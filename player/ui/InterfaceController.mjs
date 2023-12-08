@@ -1367,7 +1367,7 @@ export class InterfaceController {
         function() {
           DOMElements.playPauseButtonBigCircle.classList.remove('transform-active');
         },
-        500,
+        450,
     );
   }
 }
