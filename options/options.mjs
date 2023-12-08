@@ -198,10 +198,11 @@ function optionChanged() {
       options: JSON.stringify(Options),
     });
   } else {
-    window.postMessage({
+    const postWindow = window.opener || window.parent || window;
+    postWindow.postMessage({
       type: 'options',
       options: JSON.stringify(Options),
-    }, window.location.origin);
+    }, '/');
     localStorage.setItem('options', JSON.stringify(Options));
   }
 }
