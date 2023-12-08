@@ -201,7 +201,7 @@ function optionChanged() {
     window.postMessage({
       type: 'options',
       options: JSON.stringify(Options),
-    }, '*');
+    }, window.location.origin);
     localStorage.setItem('options', JSON.stringify(Options));
   }
 }
