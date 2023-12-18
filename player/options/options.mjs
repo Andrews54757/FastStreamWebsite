@@ -42,7 +42,9 @@ if (!EnvUtils.isExtension()) {
   playStreamURLs.disabled = true;
   playMP4URLs.disabled = true;
   autoSub.disabled = true;
+  autoplayYoutube.disabled = true;
   autoEnableURLSInput.disabled = true;
+  customSourcePatterns.disabled = true;
 }
 async function loadOptions(newOptions) {
   newOptions = newOptions || await Utils.getOptionsFromStorage();
