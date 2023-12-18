@@ -8,7 +8,7 @@ export const DefaultOptions = {
   downloadAll: true,
   freeUnusedChannels: true,
   autoEnableBestSubtitles: false,
-  autoplayYoutube: true,
+  autoplayYoutube: EnvUtils.isExtension(),
   autoEnableURLs: [],
   customSourcePatterns: ``,
   keybinds: DefaultKeybinds,
