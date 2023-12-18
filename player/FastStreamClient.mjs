@@ -4,7 +4,7 @@ import {DownloadManager} from './network/DownloadManager.mjs';
 import {DefaultPlayerEvents} from './enums/DefaultPlayerEvents.mjs';
 import {DownloadStatus} from './enums/DownloadStatus.mjs';
 import {SubtitlesManager} from './ui/subtitles/SubtitlesManager.mjs';
-import {VideoAnalyzer} from './analyzer/VideoAnalyzer.mjs';
+import {VideoAnalyzer} from './modules/analyzer/VideoAnalyzer.mjs';
 import {AnalyzerEvents} from './enums/AnalyzerEvents.mjs';
 import {EventEmitter} from './modules/eventemitter.mjs';
 import {SourcesBrowser} from './ui/SourcesBrowser.mjs';
@@ -14,6 +14,7 @@ import {DOMElements} from './ui/DOMElements.mjs';
 import {AudioConfigManager} from './ui/audio/AudioConfigManager.mjs';
 import {EnvUtils} from './utils/EnvUtils.mjs';
 import {Localize} from './modules/Localize.mjs';
+import {ClickActions} from './options/defaults/ClickActions.mjs';
 export class FastStreamClient extends EventEmitter {
   constructor() {
     super();
@@ -28,7 +29,9 @@ export class FastStreamClient extends EventEmitter {
       freeFragments: true,
       downloadAll: false,
       freeUnusedChannels: true,
-      clickToPause: false,
+      singleClickAction: ClickActions.HIDE_CONTROLS,
+      doubleClickAction: ClickActions.PLAY_PAUSE,
+      tripleClickAction: ClickActions.FULLSCREEN,
       videoBrightness: 1,
       videoContrast: 1,
       videoSaturation: 1,
@@ -38,6 +41,7 @@ export class FastStreamClient extends EventEmitter {
       videoHueRotate: 0,
       seekStepSize: 0.2,
       defaultPlaybackRate: 1,
+      qualityMultiplier: 1,
     };
     this.persistent = {
       playing: false,
@@ -104,9 +108,11 @@ export class FastStreamClient extends EventEmitter {
     this.options.downloadAll = options.downloadAll;
     this.options.freeUnusedChannels = options.freeUnusedChannels;
     this.options.autoEnableBestSubtitles = options.autoEnableBestSubtitles;
-    this.options.clickToPause = options.clickToPause;
     this.options.maxSpeed = options.maxSpeed;
     this.options.seekStepSize = options.seekStepSize;
+    this.options.singleClickAction = options.singleClickAction;
+    this.options.doubleClickAction = options.doubleClickAction;
+    this.options.tripleClickAction = options.tripleClickAction;
     this.options.videoBrightness = options.videoBrightness;
     this.options.videoContrast = options.videoContrast;
     this.options.videoSaturation = options.videoSaturation;
@@ -114,6 +120,7 @@ export class FastStreamClient extends EventEmitter {
     this.options.videoSepia = options.videoSepia;
     this.options.videoInvert = options.videoInvert;
     this.options.videoHueRotate = options.videoHueRotate;
+    this.options.qualityMultiplier = options.qualityMultiplier;
     if (this.persistent.playbackRate === this.options.defaultPlaybackRate) {
       this.playbackRate = options.playbackRate;
     }
@@ -227,13 +234,14 @@ export class FastStreamClient extends EventEmitter {
   }
   updateQualityLevels() {
     this.interfaceController.updateQualityLevels();
+    this.interfaceController.updateLanguageTracks();
     this.updateHasDownloadSpace();
   }
   updateHasDownloadSpace() {
     this.hasDownloadSpace = false;
     const levels = this.levels;
     if (!levels) return;
-    const currentLevel = this.previousLevel;
+    const currentLevel = this.currentLevel;
     const level = levels.get(currentLevel);
     if (!level) return;
     if (EnvUtils.isIncognito()) {
@@ -273,7 +281,9 @@ export class FastStreamClient extends EventEmitter {
     this.source = source;
     const estimate = await navigator.storage.estimate();
     this.storageAvailable = estimate.quota - estimate.usage;
-    this.player = await this.playerLoader.createPlayer(source.mode, this);
+    this.player = await this.playerLoader.createPlayer(source.mode, this, {
+      qualityMultiplier: this.options.qualityMultiplier,
+    });
     await this.player.setup();
     this.bindPlayer(this.player);
     await this.player.setSource(source);
@@ -378,6 +388,7 @@ export class FastStreamClient extends EventEmitter {
         }
       }
     }
+    this.checkLevelChange();
     this.videoAnalyzer.update();
     this.videoAnalyzer.saveAnalyzerData();
     this.interfaceController.updateStatusMessage();
@@ -554,6 +565,7 @@ export class FastStreamClient extends EventEmitter {
     });
     let autoPlayTriggered = false;
     this.context.on(DefaultPlayerEvents.CANPLAY, (event) => {
+      this.player.playbackRate = this.persistent.playbackRate;
       if (!autoPlayTriggered && this.options.autoPlay && this.persistent.playing === false) {
         autoPlayTriggered = true;
         this.play();
@@ -623,11 +635,14 @@ export class FastStreamClient extends EventEmitter {
     this.context.on(DefaultPlayerEvents.SKIP_SEGMENTS, () => {
       this.interfaceController.updateSkipSegments();
     });
+    this.context.on(DefaultPlayerEvents.LANGUAGE_TRACKS, (e) => {
+      this.interfaceController.updateLanguageTracks();
+    });
   }
   bindPreviewPlayer(player) {
     this.previewContext = player.createContext();
     this.previewContext.on(DefaultPlayerEvents.MANIFEST_PARSED, () => {
-      player.currentLevel = this.previousLevel;
+      player.currentLevel = this.currentLevel;
       player.load();
     });
     this.previewContext.on(DefaultPlayerEvents.FRAGMENT_UPDATE, (fragment) => {
@@ -709,34 +724,45 @@ export class FastStreamClient extends EventEmitter {
     return this.player?.currentAudioLevel;
   }
   set currentLevel(value) {
-    const previousLevel = this.previousLevel;
-    this.previousLevel = value;
     this.player.currentLevel = value;
-    if (this.previewPlayer) {
-      this.previewPlayer.currentLevel = value;
-    }
-    this.videoAnalyzer.setLevel(value);
-    if (this.options.freeUnusedChannels && value !== previousLevel && this.fragmentsStore[previousLevel]) {
-      this.fragmentsStore[previousLevel].forEach((fragment, i) => {
-        if (i === -1) return;
-        this.freeFragment(fragment);
-      });
-    }
-    // Reset failed fragments
-    this.resetFailed();
-    this.updateQualityLevels();
+    this.checkLevelChange();
   }
   set currentAudioLevel(value) {
-    const previousLevel = this.previousAudioLevel;
-    this.previousAudioLevel = value;
     this.player.currentAudioLevel = value;
-    if (value !== previousLevel && this.fragmentsStore[previousLevel]) {
-      this.fragmentsStore[previousLevel].forEach((fragment, i) => {
-        if (i === -1) return;
-        this.freeFragment(fragment);
-      });
+    this.checkLevelChange();
+  }
+  checkLevelChange() {
+    const level = this.currentLevel;
+    const audioLevel = this.currentAudioLevel;
+    let hasChanged = false;
+    if (level !== this.previousLevel) {
+      if (this.options.freeUnusedChannels && this.fragmentsStore[this.previousLevel]) {
+        this.fragmentsStore[this.previousLevel].forEach((fragment, i) => {
+          if (i === -1) return;
+          this.freeFragment(fragment);
+        });
+      }
+      if (this.previewPlayer) {
+        this.previewPlayer.currentLevel = level;
+      }
+      this.videoAnalyzer.setLevel(level);
+      this.previousLevel = level;
+      hasChanged = true;
     }
-    this.updateQualityLevels();
+    if (audioLevel !== this.previousAudioLevel) {
+      if (this.options.freeUnusedChannels && this.fragmentsStore[this.previousAudioLevel]) {
+        this.fragmentsStore[this.previousAudioLevel].forEach((fragment, i) => {
+          if (i === -1) return;
+          this.freeFragment(fragment);
+        });
+      }
+      this.previousAudioLevel = audioLevel;
+      hasChanged = true;
+    }
+    if (hasChanged) {
+      this.resetFailed();
+      this.updateQualityLevels();
+    }
   }
   get fragments() {
     return this.fragmentsStore[this.currentLevel];
@@ -782,6 +808,15 @@ export class FastStreamClient extends EventEmitter {
   }
   get chapters() {
     return this.player?.chapters || [];
+  }
+  get languageTracks() {
+    return this.player?.languageTracks || {
+      video: [],
+      audio: [],
+    };
+  }
+  setLanguageTrack(track) {
+    this.player.setLanguageTrack(track);
   }
   debugDemo() {
     this.interfaceController.hideControlBar = ()=>{};

@@ -13,6 +13,7 @@ export default class DashPlayer extends EventEmitter {
     this.client = client;
     this.video = document.createElement('video');
     this.isPreview = options?.isPreview || false;
+    this.qualityMultiplier = options?.qualityMultiplier || 1.1;
     this.fragmentRequester = new DashFragmentRequester(this);
   }
   async setup() {
@@ -43,19 +44,24 @@ export default class DashPlayer extends EventEmitter {
       this.dash.setInitialMediaSettingsFor('audio', {
         lang,
       });
-      const vtrack = this.videoTracks.find((track) => {
+      const videoTracks = this.videoTracks;
+      const audioTracks = this.audioTracks;
+      const vtrack = videoTracks.find((track) => {
         const subsetLength = Math.min(track.lang.length, lang.length);
         return subsetLength !== 0 && track.lang.substring(0, subsetLength).toLowerCase() === lang.substring(0, subsetLength).toLowerCase();
       });
       if (vtrack) {
         this.dash.setCurrentTrack(vtrack);
       }
-      const atrack = this.audioTracks.find((track) => {
+      const atrack = audioTracks.find((track) => {
         const subsetLength = Math.min(track.lang.length, lang.length);
         return subsetLength !== 0 && track.lang.substring(0, subsetLength).toLowerCase() === lang.substring(0, subsetLength).toLowerCase();
       });
       if (atrack) {
         this.dash.setCurrentTrack(atrack);
+      }
+      if (videoTracks.length > 1 || audioTracks.length > 1) {
+        this.emit(DefaultPlayerEvents.LANGUAGE_TRACKS);
       }
     });
     this.dash.on('needkey', (e) => {
@@ -65,17 +71,8 @@ export default class DashPlayer extends EventEmitter {
     const initialize = ()=> {
       if (initAlready) return;
       initAlready = true;
-      let max = -1;
-      let maxLevel = undefined;
-      // Get best quality but within screen resolution
-      this.levels.forEach((level, key) => {
-        if (level.bitrate > max) {
-          if (level.width > window.innerWidth * window.devicePixelRatio * 1.2 || level.height > window.innerHeight * window.devicePixelRatio * 1.2) return;
-          max = level.bitrate;
-          maxLevel = key;
-        }
-      });
-      this.emit(DefaultPlayerEvents.MANIFEST_PARSED, maxLevel);
+      const level = Utils.selectQuality(this.levels, this.qualityMultiplier);
+      this.emit(DefaultPlayerEvents.MANIFEST_PARSED, level);
     };
     this.dash.on('initialInit', (a) => {
       this.extractAllFragments();
@@ -273,11 +270,51 @@ export default class DashPlayer extends EventEmitter {
   get duration() {
     return this.video.duration;
   }
+  filterLanguageTracks(tracks) {
+    const seenLanguages = [];
+    return tracks.filter((track) => {
+      // Check if codec is supported
+      if (!this.video.canPlayType(track.codec)) {
+        return false;
+      }
+      // Check if language is unique
+      if (seenLanguages.includes(track.lang)) {
+        return false;
+      }
+      seenLanguages.push(track.lang);
+      return true;
+    });
+  }
   get audioTracks() {
-    return this.dash.getTracksFor('audio');
+    return this.filterLanguageTracks(this.dash.getTracksFor('audio'));
   }
   get videoTracks() {
-    return this.dash.getTracksFor('video');
+    return this.filterLanguageTracks(this.dash.getTracksFor('video'));
+  }
+  get languageTracks() {
+    return {
+      audio: this.audioTracks.map((track) => {
+        return {
+          type: 'audio',
+          lang: track.lang,
+          index: track.index,
+          isActive: track === this.dash.getCurrentTrackFor('audio'),
+          track,
+        };
+      }),
+      video: this.videoTracks.map((track) => {
+        return {
+          type: 'video',
+          lang: track.lang,
+          index: track.index,
+          isActive: track === this.dash.getCurrentTrackFor('video'),
+          track,
+        };
+      }),
+    };
+  }
+  setLanguageTrack(track) {
+    this.dash.setCurrentTrack(track.track);
   }
   get currentFragment() {
     const frags = this.client.getFragments(this.currentLevel);

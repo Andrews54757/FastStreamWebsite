@@ -3,6 +3,7 @@ import {PlayerModes} from '../enums/PlayerModes.mjs';
 import {Coloris} from '../modules/coloris.mjs';
 import {Localize} from '../modules/Localize.mjs';
 import {streamSaver} from '../modules/StreamSaver.mjs';
+import {ClickActions} from '../options/defaults/ClickActions.mjs';
 import {SubtitleTrack} from '../SubtitleTrack.mjs';
 import {EnvUtils} from '../utils/EnvUtils.mjs';
 import {FastStreamArchiveUtils} from '../utils/FastStreamArchiveUtils.mjs';
@@ -19,6 +20,8 @@ export class InterfaceController {
     this.client = client;
     this.persistent = client.persistent;
     this.isSeeking = false;
+    this.hidden = false;
+    this.shouldPlay = false;
     this.isMouseOverProgressbar = false;
     this.lastSpeed = 0;
     this.mouseOverControls = false;
@@ -35,6 +38,7 @@ export class InterfaceController {
     this.registerStatusLevel('error');
     this.registerStatusLevel('save-video', 1);
     this.registerStatusLevel('save-screenshot', 1);
+    this.registerStatusLevel('subtitles', 1);
     this.registerStatusLevel('chapter', 2);
     this.setupDOM();
   }
@@ -355,14 +359,6 @@ export class InterfaceController {
       this.playPauseToggle();
       e.stopPropagation();
     });
-    DOMElements.videoContainer.addEventListener('dblclick', (e) => {
-      if (!this.client.options.clickToPause) {
-        this.playPauseToggle();
-      } else {
-        this.hideControlBarOnAction();
-      }
-      e.stopPropagation();
-    });
     DOMElements.progressContainer.addEventListener('mousedown', this.onProgressbarMouseDown.bind(this));
     DOMElements.progressContainer.addEventListener('mouseenter', this.onProgressbarMouseEnter.bind(this));
     DOMElements.progressContainer.addEventListener('mouseleave', this.onProgressbarMouseLeave.bind(this));
@@ -414,6 +410,66 @@ export class InterfaceController {
       const index = candidates.indexOf(current);
       if (e.key === 'ArrowDown') {
         current.classList.remove('candidate');
+        const next = (index < candidates.length - 1) ? candidates[index + 1] : candidates[0];
+        next.classList.add('candidate');
+        e.preventDefault();
+        e.stopPropagation();
+      } else if (e.key === 'ArrowUp') {
+        current.classList.remove('candidate');
+        const next = (index > 0) ? candidates[index - 1] : candidates[candidates.length - 1];
+        next.classList.add('candidate');
+        e.preventDefault();
+        e.stopPropagation();
+      } else if (e.key === 'Enter') {
+        current.click();
+        e.preventDefault();
+        e.stopPropagation();
+      }
+    });
+    let languageClicked = false;
+    DOMElements.languageButton.addEventListener('click', (e) => {
+      languageClicked = ! languageClicked;
+      if (languageClicked) {
+        DOMElements.languageMenu.style.display = '';
+      } else {
+        DOMElements.languageMenu.style.display = 'none';
+      }
+      e.stopPropagation();
+    });
+    DOMElements.playerContainer.addEventListener('click', (e) => {
+      languageClicked = false;
+      DOMElements.languageMenu.style.display = 'none';
+    });
+    DOMElements.languageButton.tabIndex = 0;
+    DOMElements.languageButton.addEventListener('focus', ()=>{
+      DOMElements.languageMenu.style.display = '';
+    });
+    DOMElements.languageButton.addEventListener('blur', ()=>{
+      if (!languageClicked) {
+        DOMElements.languageMenu.style.display = 'none';
+      }
+      const candidates = Array.from(DOMElements.languageMenu.getElementsByClassName('language_track'));
+      let current = candidates.find((el) => el.classList.contains('candidate'));
+      if (!current) {
+        current = candidates.find((el) => el.classList.contains('active'));
+      }
+      if (!current) {
+        return;
+      }
+      current.classList.remove('candidate');
+    });
+    DOMElements.languageButton.addEventListener('keydown', (e) => {
+      const candidates = Array.from(DOMElements.languageMenu.getElementsByClassName('language_track'));
+      let current = candidates.find((el) => el.classList.contains('candidate'));
+      if (!current) {
+        current = candidates.find((el) => el.classList.contains('active'));
+      }
+      if (!current) {
+        return;
+      }
+      const index = candidates.indexOf(current);
+      if (e.key === 'ArrowDown') {
+        current.classList.remove('candidate');
         if (index < candidates.length - 1) {
           candidates[index + 1].classList.add('candidate');
         } else {
@@ -436,6 +492,10 @@ export class InterfaceController {
         e.stopPropagation();
       }
     });
+    DOMElements.languageMenu.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+    });
     DOMElements.playerContainer.addEventListener('mousemove', this.onPlayerMouseMove.bind(this));
     DOMElements.controlsContainer.addEventListener('mouseenter', this.onControlsMouseEnter.bind(this));
     DOMElements.controlsContainer.addEventListener('mouseleave', this.onControlsMouseLeave.bind(this));
@@ -447,16 +507,51 @@ export class InterfaceController {
       this.focusingControls = false;
       this.queueControlsHide();
     });
-    DOMElements.videoContainer.addEventListener('click', () => {
+    let clickCount = 0;
+    let clickTimeout = null;
+    DOMElements.videoContainer.addEventListener('click', (e) => {
       if (this.isBigPlayButtonVisible()) {
-        this.playPauseToggle();
-      } else if (this.client.options.clickToPause) {
         this.playPauseToggle();
         return;
       }
-      this.focusingControls = false;
-      this.mouseOverControls = false;
-      this.hideControlBarOnAction();
+      if (clickTimeout !== null) {
+        clickCount++;
+      } else {
+        clickCount = 1;
+      }
+      clearTimeout(clickTimeout);
+      clickTimeout = setTimeout(() => {
+        clickTimeout = null;
+        let clickAction;
+        if (clickCount === 1) {
+          clickAction = this.client.options.singleClickAction;
+        } else if (clickCount === 2) {
+          clickAction = this.client.options.doubleClickAction;
+        } else if (clickCount === 3) {
+          clickAction = this.client.options.tripleClickAction;
+        } else {
+          return;
+        }
+        switch (clickAction) {
+          case ClickActions.FULLSCREEN:
+            this.fullscreenToggle();
+            break;
+          case ClickActions.PIP:
+            this.pipToggle();
+            break;
+          case ClickActions.PLAY_PAUSE:
+            this.playPauseToggle();
+            break;
+          case ClickActions.HIDE_CONTROLS:
+            this.focusingControls = false;
+            this.mouseOverControls = false;
+            this.hideControlBar();
+            break;
+          case ClickActions.HIDE_PLAYER:
+            this.toggleHide();
+            break;
+        }
+      }, clickCount < 3 ? 300 : 0);
     });
     DOMElements.hideButton.addEventListener('click', () => {
       DOMElements.hideButton.blur();
@@ -531,6 +626,20 @@ export class InterfaceController {
     DOMElements.download.style.display = (this.client.player && !this.client.player.canSave().cantSave) ? 'inline-block' : 'none';
     DOMElements.screenshot.style.display = this.client.player ? 'inline-block' : 'none';
     DOMElements.playinfo.style.display = this.client.player ? 'none' : '';
+  }
+  toggleHide() {
+    if (this.hidden) {
+      DOMElements.playerContainer.classList.remove('player-hidden');
+      this.hidden = false;
+      if (this.shouldPlay) {
+        this.client.player?.play();
+      }
+    } else {
+      DOMElements.playerContainer.classList.add('player-hidden');
+      this.hidden = true;
+      this.shouldPlay = this.client.persistent.playing;
+      this.client.player?.pause();
+    }
   }
   pipToggle() {
     if (document.pictureInPictureElement) {
@@ -926,7 +1035,7 @@ export class InterfaceController {
   queueControlsHide(time) {
     clearTimeout(this.hideControlBarTimeout);
     this.hideControlBarTimeout = setTimeout(() => {
-      if (!this.focusingControls && !this.mouseOverControls && !this.isBigPlayButtonVisible()) {
+      if (!this.focusingControls && !this.mouseOverControls && !this.isBigPlayButtonVisible() && this.persistent.playing) {
         this.hideControlBar();
       }
     }, time || 2000);
@@ -1212,6 +1321,83 @@ export class InterfaceController {
       }
     });
   }
+  updateLanguageTracks() {
+    const tracks = this.client.languageTracks;
+    const videoTracks = tracks.video;
+    const audioTracks = tracks.audio;
+    if (videoTracks.length < 2 && audioTracks.length < 2) {
+      DOMElements.languageButton.style.display = 'none';
+      return;
+    } else {
+      DOMElements.languageButton.style.display = '';
+    }
+    DOMElements.languageMenu.replaceChildren();
+    const languageTable = document.createElement('div');
+    languageTable.classList.add('language_table');
+    DOMElements.languageMenu.appendChild(languageTable);
+    const languages = [];
+    if (videoTracks.length > 1) {
+      videoTracks.forEach((track) => {
+        if (!languages.includes(track.lang)) {
+          languages.push(track.lang);
+        }
+      });
+    }
+    if (audioTracks.length > 1) {
+      audioTracks.forEach((track) => {
+        if (!languages.includes(track.lang)) {
+          languages.push(track.lang);
+        }
+      });
+    }
+    languages.sort();
+    const regionNames = new Intl.DisplayNames([
+      navigator.language,
+    ], {type: 'language'});
+    languages.forEach((language) => {
+      const languageElement = document.createElement('div');
+      languageElement.classList.add('language_container');
+      languageTable.appendChild(languageElement);
+      const languageText = document.createElement('div');
+      languageText.classList.add('language_text');
+      try {
+        languageText.textContent = regionNames.of(language);
+      } catch (e) {
+        languageText.textContent = language || 'Unknown';
+      }
+      languageElement.appendChild(languageText);
+      const videoTrack = videoTracks.find((track) => track.lang === language);
+      const audioTrack = audioTracks.find((track) => track.lang === language);
+      const trackElements = ([videoTrack, audioTrack]).map((track) => {
+        if (!track) return;
+        const trackElement = document.createElement('div');
+        trackElement.classList.add('language_track');
+        trackElement.textContent = Localize.getMessage('player_languagemenu_' + track.type);
+        trackElement.setAttribute('aria-label', Localize.getMessage('player_languagemenu_' + track.type) + ': ' + language);
+        if (track.isActive) {
+          trackElement.classList.add('active');
+        }
+        languageElement.appendChild(trackElement);
+        trackElement.addEventListener('click', (e) => {
+          Array.from(DOMElements.languageMenu.getElementsByClassName('active')).forEach((element) => {
+            element.classList.remove('active');
+          });
+          trackElement.classList.add('active');
+          this.client.setLanguageTrack(track);
+          e.stopPropagation();
+        });
+        return trackElement;
+      });
+      languageElement.addEventListener('click', (e) => {
+        trackElements.forEach((element) => {
+          if (element) {
+            element.click();
+          }
+        });
+        e.stopPropagation();
+      });
+    });
+  }
   updateQualityLevels() {
     const levels = this.client.levels;
     if (!levels || levels.size <= 1) {
@@ -1220,13 +1406,17 @@ export class InterfaceController {
     } else {
       DOMElements.videoSource.style.display = '';
     }
-    const currentLevel = this.client.previousLevel;
+    const currentLevel = this.client.currentLevel;
     DOMElements.videoSourceList.replaceChildren();
     levels.forEach((level, i) => {
       const levelelement = document.createElement('div');
       levelelement.classList.add('fluid_video_source_list_item');
       levelelement.addEventListener('click', (e) => {
+        Array.from(DOMElements.videoSourceList.getElementsByClassName('source_active')).forEach((element) => {
+          element.classList.remove('source_active');
+        });
         this.client.currentLevel = i;
+        levelelement.classList.add('source_active');
         e.stopPropagation();
       });
       if (i === currentLevel) {
@@ -1237,7 +1427,6 @@ export class InterfaceController {
       const text = document.createElement('span');
       const label = level.width + 'x' + level.height + ' @' + Math.round(level.bitrate / 1000) + 'kbps';
       text.textContent = (i === currentLevel) ? label + ' ' + Localize.getMessage('player_quality_current') : label;
-      //   levelelement.appendChild(icon);
       levelelement.appendChild(text);
       DOMElements.videoSourceList.appendChild(levelelement);
     });
@@ -1341,6 +1530,7 @@ export class InterfaceController {
     const previousValue = this.persistent.playing;
     this.persistent.playing = false;
     this.updatePlayPauseButton();
+    this.showControlBar();
     if (previousValue) {
       this.playPauseAnimation();
     }

@@ -3,6 +3,9 @@ import {EnvUtils} from '../utils/EnvUtils.mjs';
 import {StringUtils} from '../utils/StringUtils.mjs';
 import {Utils} from '../utils/Utils.mjs';
 import {WebUtils} from '../utils/WebUtils.mjs';
+import {DefaultOptions} from './defaults/DefaultOptions.mjs';
+import {Localize} from '../modules/Localize.mjs';
+import {ClickActions} from './defaults/ClickActions.mjs';
 let Options = {};
 const analyzeVideos = document.getElementById('analyzevideos');
 const playStreamURLs = document.getElementById('playstreamurls');
@@ -15,12 +18,24 @@ const autoSub = document.getElementById('autosub');
 const maxSpeed = document.getElementById('maxspeed');
 const seekStepSize = document.getElementById('seekstepsize');
 const playbackRate = document.getElementById('playbackrate');
-const clickToPause = document.getElementById('clicktopause');
+const autoplayYoutube = document.getElementById('autoplayyt');
+const qualityMultiplier = document.getElementById('qualitymultiplier');
+const importButton = document.getElementById('import');
+const exportButton = document.getElementById('export');
+const clickAction = document.getElementById('clickaction');
+const dblclickAction = document.getElementById('dblclickaction');
+const tplclickAction = document.getElementById('tplclickaction');
+const customSourcePatterns = document.getElementById('customSourcePatterns');
 autoEnableURLSInput.setAttribute('autocapitalize', 'off');
 autoEnableURLSInput.setAttribute('autocomplete', 'off');
 autoEnableURLSInput.setAttribute('autocorrect', 'off');
 autoEnableURLSInput.setAttribute('spellcheck', false);
 autoEnableURLSInput.placeholder = 'https://example.com/movie/\n~^https:\\/\\/example\\.com\\/(movie|othermovie)\\/';
+customSourcePatterns.setAttribute('autocapitalize', 'off');
+customSourcePatterns.setAttribute('autocomplete', 'off');
+customSourcePatterns.setAttribute('autocorrect', 'off');
+customSourcePatterns.setAttribute('spellcheck', false);
+customSourcePatterns.placeholder = '# This is a comment. Use the following format.\n[file extension] /[regex]/[flags]';
 loadOptions();
 if (!EnvUtils.isExtension()) {
   analyzeVideos.disabled = true;
@@ -38,10 +53,15 @@ async function loadOptions(newOptions) {
   playStreamURLs.checked = !!Options.playStreamURLs;
   playMP4URLs.checked = !!Options.playMP4URLs;
   autoSub.checked = !!Options.autoEnableBestSubtitles;
-  clickToPause.checked = !!Options.clickToPause;
+  autoplayYoutube.checked = !!Options.autoplayYoutube;
   maxSpeed.value = StringUtils.getSpeedString(Options.maxSpeed);
   seekStepSize.value = Math.round(Options.seekStepSize * 100) / 100;
   playbackRate.value = Options.playbackRate;
+  qualityMultiplier.value = Options.qualityMultiplier;
+  customSourcePatterns.value = Options.customSourcePatterns || '';
+  setSelectMenuValue(clickAction, Options.singleClickAction);
+  setSelectMenuValue(dblclickAction, Options.doubleClickAction);
+  setSelectMenuValue(tplclickAction, Options.tripleClickAction);
   if (Options.keybinds) {
     keybindsList.replaceChildren();
     for (const keybind in Options.keybinds) {
@@ -62,14 +82,53 @@ async function loadOptions(newOptions) {
   });
   autoEnableURLSInput.value = Options.autoEnableURLs.join('\n');
 }
+function createSelectMenu(container, options, selected, localPrefix, callback) {
+  container.replaceChildren();
+  const select = document.createElement('select');
+  for (const option of options) {
+    const optionElement = document.createElement('option');
+    optionElement.value = option;
+    optionElement.textContent = Localize.getMessage(localPrefix + '_' + option);
+    if (option === selected) {
+      optionElement.selected = true;
+    }
+    select.appendChild(optionElement);
+  }
+  select.addEventListener('change', callback);
+  container.appendChild(select);
+}
+function setSelectMenuValue(container, value) {
+  const select = container.querySelector('select');
+  if (!select) {
+    return;
+  }
+  select.value = value;
+}
+createSelectMenu(clickAction, Object.values(ClickActions), Options.singleClickAction, 'options_general_clickaction', (e) => {
+  Options.singleClickAction = e.target.value;
+  optionChanged();
+});
+createSelectMenu(dblclickAction, Object.values(ClickActions), Options.doubleClickAction, 'options_general_clickaction', (e) => {
+  Options.doubleClickAction = e.target.value;
+  optionChanged();
+});
+createSelectMenu(tplclickAction, Object.values(ClickActions), Options.tripleClickAction, 'options_general_clickaction', (e) => {
+  Options.tripleClickAction = e.target.value;
+  optionChanged();
+});
 document.querySelectorAll('.option').forEach((option) => {
   option.addEventListener('click', (e) => {
     if (e.target.tagName !== 'INPUT') {
       const input = option.querySelector('input');
-      input.click();
+      if (input) {
+        input.click();
+      }
     }
   });
-  WebUtils.setupTabIndex(option.querySelector('input'));
+  const input = option.querySelector('input');
+  if (input) {
+    WebUtils.setupTabIndex(input);
+  }
 });
 document.querySelectorAll('.video-option').forEach((option) => {
   const numberInput = option.querySelector('input.number');
@@ -158,8 +217,8 @@ freeUnusedChannels.addEventListener('change', () => {
   Options.freeUnusedChannels = freeUnusedChannels.checked;
   optionChanged();
 });
-clickToPause.addEventListener('change', () => {
-  Options.clickToPause = clickToPause.checked;
+autoplayYoutube.addEventListener('change', () => {
+  Options.autoplayYoutube = autoplayYoutube.checked;
   optionChanged();
 });
 maxSpeed.addEventListener('change', () => {
@@ -176,6 +235,10 @@ playbackRate.addEventListener('change', () => {
   Options.playbackRate = parseFloat(playbackRate.value) || 1;
   optionChanged();
 });
+qualityMultiplier.addEventListener('change', () => {
+  Options.qualityMultiplier = Math.max(parseFloat(qualityMultiplier.value) || 1, 0.01);
+  optionChanged();
+});
 document.getElementById('resetdefault').addEventListener('click', () => {
   Options.keybinds = JSON.parse(JSON.stringify(DefaultKeybinds));
   keybindsList.replaceChildren();
@@ -190,6 +253,40 @@ WebUtils.setupTabIndex(document.getElementById('resetdefault'));
 autoEnableURLSInput.addEventListener('input', (e) => {
   Options.autoEnableURLs = autoEnableURLSInput.value.split('\n').map((o)=>o.trim()).filter((o)=>o.length);
   optionChanged();
+});
+customSourcePatterns.addEventListener('input', (e) => {
+  Options.customSourcePatterns = customSourcePatterns.value;
+  optionChanged();
+});
+importButton.addEventListener('click', () => {
+  const picker = document.createElement('input');
+  picker.type = 'file';
+  picker.accept = '.json';
+  picker.addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const text = e.target.result;
+      const newOptions = Utils.mergeOptions(DefaultOptions, JSON.parse(text));
+      loadOptions(newOptions);
+      optionChanged();
+    };
+    reader.readAsText(file);
+  });
+  document.body.appendChild(picker);
+  picker.click();
+  picker.remove();
+});
+exportButton.addEventListener('click', async () => {
+  const blob = new Blob([JSON.stringify(Options, null, 2)], {type: 'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'faststream-options.json';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
 });
 function optionChanged() {
   if (EnvUtils.isExtension()) {

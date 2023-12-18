@@ -1,9 +1,9 @@
-import {AnalyzerEvents} from '../enums/AnalyzerEvents.mjs';
-import {DefaultPlayerEvents} from '../enums/DefaultPlayerEvents.mjs';
-import {DownloadStatus} from '../enums/DownloadStatus.mjs';
-import {PlayerModes} from '../enums/PlayerModes.mjs';
-import {EventEmitter} from '../modules/eventemitter.mjs';
-import {EnvUtils} from '../utils/EnvUtils.mjs';
+import {AnalyzerEvents} from '../../enums/AnalyzerEvents.mjs';
+import {DefaultPlayerEvents} from '../../enums/DefaultPlayerEvents.mjs';
+import {DownloadStatus} from '../../enums/DownloadStatus.mjs';
+import {PlayerModes} from '../../enums/PlayerModes.mjs';
+import {EventEmitter} from '../eventemitter.mjs';
+import {EnvUtils} from '../../utils/EnvUtils.mjs';
 import {VideoAligner} from './VideoAligner.mjs';
 const AnalyzerStatus = {
   IDLE: 'idle',

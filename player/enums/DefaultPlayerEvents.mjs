@@ -103,4 +103,8 @@ export const DefaultPlayerEvents = {
    * Fired when the player has skip segments
    */
   SKIP_SEGMENTS: 'skipsegments',
+  /**
+   * Fired when the player has language tracks
+   */
+  LANGUAGE_TRACKS: 'languagetracks',
 };
