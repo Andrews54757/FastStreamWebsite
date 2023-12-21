@@ -56,9 +56,10 @@ export class OpenSubtitlesSearch extends EventEmitter {
       this.closeUI();
     });
     WebUtils.setupTabIndex(closeBtn);
+    const contentContainer = DOMElements.subuiContainer.getElementsByClassName('content_container')[0];
     this.subui.searchContainer = document.createElement('div');
     this.subui.searchContainer.classList.add('subtitle-search-container');
-    DOMElements.subuiContainer.appendChild(this.subui.searchContainer);
+    contentContainer.appendChild(this.subui.searchContainer);
     const searchInput = WebUtils.create('input', null, 'text_input');
     searchInput.placeholder = Localize.getMessage('player_opensubtitles_search_placeholder');
     searchInput.classList.add('subtitle-search-input');
@@ -177,10 +178,10 @@ export class OpenSubtitlesSearch extends EventEmitter {
     });
     this.subui.results = document.createElement('div');
     this.subui.results.classList.add('subtitle-results');
-    DOMElements.subuiContainer.appendChild(this.subui.results);
+    contentContainer.appendChild(this.subui.results);
     this.subui.pages = document.createElement('div');
     this.subui.pages.classList.add('subtitle-pages');
-    DOMElements.subuiContainer.appendChild(this.subui.pages);
+    contentContainer.appendChild(this.subui.pages);
   }
   async queryOpenSubtitles(query) {
     const defaulQuery = {

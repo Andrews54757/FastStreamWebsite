@@ -52,8 +52,14 @@ export class URLUtils {
       return false;
     }
   }
+  static strip_queryhash(url) {
+    return url.split(/[#?]/)[0];
+  }
   static get_url_extension(url) {
-    return url.split(/[#?]/)[0].split('.').pop().trim();
+    return this.strip_queryhash(url).split('.').pop().trim();
+  }
+  static get_file_name(url) {
+    return this.strip_queryhash(url).split('/').pop().trim();
   }
   static getModeFromExtension(ext) {
     return ModesMap.get(ext);

@@ -187,7 +187,7 @@ export class DownloadManager {
               speed = this.speedTestBuffer.reduce((a, b) => a + b, 0) / this.speedTestBuffer.length;
               this.speedTestBuffer = [];
               if (speed > this.lastSpeed) {
-                const maxDownloaders = (this.client?.source?.mode === PlayerModes.ACCELERATED_YT) ? 3 : 6;
+                const maxDownloaders = (this.client?.source?.mode === PlayerModes.ACCELERATED_YT) ? 2 : 6;
                 if (this.downloaders.length < maxDownloaders) {
                   console.log('Adding downloader, speed: ' + speed);
                   this.downloaders.push(new StandardDownloader(this));
@@ -247,13 +247,13 @@ export class DownloadManager {
   async setup() {
     // Chrome can move blobs to file storage, so we don't need to use IndexedDB
     if (!EnvUtils.isChrome() && IndexedDBManager.isSupported()) {
-      this.indexedDBManager = new IndexedDBManager();
+      const indexedDBManager = new IndexedDBManager();
       try {
-        await this.indexedDBManager.setup();
+        await indexedDBManager.setup();
+        this.indexedDBManager = indexedDBManager;
       } catch (e) {
         // IndexedDB is not supported
-        console.warn(e);
-        this.indexedDBManager = null;
+        console.warn('IndexedDB is not supported', e);
       }
     }
   }

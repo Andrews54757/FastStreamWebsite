@@ -4,6 +4,8 @@ import {Coloris} from '../modules/coloris.mjs';
 import {Localize} from '../modules/Localize.mjs';
 import {streamSaver} from '../modules/StreamSaver.mjs';
 import {ClickActions} from '../options/defaults/ClickActions.mjs';
+import {MiniplayerPositions} from '../options/defaults/MiniplayerPositions.mjs';
+import {VisChangeActions} from '../options/defaults/VisChangeActions.mjs';
 import {SubtitleTrack} from '../SubtitleTrack.mjs';
 import {EnvUtils} from '../utils/EnvUtils.mjs';
 import {FastStreamArchiveUtils} from '../utils/FastStreamArchiveUtils.mjs';
@@ -604,6 +606,23 @@ export class InterfaceController {
     DOMElements.controlsContainer.addEventListener('click', (e) => {
       e.stopPropagation();
     });
+    document.addEventListener('visibilitychange', ()=>{
+      if (!document.hidden) {
+        this.handleVisibilityChange(true);
+      } else {
+        this.handleVisibilityChange(false);
+      }
+    });
+    const o = new IntersectionObserver(([entry]) => {
+      if (entry.intersectionRatio > 0.25 && !document.hidden) {
+        this.handleVisibilityChange(true);
+      } else {
+        this.handleVisibilityChange(false);
+      }
+    }, {
+      threshold: [0, 0.25, 0.5],
+    });
+    o.observe(document.body);
     // eslint-disable-next-line new-cap
     Coloris({
       theme: 'pill',
@@ -620,6 +639,81 @@ export class InterfaceController {
       alpha: true,
     });
     this.updateToolVisibility();
+  }
+  async handleVisibilityChange(isVisible) {
+    const action = this.client.options.visChangeAction;
+    if (isVisible === this.lastPageVisibility || this.miniPlayerActive) {
+      return;
+    }
+    switch (action) {
+      case VisChangeActions.NOTHING:
+        break;
+      case VisChangeActions.PLAY_PAUSE:
+        if (!isVisible) {
+          this.shouldPlay = this.client.persistent.playing;
+          await this.client.player?.pause();
+        } else {
+          if (this.shouldPlay) {
+            await this.client.player?.play();
+          }
+        }
+        break;
+      case VisChangeActions.PIP:
+        if (!isVisible) {
+          await this.enterPip();
+        } else {
+          await this.exitPip();
+        }
+        break;
+      case VisChangeActions.MINI_PLAYER:
+        this.requestMiniplayer(!isVisible);
+        break;
+    }
+    this.lastPageVisibility = isVisible;
+  }
+  requestMiniplayer(force) {
+    if (EnvUtils.isExtension()) {
+      this.miniPlayerActive = true;
+      const styles = {};
+      switch (this.client.options.miniPos) {
+        case MiniplayerPositions.TOP_LEFT:
+          styles.top = '0px';
+          styles.left = '0px';
+          break;
+        case MiniplayerPositions.TOP_RIGHT:
+          styles.top = '0px';
+          styles.right = '0px';
+          break;
+        case MiniplayerPositions.BOTTOM_LEFT:
+          styles.bottom = '0px';
+          styles.left = '0px';
+          break;
+        case MiniplayerPositions.BOTTOM_RIGHT:
+          styles.bottom = '0px';
+          styles.right = '0px';
+          break;
+      }
+      chrome.runtime.sendMessage({
+        type: 'request_miniplayer',
+        size: this.client.options.miniSize,
+        force,
+        styles,
+        autoExit: true,
+      }, (response) => {
+        if (response !== 'enter') {
+          this.miniPlayerActive = false;
+        }
+      });
+    }
+  }
+  setMiniplayerStatus(isMini) {
+    if (isMini) {
+      this.miniPlayerActive = true;
+      DOMElements.playerContainer.classList.add('miniplayer');
+    } else {
+      this.miniPlayerActive = false;
+      DOMElements.playerContainer.classList.remove('miniplayer');
+    }
   }
   updateToolVisibility() {
     DOMElements.pip.style.display = (this.client.player && document.pictureInPictureEnabled) ? 'inline-block' : 'none';
@@ -641,16 +735,57 @@ export class InterfaceController {
       this.client.player?.pause();
     }
   }
+  async documentPipToggle() {
+    if (window.documentPictureInPicture.window) {
+      window.documentPictureInPicture.window.close();
+      return;
+    }
+    const pipWindow = await documentPictureInPicture.requestWindow({
+      width: DOMElements.playerContainer.clientWidth,
+      height: DOMElements.playerContainer.clientHeight,
+    });
+    pipWindow.document.body.appendChild(DOMElements.playerContainer);
+    // Copy style sheets over from the initial document
+    // so that the player looks the same.
+    [...document.styleSheets].forEach((styleSheet) => {
+      try {
+        const cssRules = [...styleSheet.cssRules]
+            .map((rule) => rule.cssText)
+            .join('');
+        const style = document.createElement('style');
+        style.textContent = cssRules;
+        pipWindow.document.head.appendChild(style);
+      } catch (e) {
+        const link = document.createElement('link');
+        link.rel = 'stylesheet';
+        link.type = styleSheet.type;
+        link.media = styleSheet.media;
+        link.href = styleSheet.href;
+        pipWindow.document.head.appendChild(link);
+      }
+    });
+    pipWindow.addEventListener('pagehide', (event) => {
+      document.body.appendChild(DOMElements.playerContainer);
+    });
+  }
   pipToggle() {
     if (document.pictureInPictureElement) {
-      document.exitPictureInPicture();
+      return this.exitPip();
     } else {
-      if (!this.client.player) {
-        alert(Localize.getMessage('player_nosource_alert'));
-        return;
-      }
-      this.client.player.getVideo().requestPictureInPicture();
+      return this.enterPip();
     }
+  }
+  exitPip() {
+    if (document.pictureInPictureElement) {
+      return document.exitPictureInPicture();
+    }
+    return Promise.resolve();
+  }
+  enterPip() {
+    if (!document.pictureInPictureElement && this.client.player) {
+      return this.client.player.getVideo().requestPictureInPicture();
+    }
+    return Promise.resolve();
   }
   setupRateChanger() {
     const els = [];
@@ -746,12 +881,14 @@ export class InterfaceController {
         });
       } else if (audioFormats.includes(ext)) {
         newSource = new VideoSource(window.URL.createObjectURL(file), {}, PlayerModes.DIRECT);
+        newSource.identifier = file.name + 'size' + file.size;
       } else if (URLUtils.getModeFromExtension(ext)) {
         let mode = URLUtils.getModeFromExtension(ext);
         if (mode === PlayerModes.ACCELERATED_MP4) {
           mode = PlayerModes.DIRECT;
         }
         newSource = new VideoSource(window.URL.createObjectURL(file), {}, mode);
+        newSource.identifier = file.name + 'size' + file.size;
       } else if (ext === 'fsa') {
         const buffer = await RequestUtils.httpGetLarge(window.URL.createObjectURL(file));
         try {
@@ -1010,6 +1147,9 @@ export class InterfaceController {
   skipSegment() {
     const time = this.client.currentTime;
     const currentSegment = this.skipSegments.find((segment) => segment.startTime <= time && segment.endTime >= time);
+    if (!currentSegment) {
+      return;
+    }
     this.client.currentTime = currentSegment.endTime;
     if (currentSegment.onSkip) {
       currentSegment.onSkip();
@@ -1487,7 +1627,7 @@ export class InterfaceController {
       } else {
         if (EnvUtils.isExtension()) {
           chrome.runtime.sendMessage({
-            type: 'fullscreen',
+            type: 'request_fullscreen',
           }, (response)=>{
             this.setFullscreenStatus(response === 'enter');
           });

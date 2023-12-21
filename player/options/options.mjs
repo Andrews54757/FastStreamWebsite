@@ -6,6 +6,8 @@ import {WebUtils} from '../utils/WebUtils.mjs';
 import {DefaultOptions} from './defaults/DefaultOptions.mjs';
 import {Localize} from '../modules/Localize.mjs';
 import {ClickActions} from './defaults/ClickActions.mjs';
+import {VisChangeActions} from './defaults/VisChangeActions.mjs';
+import {MiniplayerPositions} from './defaults/MiniplayerPositions.mjs';
 let Options = {};
 const analyzeVideos = document.getElementById('analyzevideos');
 const playStreamURLs = document.getElementById('playstreamurls');
@@ -25,7 +27,12 @@ const exportButton = document.getElementById('export');
 const clickAction = document.getElementById('clickaction');
 const dblclickAction = document.getElementById('dblclickaction');
 const tplclickAction = document.getElementById('tplclickaction');
+const visChangeAction = document.getElementById('vischangeaction');
 const customSourcePatterns = document.getElementById('customSourcePatterns');
+const showWhenMiniSelected = document.getElementById('showWhenMiniSelected');
+const storeProgress = document.getElementById('storeprogress');
+const miniSize = document.getElementById('minisize');
+const miniPos = document.getElementById('minipos');
 autoEnableURLSInput.setAttribute('autocapitalize', 'off');
 autoEnableURLSInput.setAttribute('autocomplete', 'off');
 autoEnableURLSInput.setAttribute('autocorrect', 'off');
@@ -45,6 +52,7 @@ if (!EnvUtils.isExtension()) {
   autoplayYoutube.disabled = true;
   autoEnableURLSInput.disabled = true;
   customSourcePatterns.disabled = true;
+  miniSize.disabled = true;
 }
 async function loadOptions(newOptions) {
   newOptions = newOptions || await Utils.getOptionsFromStorage();
@@ -61,9 +69,18 @@ async function loadOptions(newOptions) {
   playbackRate.value = Options.playbackRate;
   qualityMultiplier.value = Options.qualityMultiplier;
   customSourcePatterns.value = Options.customSourcePatterns || '';
+  miniSize.value = Options.miniSize;
+  storeProgress.checked = !!Options.storeProgress;
   setSelectMenuValue(clickAction, Options.singleClickAction);
   setSelectMenuValue(dblclickAction, Options.doubleClickAction);
   setSelectMenuValue(tplclickAction, Options.tripleClickAction);
+  setSelectMenuValue(visChangeAction, Options.visChangeAction);
+  setSelectMenuValue(miniPos, Options.miniPos);
+  if (Options.visChangeAction === VisChangeActions.MINI_PLAYER) {
+    showWhenMiniSelected.style.display = '';
+  } else {
+    showWhenMiniSelected.style.display = 'none';
+  }
   if (Options.keybinds) {
     keybindsList.replaceChildren();
     for (const keybind in Options.keybinds) {
@@ -118,12 +135,34 @@ createSelectMenu(tplclickAction, Object.values(ClickActions), Options.tripleClic
   Options.tripleClickAction = e.target.value;
   optionChanged();
 });
+createSelectMenu(visChangeAction, Object.values(VisChangeActions), Options.visChangeAction, 'options_general_vischangeaction', (e) => {
+  Options.visChangeAction = e.target.value;
+  if (Options.visChangeAction === VisChangeActions.MINI_PLAYER) {
+    showWhenMiniSelected.style.display = '';
+  } else {
+    showWhenMiniSelected.style.display = 'none';
+  }
+  optionChanged();
+});
+createSelectMenu(miniPos, Object.values(MiniplayerPositions), Options.miniPos, 'options_general_minipos', (e) => {
+  Options.miniPos = e.target.value;
+  optionChanged();
+});
 document.querySelectorAll('.option').forEach((option) => {
   option.addEventListener('click', (e) => {
     if (e.target.tagName !== 'INPUT') {
       const input = option.querySelector('input');
       if (input) {
-        input.click();
+        if (input.type === 'checkbox') {
+          input.click();
+        } else {
+          input.focus();
+        }
+      } else {
+        const select = option.querySelector('select');
+        if (select) {
+          select.focus();
+        }
       }
     }
   });
@@ -215,6 +254,10 @@ downloadAll.addEventListener('change', () => {
   Options.downloadAll = downloadAll.checked;
   optionChanged();
 });
+storeProgress.addEventListener('change', () => {
+  Options.storeProgress = storeProgress.checked;
+  optionChanged();
+});
 freeUnusedChannels.addEventListener('change', () => {
   Options.freeUnusedChannels = freeUnusedChannels.checked;
   optionChanged();
@@ -239,6 +282,10 @@ playbackRate.addEventListener('change', () => {
 });
 qualityMultiplier.addEventListener('change', () => {
   Options.qualityMultiplier = Math.max(parseFloat(qualityMultiplier.value) || 1, 0.01);
+  optionChanged();
+});
+miniSize.addEventListener('change', () => {
+  Options.miniSize = Math.min(Math.max(parseFloat(miniSize.value) || 0.25, 0.01), 1);
   optionChanged();
 });
 document.getElementById('resetdefault').addEventListener('click', () => {
@@ -290,28 +337,42 @@ exportButton.addEventListener('click', async () => {
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
 });
+let optionSendTime = null;
 function optionChanged() {
   if (EnvUtils.isExtension()) {
-    chrome?.runtime?.sendMessage({
-      type: 'options',
+    chrome.storage.local.set({
       options: JSON.stringify(Options),
+    }, ()=>{
+      optionSendTime = Date.now();
+      chrome.runtime.sendMessage({
+        type: 'options_init',
+        time: optionSendTime,
+      });
     });
   } else {
+    localStorage.setItem('options', JSON.stringify(Options));
     const postWindow = window.opener || window.parent || window;
     postWindow.postMessage({
       type: 'options',
-      options: JSON.stringify(Options),
     }, '/');
-    localStorage.setItem('options', JSON.stringify(Options));
   }
 }
 if (EnvUtils.isExtension()) {
-// Load options on options event
+  // Load options on options event
   chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-    if (request.type === 'options') {
-      loadOptions(JSON.parse(request.options));
+    if (request.type === 'options' || request.type === 'options_init') {
+      if (request.time !== optionSendTime) {
+        loadOptions();
+      }
     }
   });
+  // Load options on visibility change
+  const o = new IntersectionObserver(([entry]) => {
+    if (entry.isIntersecting) {
+      loadOptions();
+    }
+  });
+  o.observe(document.body);
   const ratebox = document.getElementById('ratebox');
   document.getElementById('rate').addEventListener('click', (e) => {
     chrome?.storage?.local?.set({

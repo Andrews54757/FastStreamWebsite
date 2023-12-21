@@ -187,6 +187,7 @@ export class AudioConfigManager extends EventEmitter {
     return this.profiles.find((profile) => profile.id === id);
   }
   setupUI() {
+    const contentContainer = DOMElements.audioConfigContainer.getElementsByClassName('content_container')[0];
     DOMElements.audioConfigContainer.addEventListener('click', (e) => {
       e.stopPropagation();
     });
@@ -219,7 +220,7 @@ export class AudioConfigManager extends EventEmitter {
     WebUtils.setupTabIndex(closeBtn);
     // setup dropdowns
     this.ui.profileManager = WebUtils.create('div', null, 'profile_manager');
-    DOMElements.audioConfigContainer.appendChild(this.ui.profileManager);
+    contentContainer.appendChild(this.ui.profileManager);
     this.ui.profileDropdown = document.createElement('div');
     this.ui.profileManager.appendChild(this.ui.profileDropdown);
     this.updateProfileDropdown();
@@ -309,7 +310,7 @@ export class AudioConfigManager extends EventEmitter {
     });
     WebUtils.setupTabIndex(this.ui.deleteButton);
     this.ui.dynamicsContainer = WebUtils.create('div', null, 'dynamics_container');
-    DOMElements.audioConfigContainer.appendChild(this.ui.dynamicsContainer);
+    contentContainer.appendChild(this.ui.dynamicsContainer);
     this.ui.dynamicsContainer.appendChild(this.audioEqualizer.getElement());
     this.ui.dynamicsContainer.appendChild(this.audioCompressor.getElement());
     this.ui.dynamicsContainer.appendChild(this.audioChannelMixer.getElement());
