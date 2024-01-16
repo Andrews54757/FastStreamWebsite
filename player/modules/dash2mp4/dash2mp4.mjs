@@ -192,6 +192,7 @@ export class DASH2MP4 extends EventEmitter {
     }
     const movieTimescale = tracks[0].timescale;
     tracks.forEach((track) => {
+      track.movieTimescale = movieTimescale;
       track.elst.push({
         media_time: (track.chunks[0].startPTS - minPts) / track.timescale * movieTimescale,
         segment_duration: (track.chunks[track.chunks.length - 1].endPTS - track.chunks[0].startPTS) / track.timescale * movieTimescale,

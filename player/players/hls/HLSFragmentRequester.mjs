@@ -17,7 +17,7 @@ export class HLSFragmentRequester {
       this.player.emit(DefaultPlayerEvents.FRAGMENT_UPDATE, fragment);
     }
     const frag = fragment.getFrag();
-    if (frag.decryptdata || frag.encrypted) {
+    if (frag.decryptdata) {
       throw new Error('unexpected decryptdata');
     }
     let keyPromise;

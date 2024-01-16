@@ -272,12 +272,20 @@ const TranslationMap = {
   "options_pattern_body": "These patterns are used to detect custom video sources on webpages. They are applied in order, and the first match is used. For advanced users only.",
   "options_help_header": "Help",
   "options_help_welcome": "Welcome Page",
-  "options_help_issues": "Issue Tracker"
+  "options_help_issues": "Issue Tracker",
+  "subtitles_settings_fontFamily": "Font Family",
+  "subtitles_settings_fontWeight": "Font Weight",
+  "subtitles_settings_fontSize": "Font Size",
+  "subtitles_settings_color": "Font Color",
+  "subtitles_settings_background": "Background Color",
+  "subtitles_settings_outlineColor": "Outline Color",
+  "subtitles_settings_outlineWidth": "Outline Width",
+  "subtitles_settings_defaultLanguage": "Language"
 };
 export class Localize {
   static getMessage(key, substitutions) {
     if (EnvUtils.isExtension()) {
-      return chrome.i18n.getMessage(key, substitutions);
+      return chrome.i18n.getMessage(key, substitutions) || key;
     }
     if (!Object.hasOwn(TranslationMap, key)) {
       return key;

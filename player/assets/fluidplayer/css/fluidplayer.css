@@ -267,7 +267,7 @@ body {
 .fluid_subtitles_container {
     color: white;
     position: absolute;
-    bottom: 46px;
+    bottom: 40px;
     height: auto;
     z-index: 1;
     text-align: center;
@@ -276,7 +276,7 @@ body {
 }
 
 .controls_visible.expanded .fluid_subtitles_container {
-    bottom: 126px;
+    bottom: 120px;
 }
 
 .fluid_subtitles_container .subtitle-track {
@@ -285,6 +285,10 @@ body {
     padding: 0.25em;
     border-radius: 4px;
     display: inline-block;
+}
+
+.subtitle-track-wrapper {
+    cursor: grab;
 }
 
 .fluid_video_wrapper.fluid_player_layout_default .fade_out {
@@ -805,6 +809,22 @@ body {
     width: 250px;
 }
 
+.subtitles_menu.settings {
+    width: 300px;
+}
+
+.subtitles_menu .subtitles_options {
+    display: none;
+}
+
+.subtitles_menu.settings .subtitles_options {
+    display: block;
+}
+
+.subtitles_menu.settings .subtitles_view {
+    display: none;
+}
+
 
 .fluid_button_video_source .fluid_video_sources_list,
 .fluid_button_language .fluid_language_list {
@@ -918,10 +938,6 @@ body {
 .buffering_spinner>.spinner {
     float: left;
     margin-right: 4px;
-}
-
-.subtitle-track-wrapper {
-    margin-top: 5px;
 }
 
 .intro_outro_container {
@@ -2567,12 +2583,16 @@ body {
         width: 200px;
     }
 
+    .subtitles_menu.settings {
+        width: 250px;
+    }
+
     .fluid_subtitles_container {
-        bottom: 5px;
+        bottom: 0px;
     }
 
     .controls_visible .fluid_subtitles_container {
-        bottom: 46px;
+        bottom: 40px;
     }
 
 }
@@ -2591,6 +2611,10 @@ body {
 
     .subtitles_menu {
         width: 150px;
+    }
+
+    .subtitles_menu.settings {
+        width: 200px;
     }
 
     .disable-when-mini {

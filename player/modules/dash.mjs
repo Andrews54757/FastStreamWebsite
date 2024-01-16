@@ -36335,17 +36335,17 @@ let dash;
               setInitialSettings(type, settings);
             }
             if (!tracksForType || tracksForType.length === 0) return;
-            if (settings) {
-              tracks = Array.from(tracksForType);
-              tracks = filterTracksBySettings(tracks, matchSettingsLang, settings);
-              tracks = filterTracksBySettings(tracks, matchSettingsIndex, settings);
-              tracks = filterTracksBySettings(tracks, matchSettingsViewPoint, settings);
-              if (!(type === _constants_Constants__WEBPACK_IMPORTED_MODULE_0__["default"].AUDIO && !!lastSelectedTracks[type])) {
-                tracks = filterTracksBySettings(tracks, matchSettingsRole, settings);
-              }
-              tracks = filterTracksBySettings(tracks, matchSettingsAccessibility, settings);
-              tracks = filterTracksBySettings(tracks, matchSettingsAudioChannelConfig, settings);
-            }
+            // if (settings) {
+            //   tracks = Array.from(tracksForType);
+            //   tracks = filterTracksBySettings(tracks, matchSettingsLang, settings);
+            //   tracks = filterTracksBySettings(tracks, matchSettingsIndex, settings);
+            //   tracks = filterTracksBySettings(tracks, matchSettingsViewPoint, settings);
+            //   if (!(type === _constants_Constants__WEBPACK_IMPORTED_MODULE_0__["default"].AUDIO && !!lastSelectedTracks[type])) {
+            //     tracks = filterTracksBySettings(tracks, matchSettingsRole, settings);
+            //   }
+            //   tracks = filterTracksBySettings(tracks, matchSettingsAccessibility, settings);
+            //   tracks = filterTracksBySettings(tracks, matchSettingsAudioChannelConfig, settings);
+            // }
             if (tracks.length === 0) {
               setTrack(selectInitialTrack(type, tracksForType), true);
             } else {

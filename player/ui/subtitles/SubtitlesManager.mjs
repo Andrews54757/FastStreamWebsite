@@ -14,7 +14,8 @@ export class SubtitlesManager {
     this.tracks = [];
     this.activeTracks = [];
     this.isTestSubtitleActive = false;
-    this.subtitleTrackElements = [];
+    this.subtitleTrackListElements = [];
+    this.subtitleTrackDisplayElements = [];
     this.settingsManager = new SubtitlesSettingsManager();
     this.settingsManager.on(SubtitlesSettingsManagerEvents.SETTINGS_CHANGED, this.onSettingsChanged.bind(this));
     this.settingsManager.loadSettings();
@@ -27,7 +28,7 @@ export class SubtitlesManager {
     if (returnedTrack !== subtitleTrack) {
       return returnedTrack;
     }
-    const defLang = this.settingsManager.getSettings()['default-lang'];
+    const defLang = this.settingsManager.getSettings().defaultLanguage;
     if (autoset && this.activeTracks.length === 0 && this.client.options.autoEnableBestSubtitles) {
       if (subtitleTrack.language && subtitleTrack.language.substring(0, defLang.length) === defLang) {
         this.activateTrack(subtitleTrack);
@@ -78,7 +79,8 @@ export class SubtitlesManager {
     this.client.subtitleSyncer.toggleTrack(track, true);
   }
   onSettingsChanged(settings) {
-    this.openSubtitlesSearch.setLanguageInputValue(settings['default-lang']);
+    this.openSubtitlesSearch.setLanguageInputValue(settings.defaultLanguage);
+    this.refreshSubtitleStyles();
     this.renderSubtitles();
     this.client.subtitleSyncer.onVideoTimeUpdate();
   }
@@ -207,6 +209,9 @@ export class SubtitlesManager {
       e.stopPropagation();
       e.preventDefault();
     });
+    window.addEventListener('resize', () => {
+      this.checkTrackBounds();
+    });
   }
   createTrackEntryElements(i) {
     const trackElement = document.createElement('div');
@@ -331,7 +336,12 @@ export class SubtitlesManager {
       update: () => {
         const track = this.tracks[i];
         const activeIndex = this.activeTracks.indexOf(track);
-        const name = (track.language ? ('(' + track.language + ') ') : '') + (track.label || `Track ${i + 1}`);
+        const nameCandidate = (track.language ? ('(' + track.language + ') ') : '') + (track.label || `Track ${i + 1}`);
+        let name = nameCandidate;
+        // limit to 30 chars
+        if (name.length > 30) {
+          name = name.substring(0, 30) + '...';
+        }
         if (activeIndex !== -1) {
           trackElement.classList.add('subtitle-track-active');
           if (this.activeTracks.length > 1) {
@@ -343,11 +353,12 @@ export class SubtitlesManager {
           trackElement.classList.remove('subtitle-track-active');
           trackName.textContent = name;
         }
+        trackName.title = nameCandidate;
       },
     };
   }
   updateTrackList() {
-    const cachedElements = this.subtitleTrackElements;
+    const cachedElements = this.subtitleTrackListElements;
     const tracks = this.tracks;
     // Remove extra elements
     for (let i = cachedElements.length - 1; i >= tracks.length; i--) {
@@ -369,34 +380,108 @@ export class SubtitlesManager {
     this.client.subtitleSyncer.onVideoTimeUpdate();
   }
   applyStyles(trackContainer) {
-    const settings = this.settingsManager.getSettings();
-    trackContainer.style.color = settings.color;
-    trackContainer.style.fontSize = settings['font-size'];
-    trackContainer.style.backgroundColor = settings.background;
+    return this.settingsManager.applyStyles(trackContainer);
+  }
+  refreshSubtitleStyles() {
+    this.subtitleTrackDisplayElements.forEach((el) => {
+      this.applyStyles(el);
+    });
+  }
+  createSubtitleDisplayElements(i) {
+    const trackContainer = document.createElement('div');
+    trackContainer.className = 'subtitle-track';
+    this.applyStyles(trackContainer);
+    const wrapper = document.createElement('div');
+    wrapper.className = 'subtitle-track-wrapper';
+    wrapper.appendChild(trackContainer);
+    wrapper.style.marginBottom = '5px';
+    let yStart = 0;
+    const mouseup = (e) => {
+      document.removeEventListener('mousemove', mousemove);
+      document.removeEventListener('mouseup', mouseup);
+      e.stopPropagation();
+    };
+    const mousemove = (e) => {
+      // drag by adjusting margin-bottom
+      const oldDiff = yStart - e.clientY;
+      let diff = oldDiff;
+      let current = wrapper;
+      do {
+        const marginBottom = parseInt(current.style.marginBottom) || 0;
+        const newMarginBottom = Math.max(marginBottom + diff, 5);
+        current.style.marginBottom = newMarginBottom + 'px';
+        diff -= (newMarginBottom - marginBottom);
+        current = current.nextElementSibling;
+      } while (current && diff < 0);
+      const adjustedDiff = oldDiff - diff;
+      const previousSibling = wrapper.previousElementSibling;
+      if (previousSibling) {
+        const previousMarginBottom = parseInt(previousSibling.style.marginBottom) || 0;
+        const newPreviousMarginBottom = Math.max(previousMarginBottom - adjustedDiff, 5);
+        previousSibling.style.marginBottom = newPreviousMarginBottom + 'px';
+      }
+      yStart = e.clientY;
+      this.checkTrackBounds();
+      e.stopPropagation();
+    };
+    wrapper.addEventListener('mousedown', (e) => {
+      yStart = e.clientY;
+      document.addEventListener('mousemove', mousemove);
+      document.addEventListener('mouseup', mouseup);
+      e.stopPropagation();
+    });
+    return {
+      trackContainer,
+      wrapper,
+    };
+  }
+  // Make sure subtitles are not outside of the video
+  checkTrackBounds() {
+    const trackElements = this.subtitleTrackDisplayElements;
+    const playerHeight = DOMElements.playerContainer.offsetHeight - parseInt(window.getComputedStyle(DOMElements.subtitlesContainer).bottom);
+    let totalTrackHeight = 0;
+    for (let i = 0; i < trackElements.length; i++) {
+      const trackWrapper = trackElements[i].parentElement;
+      const marginBottom = parseInt(trackWrapper.style.marginBottom);
+      totalTrackHeight += trackWrapper.offsetHeight + marginBottom;
+    }
+    let shrinkAmount = Math.max(totalTrackHeight - playerHeight, 0);
+    // shrink margin-bottom from topmost track downwards
+    for (let i = 0; i < trackElements.length && shrinkAmount > 0; i++) {
+      const trackWrapper = trackElements[i].parentElement;
+      const marginBottom = parseInt(trackWrapper.style.marginBottom) || 0;
+      const newMarginBottom = Math.max(marginBottom - shrinkAmount, 5);
+      trackWrapper.style.marginBottom = newMarginBottom + 'px';
+      shrinkAmount -= (marginBottom - newMarginBottom);
+    }
   }
   renderSubtitles() {
-    DOMElements.subtitlesContainer.replaceChildren();
+    const cachedElements = this.subtitleTrackDisplayElements;
+    const tracks = this.activeTracks;
+    let trackLen = tracks.length;
     if (this.isTestSubtitleActive) {
-      const trackContainer = document.createElement('div');
-      trackContainer.className = 'subtitle-track';
-      this.applyStyles(trackContainer);
-      const cue = document.createElement('div');
-      cue.textContent = Localize.getMessage('player_testsubtitle');
-      trackContainer.appendChild(cue);
-      const wrapper = document.createElement('div');
-      wrapper.className = 'subtitle-track-wrapper';
-      wrapper.appendChild(trackContainer);
+      trackLen++;
+    }
+    // Remove extra elements
+    for (let i = cachedElements.length - 1; i >= trackLen; i--) {
+      const el = cachedElements[i];
+      el.parentElement.remove();
+      cachedElements.splice(i, 1);
+    }
+    // Add new elements
+    for (let i = cachedElements.length; i < trackLen; i++) {
+      const {trackContainer, wrapper} = this.createSubtitleDisplayElements(i);
+      cachedElements.push(trackContainer);
       DOMElements.subtitlesContainer.appendChild(wrapper);
     }
-    const tracks = this.activeTracks;
+    // Update elements
     const currentTime = this.client.persistent.currentTime;
-    tracks.forEach((track) => {
-      const trackContainer = document.createElement('div');
-      trackContainer.className = 'subtitle-track';
-      this.applyStyles(trackContainer);
-      const cues = track.cues;
+    for (let i = 0; i < tracks.length; i++) {
+      const trackContainer = cachedElements[i];
+      trackContainer.replaceChildren();
+      const cues = tracks[i].cues;
       let hasCues = false;
-      let cueIndex = Utils.binarySearch(cues, currentTime, (time, cue) => {
+      let cueIndex = Utils.binarySearch(cues, this.client.persistent.currentTime, (time, cue) => {
         if (cue.startTime > time) {
           return -1;
         } else if (cue.endTime < time) {
@@ -418,17 +503,24 @@ export class SubtitlesManager {
           cueIndex++;
         }
       }
-      const wrapper = document.createElement('div');
-      wrapper.className = 'subtitle-track-wrapper';
-      wrapper.appendChild(trackContainer);
-      DOMElements.subtitlesContainer.appendChild(wrapper);
       if (!hasCues) {
-        wrapper.style.opacity = 0;
+        trackContainer.style.opacity = 0;
         const fillerCue = document.createElement('div');
         trackContainer.appendChild(fillerCue);
         fillerCue.textContent = '|';
+      } else {
+        trackContainer.style.opacity = '';
       }
-    });
+    }
+    if (this.isTestSubtitleActive) {
+      const trackContainer = cachedElements[trackLen - 1];
+      trackContainer.replaceChildren();
+      trackContainer.style.opacity = '';
+      const cue = document.createElement('div');
+      cue.textContent = Localize.getMessage('player_testsubtitle');
+      trackContainer.appendChild(cue);
+    }
+    this.checkTrackBounds();
   }
   mediaNameSet() {
     this.openSubtitlesSearch.setQueryInputValue(this.client.mediaName);

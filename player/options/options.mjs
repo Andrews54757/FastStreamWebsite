@@ -8,6 +8,7 @@ import {Localize} from '../modules/Localize.mjs';
 import {ClickActions} from './defaults/ClickActions.mjs';
 import {VisChangeActions} from './defaults/VisChangeActions.mjs';
 import {MiniplayerPositions} from './defaults/MiniplayerPositions.mjs';
+import {DefaultSubtitlesSettings} from './defaults/DefaultSubtitlesSettings.mjs';
 let Options = {};
 const analyzeVideos = document.getElementById('analyzevideos');
 const playStreamURLs = document.getElementById('playstreamurls');
@@ -316,9 +317,12 @@ importButton.addEventListener('click', () => {
     const reader = new FileReader();
     reader.onload = (e) => {
       const text = e.target.result;
-      const newOptions = Utils.mergeOptions(DefaultOptions, JSON.parse(text));
+      const newOptionsObj = JSON.parse(text);
+      const newOptions = Utils.mergeOptions(DefaultOptions, newOptionsObj);
+      const subtitlesSettings = Utils.mergeOptions(DefaultSubtitlesSettings, newOptionsObj.subtitlesSettings || {});
       loadOptions(newOptions);
       optionChanged();
+      Utils.setConfig('subtitlesSettings', JSON.stringify(subtitlesSettings));
     };
     reader.readAsText(file);
   });
@@ -327,7 +331,10 @@ importButton.addEventListener('click', () => {
   picker.remove();
 });
 exportButton.addEventListener('click', async () => {
-  const blob = new Blob([JSON.stringify(Options, null, 2)], {type: 'application/json'});
+  const blob = new Blob([JSON.stringify({
+    ...(await Utils.getOptionsFromStorage()),
+    subtitlesSettings: await Utils.getSubtitlesSettingsFromStorage(),
+  }, null, 2)], {type: 'application/json'});
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
@@ -362,6 +369,7 @@ if (EnvUtils.isExtension()) {
   chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     if (request.type === 'options' || request.type === 'options_init') {
       if (request.time !== optionSendTime) {
+        optionSendTime = request.time;
         loadOptions();
       }
     }

@@ -7,6 +7,7 @@ import {URLUtils} from './utils/URLUtils.mjs';
 import {Utils} from './utils/Utils.mjs';
 import {VideoSource} from './VideoSource.mjs';
 let OPTIONS = null;
+let optionSendTime = null;
 if (EnvUtils.isExtension()) {
   chrome.runtime.onMessage.addListener(
       (request, sender, sendResponse) => {
@@ -19,8 +20,11 @@ if (EnvUtils.isExtension()) {
               id: request.frameId,
             }, '*');
           }
-        } else if (request.type === 'options') {
-          loadOptions();
+        } else if (request.type === 'options' || request.type === 'options_init') {
+          if (request.time !== optionSendTime) {
+            optionSendTime = request.time;
+            loadOptions();
+          }
         } if (request.type === 'analyzerData') {
           window.fastStream.loadAnalyzerData(request.data);
         } else if (request.type === 'media_name') {
@@ -156,14 +160,9 @@ async function sortSubtitles(subs) {
     return subs;
   }
   let defLang = 'en';
-  const subtitlesSettings = await Utils.getConfig('subtitlesSettings');
-  try {
-    const settings = JSON.parse(subtitlesSettings);
-    if (settings['default-lang']) {
-      defLang = settings['default-lang'];
-    }
-  } catch (e) {
-    console.log(e);
+  const subtitlesSettings = await Utils.getSubtitlesSettingsFromStorage();
+  if (subtitlesSettings.defaultLanguage) {
+    defLang = subtitlesSettings.defaultLanguage;
   }
   await Promise.all(subs.map((sub) => {
     return new Promise((resolve, reject)=>{
