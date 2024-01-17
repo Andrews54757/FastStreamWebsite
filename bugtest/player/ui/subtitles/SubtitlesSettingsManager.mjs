@@ -115,7 +115,7 @@ export class SubtitlesSettingsManager extends EventEmitter {
     }
   }
   async loadSettings() {
-    this.settings = await Utils.getSubtitlesSettingsFromStorage();
+   // this.settings = await Utils.getSubtitlesSettingsFromStorage();
     this.updateSettingsUI();
     this.emit(SubtitlesSettingsManagerEvents.SETTINGS_CHANGED, this.settings);
   }
