@@ -125,7 +125,7 @@ export class SubtitlesManager {
     this.isTestSubtitleActive = true
         DOMElements.subtitlesOptionsTestButton.textContent = Localize.getMessage('player_subtitlesmenu_testbtn_stop');
         DOMElements.playerContainer.style.backgroundImage = 'linear-gradient(to right, black, white)';
-   
+        this.renderSubtitles();
 
     DOMElements.subtitlesOptionsTestButton.addEventListener('click', (e) => {
       this.isTestSubtitleActive = !this.isTestSubtitleActive;
