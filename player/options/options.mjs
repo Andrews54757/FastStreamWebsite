@@ -9,6 +9,7 @@ import {ClickActions} from './defaults/ClickActions.mjs';
 import {VisChangeActions} from './defaults/VisChangeActions.mjs';
 import {MiniplayerPositions} from './defaults/MiniplayerPositions.mjs';
 import {DefaultSubtitlesSettings} from './defaults/DefaultSubtitlesSettings.mjs';
+import {DaltonizerTypes} from './defaults/DaltonizerTypes.mjs';
 let Options = {};
 const analyzeVideos = document.getElementById('analyzevideos');
 const playStreamURLs = document.getElementById('playstreamurls');
@@ -34,6 +35,8 @@ const showWhenMiniSelected = document.getElementById('showWhenMiniSelected');
 const storeProgress = document.getElementById('storeprogress');
 const miniSize = document.getElementById('minisize');
 const miniPos = document.getElementById('minipos');
+const daltonizerType = document.getElementById('daltonizerType');
+const daltonizerStrength = document.getElementById('daltonizerStrength');
 autoEnableURLSInput.setAttribute('autocapitalize', 'off');
 autoEnableURLSInput.setAttribute('autocomplete', 'off');
 autoEnableURLSInput.setAttribute('autocorrect', 'off');
@@ -72,6 +75,7 @@ async function loadOptions(newOptions) {
   customSourcePatterns.value = Options.customSourcePatterns || '';
   miniSize.value = Options.miniSize;
   storeProgress.checked = !!Options.storeProgress;
+  setSelectMenuValue(daltonizerType, Options.videoDaltonizerType);
   setSelectMenuValue(clickAction, Options.singleClickAction);
   setSelectMenuValue(dblclickAction, Options.doubleClickAction);
   setSelectMenuValue(tplclickAction, Options.tripleClickAction);
@@ -81,6 +85,11 @@ async function loadOptions(newOptions) {
     showWhenMiniSelected.style.display = '';
   } else {
     showWhenMiniSelected.style.display = 'none';
+  }
+  if (Options.videoDaltonizerType === DaltonizerTypes.NONE) {
+    daltonizerStrength.style.display = 'none';
+  } else {
+    daltonizerStrength.style.display = '';
   }
   if (Options.keybinds) {
     keybindsList.replaceChildren();
@@ -124,6 +133,15 @@ function setSelectMenuValue(container, value) {
   }
   select.value = value;
 }
+createSelectMenu(daltonizerType, Object.values(DaltonizerTypes), Options.videoDaltonizerType, 'options_video_daltonizer', (e) => {
+  Options.videoDaltonizerType = e.target.value;
+  if (Options.videoDaltonizerType === DaltonizerTypes.NONE) {
+    daltonizerStrength.style.display = 'none';
+  } else {
+    daltonizerStrength.style.display = '';
+  }
+  optionChanged();
+});
 createSelectMenu(clickAction, Object.values(ClickActions), Options.singleClickAction, 'options_general_clickaction', (e) => {
   Options.singleClickAction = e.target.value;
   optionChanged();

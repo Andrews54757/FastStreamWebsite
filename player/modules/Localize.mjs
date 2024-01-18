@@ -1140,6 +1140,36 @@ const TranslationMap = {
     "Tono Rotar",
     "色相の回転"
   ],
+  "options_video_daltonizer_type": [
+    "Color blindness correction",
+    "Corrección del daltonismo",
+    "色覚異常の矯正"
+  ],
+  "options_video_daltonizer_strength": [
+    "Strength",
+    "Intensidad",
+    "強度"
+  ],
+  "options_video_daltonizer_none": [
+    "None",
+    "Ninguno",
+    "なし"
+  ],
+  "options_video_daltonizer_protanomaly": [
+    "Protanomaly",
+    "Protanomaly",
+    "Protanomaly"
+  ],
+  "options_video_daltonizer_deuteranomaly": [
+    "Deuteranomaly",
+    "Deuteranomaly",
+    "Deuteranomaly"
+  ],
+  "options_video_daltonizer_tritanomaly": [
+    "Tritanomaly",
+    "Tritanomaly",
+    "Tritanomaly"
+  ],
   "options_general_header": [
     "General Options",
     "Opciones Generales",
