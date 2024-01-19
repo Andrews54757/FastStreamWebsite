@@ -8,6 +8,9 @@ DaltonizerTypeMap.set(DaltonizerTypes.TRITANOMALY, 2);
 export class CSSFilterUtils {
   static getFilterString(options) {
     const filters = [];
+    if (options.videoDaltonizerType !== DaltonizerTypes.NONE && options.videoDaltonizerStrength > 0) {
+      filters.push(`url(#daltonizer-${options.videoDaltonizerType}-${options.videoDaltonizerStrength})`);
+    }
     if (options.videoBrightness !== 1) {
       filters.push(`brightness(${options.videoBrightness})`);
     }
@@ -29,12 +32,9 @@ export class CSSFilterUtils {
     if (options.videoHueRotate !== 0) {
       filters.push(`hue-rotate(${options.videoHueRotate}deg)`);
     }
-    if (options.videoDaltonizerType !== DaltonizerTypes.NONE && options.videoDaltonizerStrength > 0) {
-      filters.push(`url(#daltonizer)`);
-    }
     return filters.join(' ');
   }
-  static makeLMSDaltonizerFilter(type, loss) {
-    return SVGDaltonizer.makeLMSDaltonizerFilter(DaltonizerTypeMap.get(type), loss);
+  static makeLMSDaltonizerFilter(type, strength) {
+    return SVGDaltonizer.makeLMSDaltonizerFilter(DaltonizerTypeMap.get(type), strength, true);
   }
 }

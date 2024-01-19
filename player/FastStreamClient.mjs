@@ -180,7 +180,7 @@ export class FastStreamClient extends EventEmitter {
     }
   }
   updateCSSFilters() {
-    if (this.options.videoDaltonizerType !== -1 && this.options.videoDaltonizerStrength > 0) {
+    if (this.options.videoDaltonizerType !== DaltonizerTypes.NONE && this.options.videoDaltonizerStrength > 0) {
       const previous = document.getElementById('daltonizer-svg');
       if (previous) {
         previous.remove();
@@ -189,7 +189,7 @@ export class FastStreamClient extends EventEmitter {
           this.options.videoDaltonizerType, this.options.videoDaltonizerStrength,
       );
       svg.id = 'daltonizer-svg';
-      filter.id = 'daltonizer';
+      filter.id = `daltonizer-${this.options.videoDaltonizerType}-${this.options.videoDaltonizerStrength}`;
       svg.style.position = 'absolute';
       svg.style.width = '0px';
       svg.style.height = '0px';
