@@ -9,6 +9,7 @@ export class SubtitleSyncer extends EventEmitter {
     this.client = client;
     this.buffer = [];
     this.trackToSync = null;
+    this.isSeeking = false;
     this.options = {
       onFrameProcessed: (prob) => {
         this.onFrameProcessed(prob.isSpeech);
@@ -23,7 +24,7 @@ export class SubtitleSyncer extends EventEmitter {
   shiftSubtitles(delta) {
     if (!this.started) return;
     this.trackToSync.shift(delta);
-    this.client.subtitlesManager.renderSubtitles();
+    this.client.interfaceController.subtitlesManager.renderSubtitles();
     this.onVideoTimeUpdate();
   }
   setup() {
@@ -47,7 +48,7 @@ export class SubtitleSyncer extends EventEmitter {
       isGrabbing = true;
       grabStart = e.clientX;
       grabStartTime = this.video.currentTime;
-      this.client.interfaceController.isSeeking = true;
+      this.isSeeking = true;
       shouldPlay = this.client.persistent.playing;
       if (this.client.persistent.playing) {
         this.client.player.pause();
@@ -59,7 +60,7 @@ export class SubtitleSyncer extends EventEmitter {
         const time = grabStartTime - (delta / this.ui.timelineTicks.clientWidth * this.video.duration);
         this.client.currentTime = time;
         this.client.updateTime(time);
-        this.client.interfaceController.isSeeking = false;
+        this.isSeeking = false;
         if (shouldPlay) {
           this.client.player.play();
         }
@@ -89,7 +90,7 @@ export class SubtitleSyncer extends EventEmitter {
         const delta = e.clientX - grabStartTrack;
         grabStartTrack = e.clientX;
         this.trackToSync.shift(delta / this.ui.timelineTicks.clientWidth * this.video.duration);
-        this.client.subtitlesManager.renderSubtitles();
+        this.client.interfaceController.subtitlesManager.renderSubtitles();
       }
     });
   }

@@ -38,8 +38,9 @@ export class DownloadEntry {
   abort() {
     this.status = DownloadStatus.DOWNLOAD_FAILED;
     this.aborted = true;
-    if (this.downloader) this.downloader.abort();
-    else {
+    if (this.downloader) {
+      this.downloader.abort();
+    } else {
       this.onAbort();
     }
     this.cleanup();
@@ -98,7 +99,8 @@ export class DownloadEntry {
     });
     this.cleanup();
   }
-  onAbort() {
+  onAbort(stats) {
+    if (stats) this.stats = stats;
     this.status = DownloadStatus.DOWNLOAD_FAILED;
     this.watchers.forEach((watcher) => {
       if (watcher.callbacks.onAbort) watcher.callbacks.onAbort(this);

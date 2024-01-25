@@ -1,3 +1,4 @@
+import {EventEmitter} from '../../modules/eventemitter.mjs';
 import {Localize} from '../../modules/Localize.mjs';
 import {WebVTT} from '../../modules/vtt.mjs';
 import {SubtitleTrack} from '../../SubtitleTrack.mjs';
@@ -8,8 +9,10 @@ import {WebUtils} from '../../utils/WebUtils.mjs';
 import {DOMElements} from '../DOMElements.mjs';
 import {OpenSubtitlesSearch, OpenSubtitlesSearchEvents} from './OpenSubtitlesSearch.mjs';
 import {SubtitlesSettingsManager, SubtitlesSettingsManagerEvents} from './SubtitlesSettingsManager.mjs';
-export class SubtitlesManager {
+import {SubtitleSyncer} from './SubtitleSyncer.mjs';
+export class SubtitlesManager extends EventEmitter {
   constructor(client) {
+    super();
     this.client = client;
     this.tracks = [];
     this.activeTracks = [];
@@ -21,6 +24,7 @@ export class SubtitlesManager {
     this.settingsManager.loadSettings();
     this.openSubtitlesSearch = new OpenSubtitlesSearch(client.version);
     this.openSubtitlesSearch.on(OpenSubtitlesSearchEvents.TRACK_DOWNLOADED, this.onSubtitleTrackDownloaded.bind(this));
+    this.subtitleSyncer = new SubtitleSyncer(client);
     this.setupUI();
   }
   loadTrackAndActivateBest(subtitleTrack, autoset = false) {
@@ -68,7 +72,7 @@ export class SubtitlesManager {
     this.tracks.length = 0;
     this.activeTracks.length = 0;
     this.updateTrackList();
-    this.client.subtitleSyncer.stop();
+    this.subtitleSyncer.stop();
   }
   removeTrack(track) {
     let ind = this.tracks.indexOf(track);
@@ -76,13 +80,13 @@ export class SubtitlesManager {
     ind = this.activeTracks.indexOf(track);
     if (ind !== -1) this.activeTracks.splice(ind, 1);
     this.updateTrackList();
-    this.client.subtitleSyncer.toggleTrack(track, true);
+    this.subtitleSyncer.toggleTrack(track, true);
   }
   onSettingsChanged(settings) {
     this.openSubtitlesSearch.setLanguageInputValue(settings.defaultLanguage);
     this.refreshSubtitleStyles();
     this.renderSubtitles();
-    this.client.subtitleSyncer.onVideoTimeUpdate();
+    this.subtitleSyncer.onVideoTimeUpdate();
   }
   onSubtitleTrackDownloaded(track) {
     this.activateTrack(this.addTrack(track));
@@ -104,6 +108,7 @@ export class SubtitlesManager {
     DOMElements.subtitlesMenu.style.display = 'none';
   }
   openUI() {
+    this.emit('open');
     DOMElements.subtitlesMenu.style.display = '';
   }
   setupUI() {
@@ -131,7 +136,7 @@ export class SubtitlesManager {
         DOMElements.playerContainer.style.backgroundImage = '';
       }
       this.renderSubtitles();
-      this.client.subtitleSyncer.onVideoTimeUpdate();
+      this.subtitleSyncer.onVideoTimeUpdate();
     });
     WebUtils.setupTabIndex(DOMElements.subtitlesOptionsTestButton);
     const filechooser = document.createElement('input');
@@ -201,7 +206,7 @@ export class SubtitlesManager {
     optionsbutton.textContent = Localize.getMessage('player_subtitlesmenu_settingsbtn');
     WebUtils.setupTabIndex(optionsbutton);
     optionsbutton.addEventListener('click', (e) => {
-      this.settingsManager.showUI();
+      this.settingsManager.openUI();
     });
     WebUtils.setupTabIndex(DOMElements.subtitlesOptionsBackButton);
     DOMElements.subtitlesView.appendChild(optionsbutton);
@@ -233,7 +238,7 @@ export class SubtitlesManager {
     trackName.classList.add('subtitle-track-name');
     const resyncTool = document.createElement('div');
     resyncTool.title = Localize.getMessage('player_subtitlesmenu_resynctool_label');
-    resyncTool.className = 'fluid_button fluid_button_wand subtitle-resync-tool';
+    resyncTool.className = 'fluid_button fluid_button_wand subtitle-resync-tool subtitle-tool';
     trackElement.appendChild(resyncTool);
     // svg use
     const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
@@ -242,12 +247,12 @@ export class SubtitlesManager {
     svg.appendChild(use);
     resyncTool.appendChild(svg);
     resyncTool.addEventListener('click', (e) => {
-      this.client.subtitleSyncer.toggleTrack(this.tracks[i]);
+      this.subtitleSyncer.toggleTrack(this.tracks[i]);
       e.stopPropagation();
     }, true);
     const downloadTrack = document.createElement('div');
     downloadTrack.title = Localize.getMessage('player_subtitlesmenu_savetool_label');
-    downloadTrack.className = 'fluid_button fluid_button_download subtitle-download-tool';
+    downloadTrack.className = 'fluid_button fluid_button_download subtitle-download-tool subtitle-tool';
     // svg use
     const svg2 = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
     const use2 = document.createElementNS('http://www.w3.org/2000/svg', 'use');
@@ -278,6 +283,7 @@ export class SubtitlesManager {
     }, true);
     const removeTrack = document.createElement('div');
     removeTrack.classList.add('subtitle-remove-tool');
+    removeTrack.classList.add('subtitle-tool');
     removeTrack.title = Localize.getMessage('player_subtitlesmenu_removetool_label');
     trackElement.appendChild(removeTrack);
     removeTrack.addEventListener('click', (e) => {
@@ -286,23 +292,25 @@ export class SubtitlesManager {
     }, true);
     const shiftLTrack = document.createElement('div');
     shiftLTrack.classList.add('subtitle-shiftl-tool');
+    shiftLTrack.classList.add('subtitle-tool');
     shiftLTrack.title = Localize.getMessage('player_subtitlesmenu_shifttool_label', ['-0.2']);
     trackElement.appendChild(shiftLTrack);
     shiftLTrack.addEventListener('click', (e) => {
       this.tracks[i].shift(-0.2);
       this.renderSubtitles();
-      this.client.subtitleSyncer.onVideoTimeUpdate();
+      this.subtitleSyncer.onVideoTimeUpdate();
       this.client.interfaceController.setStatusMessage('subtitles', Localize.getMessage('player_subtitlesmenu_shifttool_message', ['-0.2']), 'info', 700);
       e.stopPropagation();
     }, true);
     const shiftRTrack = document.createElement('div');
     shiftRTrack.classList.add('subtitle-shiftr-tool');
+    shiftRTrack.classList.add('subtitle-tool');
     shiftRTrack.title = Localize.getMessage('player_subtitlesmenu_shifttool_label', ['+0.2']);
     trackElement.appendChild(shiftRTrack);
     shiftRTrack.addEventListener('click', (e) => {
       this.tracks[i].shift(0.2);
       this.renderSubtitles();
-      this.client.subtitleSyncer.onVideoTimeUpdate();
+      this.subtitleSyncer.onVideoTimeUpdate();
       this.client.interfaceController.setStatusMessage('subtitles', Localize.getMessage('player_subtitlesmenu_shifttool_message', ['+0.2']), 'info', 700);
       e.stopPropagation();
     }, true);
@@ -377,7 +385,7 @@ export class SubtitlesManager {
       cachedElements[i].update();
     }
     this.renderSubtitles();
-    this.client.subtitleSyncer.onVideoTimeUpdate();
+    this.subtitleSyncer.onVideoTimeUpdate();
   }
   applyStyles(trackContainer) {
     return this.settingsManager.applyStyles(trackContainer);

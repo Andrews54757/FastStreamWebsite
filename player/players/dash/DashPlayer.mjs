@@ -16,6 +16,8 @@ export default class DashPlayer extends EventEmitter {
     this.isPreview = options?.isPreview || false;
     this.qualityMultiplier = options?.qualityMultiplier || 1.1;
     this.fragmentRequester = new DashFragmentRequester(this);
+    this.desiredVideoLevel = null;
+    this.desiredAudioLevel = null;
   }
   async setup() {
     // eslint-disable-next-line new-cap
@@ -24,7 +26,7 @@ export default class DashPlayer extends EventEmitter {
     const emitterRelay = new EmitterRelay([preEvents, this]);
     VideoUtils.addPassthroughEventListenersToVideo(this.video, emitterRelay);
     this.dash.updateSettings({
-      streaming: {
+      'streaming': {
         abr: {
           autoSwitchBitrate: {audio: false, video: false},
         },
@@ -34,11 +36,17 @@ export default class DashPlayer extends EventEmitter {
           bufferTimeAtTopQualityLongForm: 10,
           bufferPruningInterval: 1,
         },
+        text: {
+          defaultEnabled: false,
+        },
       },
+      // 'debug': {
+      //   'logLevel': DashJS.Debug.LOG_LEVEL_INFO,
+      // },
     });
     this.dash.setCustomInitialTrackSelectionFunction((tracks)=>{
       const lang = navigator.language || 'en';
-      return TrackFilter.filterTracks(tracks, lang);
+      return TrackFilter.filterTracks(tracks, lang, this.qualityMultiplier);
     });
     this.dash.on('needkey', (e) => {
       this.emit(DefaultPlayerEvents.NEED_KEY);
@@ -59,6 +67,14 @@ export default class DashPlayer extends EventEmitter {
     });
     this.dash.on('currentTrackChanged', (a)=>{
       this.extractAllFragments();
+    });
+    this.dash.on('initFragmentNeeded', ()=>{
+      if (this.desiredVideoLevel && this.currentLevel !== this.desiredVideoLevel) {
+        this.currentLevel = this.desiredVideoLevel;
+      }
+      if (this.desiredAudioLevel && this.currentAudioLevel !== this.desiredAudioLevel) {
+        this.currentAudioLevel = this.desiredAudioLevel;
+      }
     });
     this.dash.on(DashJS.MediaPlayer.events.STREAM_INITIALIZED, (e) => {
       this.emit(DefaultPlayerEvents.LANGUAGE_TRACKS);
@@ -107,9 +123,6 @@ export default class DashPlayer extends EventEmitter {
           this.client.makeFragment(fragment.level, fragment.sn, fragment);
         }
       });
-      if (this.currentTime === 0 && this.video.readyState < 2) {
-        this.currentTime = segments[0].startTime;
-      }
     }
   }
   getLevelIdentifier(streamIndex, mediaIndex, repIndex) {
@@ -183,19 +196,9 @@ export default class DashPlayer extends EventEmitter {
     return this.video.paused;
   }
   get levels() {
-    const processor = this.dash.getStreamController().getActiveStream().getProcessors().find((o) => o.getType() === 'video');
-    if (!processor) {
-      return new Map();
-    }
-    const result = new Map();
-    processor.getMediaInfo().representations.map((rep) => {
-      result.set(this.getLevelIdentifier(processor.getStreamInfo().index, processor.getMediaInfo().index, rep.index), {
-        bitrate: rep.bandwidth,
-        height: rep.height,
-        width: rep.width,
-      });
-    });
-    return result;
+    const tracks = this.dash.getTracksFor('video');
+    const currentLang = this.dash.getCurrentTrackFor('video')?.lang || navigator.language || 'en';
+    return TrackFilter.getLevelList(tracks, currentLang);
   }
   get currentLevel() {
     const processor = this.dash.getStreamController()?.getActiveStream()?.getProcessors()?.find((o) => o.getType() === 'video');
@@ -215,8 +218,9 @@ export default class DashPlayer extends EventEmitter {
       if (!track) {
         console.warn('Could not find video track', value);
       }
+      this.desiredVideoLevel = value;
       this.dash.setCurrentTrack(track);
-      this.dash.setQualityFor('video', repIndex);
+      this.dash.setQualityFor('video', repIndex, true);
     } catch (e) {
       console.warn(e);
     }
@@ -238,8 +242,9 @@ export default class DashPlayer extends EventEmitter {
     if (!track) {
       console.warn('Could not find audio track', value);
     }
+    this.desiredAudioLevel = value;
     this.dash.setCurrentTrack(track);
-    this.dash.setQualityFor('audio', repIndex);
+    this.dash.setQualityFor('audio', repIndex, true);
   }
   get duration() {
     return this.video.duration;
@@ -248,7 +253,7 @@ export default class DashPlayer extends EventEmitter {
     return TrackFilter.uniqueLanguages(this.dash.getTracksFor('audio'));
   }
   get videoTracks() {
-    return TrackFilter.uniqueLanguages(this.dash.getTracksFor('video'));
+    return TrackFilter.uniqueLanguages(this.dash.getTracksFor('video'), this.qualityMultiplier);
   }
   get languageTracks() {
     return {

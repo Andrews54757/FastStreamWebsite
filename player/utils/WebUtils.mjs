@@ -14,6 +14,9 @@ export class WebUtils {
       }
     });
   }
+  static getOffsetLeft(elem) {
+    return elem.getBoundingClientRect().left;
+  }
   static createPagesBar(page, totalPages, callback) {
     const create = this.create;
     const total = Math.min(totalPages, 1000);

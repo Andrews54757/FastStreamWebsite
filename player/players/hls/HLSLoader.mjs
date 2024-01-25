@@ -104,9 +104,14 @@ export function HLSLoaderFactory(player) {
               }
             } else {
               if (this.callbacks) {
-                this.callbacks.onError(this.stats.error, this.context, null);
+                this.callbacks.onError(this.stats.error || {code: 520, text: 'Unknown'}, this.context, null);
               }
             }
+          },
+          onAbort: (entry) => {
+            this.copyStats(entry.stats);
+            this.stats.aborted = true;
+            if (this.callbacks?.onAbort) this.callbacks.onAbort(this.stats, this.context, null, null);
           },
         }, this.config, 1000);
       } catch (e) {
@@ -142,9 +147,14 @@ export function HLSLoaderFactory(player) {
             if (this.stats.timeout) {
               this.callbacks.onTimeout(this.stats, this.context);
             } else {
-              this.callbacks.onError(this.stats.error, this.context, null);
+              this.callbacks.onError(this.stats.error || {code: 520, text: 'Unknown'}, this.context, null);
             }
           }
+        },
+        onAbort: (entry) => {
+          this.copyStats(entry.stats);
+          this.stats.aborted = true;
+          if (this.callbacks?.onAbort) this.callbacks.onAbort(this.stats, this.context, null, null);
         },
       });
     }

@@ -100,10 +100,10 @@ export class KeybindManager extends EventEmitter {
       this.client.interfaceController.skipSegment();
     });
     this.on('SubtrackShiftRight', (e) => {
-      this.client.subtitleSyncer.shiftSubtitles(0.2);
+      this.client.interfaceController.subtitlesManager.subtitleSyncer.shiftSubtitles(0.2);
     });
     this.on('SubtrackShiftLeft', (e) => {
-      this.client.subtitleSyncer.shiftSubtitles(-0.2);
+      this.client.interfaceController.subtitlesManager.subtitleSyncer.shiftSubtitles(-0.2);
     });
     this.on('keybind', (keybind, e) => {
       // console.log("Keybind", keybind);

@@ -102,6 +102,7 @@ export class HLSFragmentRequester {
       onAbort: (entry) => {
         fragment.status = DownloadStatus.WAITING;
         this.player.emit(DefaultPlayerEvents.FRAGMENT_UPDATE, fragment);
+        if (callbacks.onAbort) callbacks.onAbort(entry);
       },
     }, priority);
     return loader;

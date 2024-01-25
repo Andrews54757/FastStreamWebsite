@@ -3,12 +3,10 @@ import {KeybindManager} from './ui/KeybindManager.mjs';
 import {DownloadManager} from './network/DownloadManager.mjs';
 import {DefaultPlayerEvents} from './enums/DefaultPlayerEvents.mjs';
 import {DownloadStatus} from './enums/DownloadStatus.mjs';
-import {SubtitlesManager} from './ui/subtitles/SubtitlesManager.mjs';
 import {VideoAnalyzer} from './modules/analyzer/VideoAnalyzer.mjs';
 import {AnalyzerEvents} from './enums/AnalyzerEvents.mjs';
 import {EventEmitter} from './modules/eventemitter.mjs';
 import {SourcesBrowser} from './ui/SourcesBrowser.mjs';
-import {SubtitleSyncer} from './ui/subtitles/SubtitleSyncer.mjs';
 import {PlayerLoader} from './players/PlayerLoader.mjs';
 import {DOMElements} from './ui/DOMElements.mjs';
 import {AudioConfigManager} from './ui/audio/AudioConfigManager.mjs';
@@ -68,10 +66,8 @@ export class FastStreamClient extends EventEmitter {
     this.interfaceController = new InterfaceController(this);
     this.keybindManager = new KeybindManager(this);
     this.downloadManager = new DownloadManager(this);
-    this.subtitlesManager = new SubtitlesManager(this);
     this.sourcesBrowser = new SourcesBrowser(this);
     this.videoAnalyzer = new VideoAnalyzer(this);
-    this.subtitleSyncer = new SubtitleSyncer(this);
     this.audioConfigManager = new AudioConfigManager(this);
     this.videoAnalyzer.on(AnalyzerEvents.MATCH, () => {
       this.interfaceController.updateSkipSegments();
@@ -207,10 +203,10 @@ export class FastStreamClient extends EventEmitter {
     if (data) this.videoAnalyzer.loadAnalyzerData(data);
   }
   clearSubtitles() {
-    this.subtitlesManager.clearTracks();
+    this.interfaceController.subtitlesManager.clearTracks();
   }
   loadSubtitleTrack(subtitleTrack, autoset = false) {
-    return this.subtitlesManager.loadTrackAndActivateBest(subtitleTrack, autoset);
+    return this.interfaceController.subtitlesManager.loadTrackAndActivateBest(subtitleTrack, autoset);
   }
   updateDuration() {
     this.interfaceController.durationChanged();
@@ -218,10 +214,7 @@ export class FastStreamClient extends EventEmitter {
   }
   updateTime(time) {
     this.persistent.currentTime = time;
-    this.interfaceController.updateProgress();
-    this.subtitlesManager.renderSubtitles();
-    this.subtitleSyncer.onVideoTimeUpdate();
-    this.interfaceController.updateSkipSegments();
+    this.interfaceController.timeUpdated();
     if (this.options.storeProgress && this.progressData && time !== this.progressData.lastTime) {
       const now = Date.now();
       if (now - this.lastProgressSave > 1000) {
@@ -374,9 +367,11 @@ export class FastStreamClient extends EventEmitter {
       this.progressDataLoading = false;
       return;
     }
+    let interval = 0;
     const changeTimeFn = () =>{
-      if (!this.duration) return;
-      this.player.off(DefaultPlayerEvents.DURATIONCHANGE, changeTimeFn);
+      if (!this.duration || !this.currentVideo || this.currentVideo.readyState === 0) return;
+      clearInterval(interval);
+      this.context.off(DefaultPlayerEvents.DURATIONCHANGE, changeTimeFn);
       if (!this.progressDataLoading || !this.progressData) return;
       this.progressDataLoading = false;
       const lastTime = this.progressData.lastTime;
@@ -386,7 +381,10 @@ export class FastStreamClient extends EventEmitter {
         this.setSeekSave(true);
       }
     };
-    this.player.on(DefaultPlayerEvents.DURATIONCHANGE, changeTimeFn);
+    interval = setInterval(() => {
+      changeTimeFn();
+    }, 1000);
+    this.context.on(DefaultPlayerEvents.DURATIONCHANGE, changeTimeFn);
     changeTimeFn();
   }
   async saveProgressData() {
@@ -452,38 +450,25 @@ export class FastStreamClient extends EventEmitter {
         if (this.fragments) this.freeFragments(this.fragments);
         if (this.audioFragments) this.freeFragments(this.audioFragments);
       }
-      this.interfaceController.updateFragmentsLoaded();
-      // Detect buffering
-      if (this.persistent.playing) {
-        const time = this.currentTime;
-        if (time === this.lastTime) {
-          this.interfaceController.setBuffering(true);
-        } else {
-          this.interfaceController.setBuffering(false);
-        }
-        this.lastTime = time;
-      } else if (this.currentVideo) {
-        if (this.currentVideo.readyState === 0) {
-          this.interfaceController.setBuffering(true);
-        } else if (this.currentVideo.readyState > 1) {
-          this.interfaceController.setBuffering(false);
-        }
-      }
     }
+    this.interfaceController.tick();
     this.checkLevelChange();
     this.videoAnalyzer.update();
     this.videoAnalyzer.saveAnalyzerData();
-    this.interfaceController.updateStatusMessage();
   }
   predownloadFragments() {
-    let nextDownload = this.getNextToDownload();
-    let hasDownloaded = false;
-    let index = 0;
+    // Don't pre-download if user is offline
+    if (!navigator.onLine) {
+      return false;
+    }
+    // throttle download speed if needed
     const speed = this.downloadManager.getSpeed();
-    // throttle download speed so blob can catch up
     if (speed > this.options.maxSpeed) {
       return false;
     }
+    let nextDownload = this.getNextToDownload();
+    let hasDownloaded = false;
+    let index = 0;
     while (nextDownload) {
       if (nextDownload.canFree() && !this.shouldDownloadAll()) {
         if (nextDownload.start > this.persistent.currentTime + this.options.bufferAhead) {
@@ -629,7 +614,7 @@ export class FastStreamClient extends EventEmitter {
   }
   setMediaName(name) {
     this.mediaName = name;
-    this.subtitlesManager.mediaNameSet();
+    this.interfaceController.subtitlesManager.mediaNameSet();
   }
   bindPlayer(player) {
     this.context = player.createContext();
@@ -712,7 +697,7 @@ export class FastStreamClient extends EventEmitter {
     this.context.on(DefaultPlayerEvents.SUSPEND, (event) => {
     });
     this.context.on(DefaultPlayerEvents.TIMEUPDATE, (event) => {
-      if (this.interfaceController.isSeeking) return;
+      if (this.interfaceController.isUserSeeking()) return;
       this.updateTime(this.currentTime);
       if (this.videoAnalyzer.pushFrame(this.player.getVideo())) {
         this.videoAnalyzer.calculate();

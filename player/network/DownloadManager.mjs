@@ -159,7 +159,7 @@ export class DownloadManager {
     this.downloaders.length = 0;
   }
   onDownloaderFinished(downloader, entry) {
-    if (entry.status === DownloadStatus.DOWNLOAD_FAILED && !entry.aborted &&
+    if (navigator.onLine && entry.status === DownloadStatus.DOWNLOAD_FAILED && !entry.aborted &&
       this.downloaders.length > 1) {
       const ind = this.downloaders.indexOf(downloader);
       if (ind !== -1) {

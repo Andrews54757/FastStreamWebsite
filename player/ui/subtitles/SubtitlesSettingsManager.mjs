@@ -34,7 +34,7 @@ export class SubtitlesSettingsManager extends EventEmitter {
       e.stopPropagation();
     });
     DOMElements.subtitlesOptionsBackButton.addEventListener('click', (e) => {
-      this.hideUI();
+      this.closeUI();
       e.stopPropagation();
     });
     this.updateSettingsUI();
@@ -88,6 +88,7 @@ export class SubtitlesSettingsManager extends EventEmitter {
       input.setAttribute('autocomplete', 'off');
       input.setAttribute('autocorrect', 'off');
       input.setAttribute('autocapitalize', 'off');
+      input.setAttribute('spellcheck', 'false');
       if (config.isColor) {
         Coloris.bindElement(input);
         input.addEventListener('keydown', (e)=>{
@@ -119,10 +120,10 @@ export class SubtitlesSettingsManager extends EventEmitter {
     this.updateSettingsUI();
     this.emit(SubtitlesSettingsManagerEvents.SETTINGS_CHANGED, this.settings);
   }
-  showUI() {
+  openUI() {
     DOMElements.subtitlesMenu.classList.add('settings');
   }
-  hideUI() {
+  closeUI() {
     DOMElements.subtitlesMenu.classList.remove('settings');
   }
 }
