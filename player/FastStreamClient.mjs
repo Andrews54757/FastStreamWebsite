@@ -24,7 +24,7 @@ export class FastStreamClient extends EventEmitter {
     this.version = EnvUtils.getVersion();
     this.options = {
       autoPlay: false,
-      maxSpeed: 300 * 1000 * 1000, // 300 MB/s
+      maxSpeed: -1,
       introCutoff: 5 * 60,
       outroCutoff: 5 * 60,
       bufferAhead: 120,
@@ -463,7 +463,7 @@ export class FastStreamClient extends EventEmitter {
     }
     // throttle download speed if needed
     const speed = this.downloadManager.getSpeed();
-    if (speed > this.options.maxSpeed) {
+    if (this.options.maxSpeed >= 0 && speed > this.options.maxSpeed) {
       return false;
     }
     let nextDownload = this.getNextToDownload();
