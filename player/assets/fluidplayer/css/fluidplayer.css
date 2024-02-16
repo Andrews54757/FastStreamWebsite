@@ -1973,7 +1973,7 @@ body {
     height: 300px;
     background-color: black;
     border-radius: 3px;
-    min-width: 560px;
+    min-width: 300px;
 }
 
 .equalizer canvas {
@@ -2280,7 +2280,8 @@ body {
 }
 
 
-.compressor {
+.compressor,
+.crosstalk {
     position: relative;
     width: 30%;
     min-width: 560px;
@@ -2290,7 +2291,23 @@ body {
     border-radius: 3px;
 }
 
-.compressor .compressor_title {
+@media (max-width: 850px) {
+    .compressor .compressor_graph {
+        display: none;
+    }
+
+    .compressor,
+    .crosstalk {
+        min-width: 300px;
+        width: 100%;
+    }
+
+    .compressor_controls {
+        margin-left: 15px;;
+    }
+}
+
+.compressor_title {
     top: 5px;
     left: 0px;
     right: 0px;
@@ -2300,17 +2317,18 @@ body {
     color: rgba(255, 255, 255, 0.8);
 }
 
-.compressor_container {
+.compressor_container,
+.crosstalk_container {
     display: flex;
     position: absolute;
     top: 30px;
     bottom: 0px;
     left: 0px;
     right: 0px;
-    gap: 10px;
 }
 
-.compressor_container .compressor_graph {
+
+.compressor_graph {
     position: relative;
     height: 270px;
     width: 270px;
@@ -2319,7 +2337,7 @@ body {
     box-sizing: border-box;
 }
 
-.compressor_graph .compressor_y_axis {
+.compressor_y_axis {
     position: absolute;
     top: 0px;
     bottom: 30px;
@@ -2327,7 +2345,7 @@ body {
     width: 30px;
 }
 
-.compressor_graph .compressor_x_axis {
+.compressor_x_axis {
     position: absolute;
     bottom: 0px;
     left: 30px;
@@ -2335,7 +2353,7 @@ body {
     height: 30px;
 }
 
-.compressor_graph .compressor_graph_container {
+.compressor_graph_container {
     position: absolute;
     top: 0px;
     bottom: 30px;
@@ -2344,7 +2362,7 @@ body {
     border: 1px solid rgba(255, 255, 255, 0.3);
 }
 
-.compressor_graph .compressor_graph_container canvas {
+.compressor_graph_container canvas {
     position: absolute;
     top: 0px;
     left: 0px;
@@ -2353,7 +2371,8 @@ body {
 }
 
 
-.compressor_container .compressor_controls {
+.compressor_controls,
+.crosstalk_controls {
     display: flex;
     flex-wrap: wrap;
     position: relative;
@@ -2363,6 +2382,41 @@ body {
     box-sizing: border-box;
     overflow-y: auto;
     margin-right: 15px;
+    margin-left: 15px;
+    gap: 0px 10px;
+}
+
+.crosstalk_calculator {
+    max-width: 200px;
+    gap: 5px;
+    display: flex;
+    flex-direction: column;
+    padding: 0px 10px;
+}
+
+.crosstalk_calculator_input_container {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.crosstalk_calculator_label {
+    display: block;
+    text-align: left;
+    font-size: 13px;
+    color: rgba(255, 255, 255, 0.8);
+}
+
+input.crosstalk_calculator_input {
+    width: 100%;
+    height: 20px;
+    line-height: 20px;
+    border-radius: 2px;
+    text-align: center;
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.8);
+    background-color: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.3);
 }
 
 .compressor_x_axis_tick {
@@ -2496,6 +2550,29 @@ body {
     border-radius: 1px;
     background-color: rgba(255, 255, 255, 0.7);
     top: calc(50% + 17px);
+}
+
+.knob_suggested_value_tick {
+    position: absolute;
+    width: 0px;
+    height: 34px;
+    top: 50%;
+    left: 50%;
+    transform-origin: 50% 0%;
+}
+.knob_suggested_value_tick_dot {
+    position: absolute;
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    bottom: 0px;
+    left: 50%;
+    background-color: rgba(255, 255, 255, 0.7);
+    transform: translate(-50%, -50%);
+}
+
+.knob_suggested_value_tick_dot.tracking {
+    background-color: rgba(80, 220, 80, 1);
 }
 
 .knob_max_value_tick {

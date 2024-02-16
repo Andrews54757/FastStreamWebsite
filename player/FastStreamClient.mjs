@@ -329,9 +329,7 @@ export class FastStreamClient extends EventEmitter {
     this.audioContext = new AudioContext();
     this.audioSource = this.audioContext.createMediaElementSource(this.player.getVideo());
     this.audioConfigManager.setupNodes();
-    this.audioGain = this.audioContext.createGain();
-    this.audioConfigManager.getOutputNode().connect(this.audioGain);
-    this.audioGain.connect(this.audioContext.destination);
+    this.audioConfigManager.getOutputNode().connect(this.audioContext.destination);
     this.updateVolume();
     this.player.playbackRate = this.persistent.playbackRate;
     this.setSeekSave(false);
@@ -599,10 +597,6 @@ export class FastStreamClient extends EventEmitter {
       this.audioSource.disconnect();
       this.audioSource = null;
     }
-    if (this.audioGain) {
-      this.audioGain.disconnect();
-      this.audioGain = null;
-    }
     promises.push(this.downloadManager.reset());
     this.interfaceController.reset();
     this.persistent.buffering = false;
@@ -861,7 +855,7 @@ export class FastStreamClient extends EventEmitter {
   updateVolume() {
     const value = this.persistent.volume;
     if (this.player) this.player.volume = 1;
-    if (this.audioGain) this.audioGain.gain.value = value;
+    this.audioConfigManager.updateVolume(value);
     this.interfaceController.updateVolumeBar();
   }
   get volume() {

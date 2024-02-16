@@ -965,6 +965,56 @@ const TranslationMap = {
     "Silenciar",
     "消音"
   ],
+  "audiocrosstalk_title": [
+    "Audio Crosstalk Correction",
+    "Corrección de Crosstalk de Audio",
+    "オーディオクロストーク補正"
+  ],
+  "audiocrosstalk_enabled": [
+    "Crosstalk Correction Enabled",
+    "Corrección de Crosstalk Habilitada",
+    "クロストーク補正有効"
+  ],
+  "audiocrosstalk_disabled": [
+    "Crosstalk Correction Disabled",
+    "Corrección de Crosstalk Deshabilitada",
+    "クロストーク補正無効"
+  ],
+  "audiocrosstalk_decaygain": [
+    "Decay",
+    "Decaimiento",
+    "減衰"
+  ],
+  "audiocrosstalk_centergain": [
+    "Center Gain",
+    "Ganancia Central",
+    "センターゲイン"
+  ],
+  "audiocrosstalk_microdelay": [
+    "Delta T",
+    "Delta T",
+    "Delta T"
+  ],
+  "audiocrosstalk_lowbypass": [
+    "Low Bypass",
+    "Bypass Bajo",
+    "低周波バイパス"
+  ],
+  "audiocrosstalk_highbypass": [
+    "High Bypass",
+    "Bypass Alto",
+    "高周波バイパス"
+  ],
+  "audiocrosstalk_speakerdistance": [
+    "Speaker Distance",
+    "Distancia Entre Altavoz",
+    "スピーカー間の距離"
+  ],
+  "audiocrosstalk_headdistance": [
+    "Head Distance",
+    "Distancia de la Cabeza",
+    "ヘッド間の距離"
+  ],
   "audiocompressor_title": [
     "Audio Compressor",
     "Compresor de Audio",
