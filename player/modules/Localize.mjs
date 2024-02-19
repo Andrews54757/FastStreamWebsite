@@ -985,10 +985,10 @@ const TranslationMap = {
     "Decaimiento",
     "減衰"
   ],
-  "audiocrosstalk_centergain": [
-    "Center Gain",
-    "Ganancia Central",
-    "センターゲイン"
+  "audiocrosstalk_colorgain": [
+    "Max Coloration",
+    "Coloración Máxima",
+    "色付け"
   ],
   "audiocrosstalk_microdelay": [
     "Delta T",

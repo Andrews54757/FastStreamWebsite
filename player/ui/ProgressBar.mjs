@@ -151,8 +151,8 @@ export class ProgressBar extends EventEmitter {
   }
   updateFragmentsLoaded() {
     if (!this.client.player) {
-      this.renderProgressBar(duration, this.progressCache, []);
-      this.renderProgressBar(duration, this.progressCacheAudio, []);
+      this.renderProgressBar(0, this.progressCache, []);
+      this.renderProgressBar(0, this.progressCacheAudio, []);
       return;
     }
     const player = this.client.player;
