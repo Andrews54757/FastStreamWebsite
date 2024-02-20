@@ -9,8 +9,6 @@ export class AudioEqualizer {
     this.equalizerNodes = [];
     this.preAnalyzer = null;
     this.postAnalyzer = null;
-    this.spectrumMaximums = null;
-    this.spectrumMaximumsFreshness = null;
     this.equalizerDbResponse = null;
     this.setupUI();
   }
@@ -22,10 +20,10 @@ export class AudioEqualizer {
     return this.ui.equalizer;
   }
   getInputNode() {
-    return this.preAnalyzer;
+    return this.inputNode;
   }
   getOutputNode() {
-    return this.postAnalyzer;
+    return this.outputNode;
   }
   setupUI() {
     this.ui = {};
@@ -65,7 +63,6 @@ export class AudioEqualizer {
     };
     this.ui.zeroLineNode.addEventListener('click', (e) => {
       e.stopPropagation();
-      if (!this.preAnalyzer) return;
       let type = 'peaking';
       if (this.ui.zeroLineNode.classList.contains('highpass')) {
         type = 'highpass';
@@ -77,11 +74,6 @@ export class AudioEqualizer {
       this.addEQNode(node);
     });
     const zeroLineNodeShowHide = (e)=> {
-      // if no analysers, don't show the zero line node
-      if (!this.preAnalyzer || !this.postAnalyzer) {
-        this.ui.zeroLineNode.style.display = 'none';
-        return;
-      }
       // if targetting a node, don't show the zero line node
       if (e.target.classList.contains('equalizer_node')) {
         this.ui.zeroLineNode.style.display = 'none';
@@ -109,7 +101,6 @@ export class AudioEqualizer {
     });
   }
   render() {
-    if (!this.preAnalyzer || !this.postAnalyzer) return;
     if (this.ui.equalizer.clientWidth !== this.pastWidth) {
       this.pastWidth = this.ui.equalizer.clientWidth;
       // Re-render equalizer response when width changes
@@ -123,7 +114,7 @@ export class AudioEqualizer {
   }
   refreshEQNodes() {
     try {
-      this.preAnalyzer.disconnect(this.postAnalyzer);
+      this.inputNode.disconnect(this.outputNode);
     } catch (e) {
     }
     this.equalizerNodes.forEach((node) => {
@@ -140,20 +131,27 @@ export class AudioEqualizer {
     });
     this.equalizerNodes.forEach((node, index) => {
       if (index === 0) {
-        this.preAnalyzer.connect(node);
+        this.inputNode.connect(node);
       } else {
         this.equalizerNodes[index - 1].connect(node);
       }
     });
     if (this.equalizerNodes.length === 0) {
-      this.preAnalyzer.connect(this.postAnalyzer);
+      this.inputNode.connect(this.outputNode);
     } else {
-      this.equalizerNodes[this.equalizerNodes.length - 1].connect(this.postAnalyzer);
+      this.equalizerNodes[this.equalizerNodes.length - 1].connect(this.outputNode);
     }
     this.renderEqualizerResponse();
     this.updateEqualizerNodeMarkers();
   }
   renderEqualizerSpectrum() {
+    // check if ui is visible
+    if (this.ui.spectrumCanvas.checkVisibility()) {
+      this.setupAnalyzers();
+    } else {
+      this.destroyAnalyzers();
+    }
+    if (!this.preAnalyzer || !this.postAnalyzer) return;
     const bufferLength = this.preAnalyzer.frequencyBinCount;
     const dataArrayPre = new Uint8Array(bufferLength);
     const dataArrayPost = new Uint8Array(bufferLength);
@@ -164,7 +162,7 @@ export class AudioEqualizer {
     const width = this.ui.spectrumCanvas.width;
     const height = this.ui.spectrumCanvas.height;
     this.spectrumCtx.clearRect(0, 0, width, height);
-    const sampleRate = this.preAnalyzer.context.sampleRate;
+    const sampleRate = this.audioContext.sampleRate;
     const maxFreq = sampleRate / 2;
     const frequencyWidth = maxFreq;
     const logFrequencyWidth = Math.log10(frequencyWidth) - Math.log10(20);
@@ -216,24 +214,10 @@ export class AudioEqualizer {
         this.spectrumCtx.fillStyle = `rgba(0, 100, 180, 0.5)`;
         this.spectrumCtx.fillRect(newX, height - yPost * yScale, barWidth, yPost * yScale);
       }
-      // // draw average fill color red
-      // this.spectrumCtx.fillStyle = `rgb(255, 255, 0)`;
-      // this.spectrumCtx.fillRect(newX, height - average * yScale, barWidth, 2);
-      // if (yPost > this.spectrumMaximums[i] || this.spectrumMaximumsFreshness[i] > 140) {
-      //   this.spectrumMaximums[i] = yPost;
-      //   this.spectrumMaximumsFreshness[i] = 0;
-      // } else {
-      //   this.spectrumMaximumsFreshness[i] += 1;
-      // }
-      // const timeDiff = this.spectrumMaximumsFreshness[i];
-      // const freshness = timeDiff < 100 ? 1 : 1 - ( ( timeDiff - 100 ) / (140 - 100) );
-      // this.spectrumCtx.fillStyle = `rgba(238, 119, 85, ${freshness})`;
-      // this.spectrumCtx.fillRect(newX, height - this.spectrumMaximums[i] * yScale, barWidth, 2);
       lastX = newX;
     }
   }
   updateEqualizerNodeMarkers() {
-    if (!this.preAnalyzer) return;
     Array.from(this.ui.equalizerNodes.children).forEach((node) => {
       if (node.classList.contains('zero_line_node')) return;
       node.remove();
@@ -258,7 +242,7 @@ export class AudioEqualizer {
       lines.push(instructions.join('\r\n'));
       return lines.join('\r\n');
     }
-    const sampleRate = this.preAnalyzer.context.sampleRate;
+    const sampleRate = this.audioContext.sampleRate;
     const maxFreq = sampleRate / 2;
     this.equalizerNodes.forEach((node, i) => {
       const el = WebUtils.create('div', null, 'equalizer_node tooltip');
@@ -402,7 +386,7 @@ export class AudioEqualizer {
     this.ui.equalizerCanvas.height = this.ui.equalizer.clientHeight * window.devicePixelRatio;
     const width = this.ui.equalizerCanvas.width;
     const height = this.ui.equalizerCanvas.height;
-    const sampleRate = this.preAnalyzer.context.sampleRate;
+    const sampleRate = this.audioContext.sampleRate;
     const maxFreq = sampleRate / 2;
     const bufferLength = width;
     const frequencyArray = new Float32Array(bufferLength);
@@ -476,7 +460,7 @@ export class AudioEqualizer {
   }
   setupEqualizerFrequencyAxis() {
     this.ui.equalizerFrequencyAxis.replaceChildren();
-    const sampleRate = this.preAnalyzer.context.sampleRate;
+    const sampleRate = this.audioContext.sampleRate;
     const maxFreq = sampleRate / 2;
     const frequencyWidth = maxFreq;
     const logFrequencyWidth = Math.log10(frequencyWidth);
@@ -529,23 +513,37 @@ export class AudioEqualizer {
     }
   }
   ratioToFrequency(ratio) {
-    const sampleRate = this.preAnalyzer.context.sampleRate;
+    const sampleRate = this.audioContext.sampleRate;
     const maxFreq = sampleRate / 2;
     const frequencyWidth = maxFreq;
     const logFrequencyWidth = Math.log10(frequencyWidth / 20);
     return Utils.clamp(Math.pow(10, ratio * logFrequencyWidth + Math.log10(20)), 0, maxFreq);
   }
-  setupNodes(audioContext) {
-    this.audioContext = audioContext;
+  setupAnalyzers() {
+    if (!this.audioContext || this.preAnalyzer) return;
+    const audioContext = this.audioContext;
     this.preAnalyzer = audioContext.createAnalyser();
     this.postAnalyzer = audioContext.createAnalyser();
-    this.spectrumMaximums = new Uint8Array(this.postAnalyzer.frequencyBinCount);
-    this.spectrumMaximumsFreshness = new Uint8Array(this.postAnalyzer.frequencyBinCount);
     this.preAnalyzer.smoothingTimeConstant = 0.6;
     this.postAnalyzer.smoothingTimeConstant = 0.6;
     this.preAnalyzer.maxDecibels = -20;
     this.postAnalyzer.maxDecibels = -20;
-    this.preAnalyzer.connect(this.postAnalyzer);
+    this.inputNode.connect(this.preAnalyzer);
+    this.outputNode.connect(this.postAnalyzer);
+  }
+  destroyAnalyzers() {
+    if (!this.preAnalyzer) return;
+    this.inputNode.disconnect(this.preAnalyzer);
+    this.outputNode.disconnect(this.postAnalyzer);
+    this.preAnalyzer = null;
+    this.postAnalyzer = null;
+  }
+  setupNodes(audioContext) {
+    this.destroyAnalyzers();
+    this.audioContext = audioContext;
+    this.inputNode = audioContext.createGain();
+    this.outputNode = audioContext.createGain();
+    this.inputNode.connect(this.outputNode);
     this.setupEqualizerFrequencyAxis();
     this.setupEqualizerDecibelAxis();
     if (this.equalizerConfig) {

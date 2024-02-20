@@ -189,8 +189,11 @@ export class CrosstalkNode {
     // Create splitter and merger nodes
     const ctx = this.audioContext;
     this.input = ctx.createGain();
+    this.input.channelInterpretation = 'speakers';
+    this.input.channelCount = 2;
+    this.input.channelCountMode = 'explicit';
     this.input.gain.value = 1.2;
-    const merger = ctx.createChannelMerger(6);
+    const merger = ctx.createChannelMerger(2);
     this.output = merger;
     this.crossover = new Crossover.CrossoverNode(ctx, {
       cutoffs: this.cutoffs,
@@ -209,7 +212,6 @@ export class CrosstalkNode {
     const convolvers = this.convolver_L.concat(this.convolver_R).concat([this.convolver_BYPASS]);
     convolvers.forEach((convolver) => {
       convolver.normalize = false;
-      convolver.channelInterpretation = 'discrete';
     });
     const h_BYPASS = new Float32Array(BUFFER_SIZE);
     h_BYPASS[0] = 1;
@@ -220,19 +222,14 @@ export class CrosstalkNode {
     const splitter_L = ctx.createChannelSplitter(2);
     const splitter_R = ctx.createChannelSplitter(2);
     this.crossover.getNode().connect(this.convolver_BYPASS, 0, 0);
-    const bypassSplitter = ctx.createChannelSplitter(6);
-    const bypassSplitter2 = ctx.createChannelSplitter(2);
-    this.convolver_BYPASS.connect(bypassSplitter2);
-    this.input.connect(bypassSplitter);
+    const bypassSplitter = ctx.createChannelSplitter(2);
+    this.convolver_BYPASS.connect(bypassSplitter);
     splitter_L.connect(merger, 0, 0);
     splitter_L.connect(merger, 1, 0);
     splitter_R.connect(merger, 0, 1);
     splitter_R.connect(merger, 1, 1);
-    bypassSplitter2.connect(merger, 0, 0);
-    bypassSplitter2.connect(merger, 1, 1);
-    for (let i = 2; i < 6; i++) {
-      bypassSplitter.connect(merger, i, i);
-    }
+    bypassSplitter.connect(merger, 0, 0);
+    bypassSplitter.connect(merger, 1, 1);
     this.splitter_L = splitter_L;
     this.splitter_R = splitter_R;
     this.updateBuffers();
