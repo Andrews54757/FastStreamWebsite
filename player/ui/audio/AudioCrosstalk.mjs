@@ -106,7 +106,7 @@ export class AudioCrosstalk {
     const l2 = Math.sqrt(Math.pow(earToEarDistance / 2 + speakerDistance / 2, 2) + headDistance * headDistance);
     const dl = l2 - l1;
     return {
-      microdelay: Utils.clamp(Math.round(dl / speedOfSound * 1e6), 30, 150),
+      microdelay: Utils.clamp(Math.round(dl / speedOfSound * 1e6), 30, 200),
       decaygain: Utils.clamp(Math.round(AudioUtils.gainToDB(l1 / l2) * 1000), -1000, -1),
     };
   }
@@ -172,7 +172,7 @@ export class AudioCrosstalk {
         this.updateCrosstalk();
       }
     }, 'dB');
-    this.crosstalkKnobs.microdelay = WebUtils.createKnob(Localize.getMessage('audiocrosstalk_microdelay'), 30, 150, (val) => {
+    this.crosstalkKnobs.microdelay = WebUtils.createKnob(Localize.getMessage('audiocrosstalk_microdelay'), 30, 200, (val) => {
       if (this.crosstalkConfig && val !== this.crosstalkConfig.microdelay) {
         this.crosstalkConfig.microdelay = val;
         this.updateCrosstalk();

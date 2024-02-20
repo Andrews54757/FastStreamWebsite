@@ -1,6 +1,7 @@
 import {Crossover} from './crossover.mjs';
 import {FFT} from './fft.mjs';
-const BUFFER_SIZE = 512;
+const IMPULSE_BUFFER_SIZE = 512;
+const FREQUENCY_BUFFER_SIZE = IMPULSE_BUFFER_SIZE * 4;
 const SHIFT_AMOUNT = 128;
 /* eslint-disable camelcase */
 export class CrosstalkNode {
@@ -8,7 +9,7 @@ export class CrosstalkNode {
     this.cachedOptions = {};
     this.currentConvolver = 0;
     this.audioContext = audioContext;
-    this.fft = new FFT(BUFFER_SIZE * 2);
+    this.fft = new FFT(FREQUENCY_BUFFER_SIZE);
     this.configure(options);
   }
   idft(X) {
@@ -39,8 +40,10 @@ export class CrosstalkNode {
       highbypass: 5000,
       ...noptions,
     };
+    const fs = this.audioContext.sampleRate;
+    options.tc = options.microdelay * fs * 1e-6;
     const changedProperties = {
-      microdelay: options.microdelay !== this.cachedOptions.microdelay,
+      tc: options.tc !== this.cachedOptions.tc,
       decaygain: options.decaygain !== this.cachedOptions.decaygain,
       colorgain: options.colorgain !== this.cachedOptions.colorgain,
       lowbypass: options.lowbypass !== this.cachedOptions.lowbypass,
@@ -50,11 +53,10 @@ export class CrosstalkNode {
     if (changedProperties.highbypass || changedProperties.lowbypass) {
       this.configureCrossover();
     }
-    if (changedProperties.microdelay || changedProperties.decaygain || changedProperties.colorgain) {
-      const fs = this.audioContext.sampleRate;
-      const n = BUFFER_SIZE * 2;
+    if (changedProperties.tc || changedProperties.decaygain || changedProperties.colorgain) {
+      const n = FREQUENCY_BUFFER_SIZE;
       const g = options.decaygain;
-      const tc = options.microdelay * fs * 1e-6;
+      const tc = options.tc;
       const y = options.colorgain;
       const gg = g * g;
       const H_CIS = new Float32Array(n * 2);
@@ -160,10 +162,10 @@ export class CrosstalkNode {
     buffer.set(temp, 0);
   }
   updateBuffers() {
-    this.buffer_L.getChannelData(0).set(this.h_CIS.subarray(0, BUFFER_SIZE));
-    this.buffer_L.getChannelData(1).set(this.h_CROSS.subarray(0, BUFFER_SIZE));
-    this.buffer_R.getChannelData(0).set(this.h_CROSS.subarray(0, BUFFER_SIZE));
-    this.buffer_R.getChannelData(1).set(this.h_CIS.subarray(0, BUFFER_SIZE));
+    this.buffer_L.getChannelData(0).set(this.h_CIS.subarray(0, IMPULSE_BUFFER_SIZE));
+    this.buffer_L.getChannelData(1).set(this.h_CROSS.subarray(0, IMPULSE_BUFFER_SIZE));
+    this.buffer_R.getChannelData(0).set(this.h_CROSS.subarray(0, IMPULSE_BUFFER_SIZE));
+    this.buffer_R.getChannelData(1).set(this.h_CIS.subarray(0, IMPULSE_BUFFER_SIZE));
     const current = this.currentConvolver;
     const other = (current + 1) % 2;
     this.convolver_L[other].buffer = this.buffer_L;
@@ -203,9 +205,9 @@ export class CrosstalkNode {
     await this.crossover.init();
     this.input.connect(this.crossover.getNode());
     // create convolver nodes
-    this.buffer_L = ctx.createBuffer(2, BUFFER_SIZE, ctx.sampleRate);
-    this.buffer_R = ctx.createBuffer(2, BUFFER_SIZE, ctx.sampleRate);
-    const buffer_BYPASS = ctx.createBuffer(2, BUFFER_SIZE, ctx.sampleRate);
+    this.buffer_L = ctx.createBuffer(2, IMPULSE_BUFFER_SIZE, ctx.sampleRate);
+    this.buffer_R = ctx.createBuffer(2, IMPULSE_BUFFER_SIZE, ctx.sampleRate);
+    const buffer_BYPASS = ctx.createBuffer(2, IMPULSE_BUFFER_SIZE, ctx.sampleRate);
     this.convolver_L = [ctx.createConvolver(), ctx.createConvolver()];
     this.convolver_R = [ctx.createConvolver(), ctx.createConvolver()];
     this.convolver_BYPASS = ctx.createConvolver();
@@ -213,7 +215,7 @@ export class CrosstalkNode {
     convolvers.forEach((convolver) => {
       convolver.normalize = false;
     });
-    const h_BYPASS = new Float32Array(BUFFER_SIZE);
+    const h_BYPASS = new Float32Array(IMPULSE_BUFFER_SIZE);
     h_BYPASS[0] = 1;
     this.rotateBuffer(h_BYPASS, SHIFT_AMOUNT);
     buffer_BYPASS.getChannelData(0).set(h_BYPASS);
