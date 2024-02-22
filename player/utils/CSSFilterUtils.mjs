@@ -15,7 +15,7 @@ export class CSSFilterUtils {
       filters.push(`brightness(${options.videoBrightness})`);
     }
     if (options.videoContrast !== 1) {
-      filters.push(`contrast(${toptions.videoContrast})`);
+      filters.push(`contrast(${options.videoContrast})`);
     }
     if (options.videoSaturation !== 1) {
       filters.push(`saturate(${options.videoSaturation})`);
