@@ -9,7 +9,7 @@ if (currentScript) {
 const assetPath = (file) => {
   return basePath + file;
 };
-export class CrossoverNode {
+export class RaceXTC {
   constructor(ctx, options) {
     this.ctx = ctx;
     this.options = options;
@@ -24,22 +24,21 @@ export class CrossoverNode {
       options: this.options,
     });
   }
-  async init() {
-    await this.ctx.audioWorklet.addModule(assetPath('crossover.worklet.mjs'));
-    const crossoverNode = new AudioWorkletNode(this.ctx, 'crossover-worklet', {
+  async init(input) {
+    this.input = input;
+    this.output = this.ctx.createGain();
+    await this.ctx.audioWorklet.addModule(assetPath('race.worklet.mjs'));
+    const crosstalkNode = new AudioWorkletNode(this.ctx, 'racextc-worklet', {
       processorOptions: this.options,
-      numberOfInputs: 1,
-      numberOfOutputs: this.options.numOutputs,
-      outputChannelCount: (new Array(this.options.numOutputs)).fill(2),
     });
-    crossoverNode.channelInterpretation = 'discrete';
-    crossoverNode.channelCountMode = 'explicit';
-    crossoverNode.channelCount = 2;
-    this.entryNode = crossoverNode;
+    this.entryNode = crosstalkNode;
+    this.input.connect(this.entryNode, 1);
+    this.entryNode.connect(this.output);
+    this.input.connect(this.output, 0);
     return this;
   }
-  getNode() {
-    return this.entryNode;
+  getOutputNode() {
+    return this.output;
   }
   destroy() {
     if (!this.entryNode) {
@@ -47,6 +46,8 @@ export class CrossoverNode {
     }
     this.getNode().port.postMessage({type: 'close'});
     this.entryNode.disconnect();
+    this.input.disconnect();
+    this.output.disconnect();
     this.entryNode = undefined;
   }
 }

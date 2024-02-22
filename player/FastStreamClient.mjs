@@ -336,21 +336,23 @@ export class FastStreamClient extends EventEmitter {
       this.setSeekSave(false);
       this.currentTime = 0;
       this.setSeekSave(true);
-      this.previewPlayer = await this.playerLoader.createPlayer(this.player.getSource().mode, this, {
-        isPreview: true,
-      });
-      await this.previewPlayer.setup();
-      this.bindPreviewPlayer(this.previewPlayer);
-      await this.previewPlayer.setSource(this.player.getSource());
-      this.interfaceController.addPreviewVideo(this.previewPlayer.getVideo());
-      await this.videoAnalyzer.setSource(this.player.getSource());
+      if (this.player.getSource()) {
+        this.previewPlayer = await this.playerLoader.createPlayer(this.player.getSource().mode, this, {
+          isPreview: true,
+        });
+        await this.previewPlayer.setup();
+        this.bindPreviewPlayer(this.previewPlayer);
+        await this.previewPlayer.setSource(this.player.getSource());
+        this.interfaceController.addPreviewVideo(this.previewPlayer.getVideo());
+        await this.videoAnalyzer.setSource(this.player.getSource());
+      }
       this.updateCSSFilters();
       this.interfaceController.updateToolVisibility();
       if (autoPlay) {
         this.play();
       }
     } catch (e) {
-      const msg = 'Please send this error to the developer: ' + e.message + '\n' + e.stack;
+      const msg = 'Please send this error to the developer at https://github.com/Andrews54757/FastStream/issues \n' + e + '\n' + e.stack;
       const el = document.createElement('div');
       el.style.position = 'fixed';
       el.style.top = '0';
@@ -361,8 +363,9 @@ export class FastStreamClient extends EventEmitter {
       el.style.zIndex = '999999999';
       el.innerText = msg;
       document.body.appendChild(el);
+      console.error(e);
     }
-    if (this.progressMemory && this.options.storeProgress) {
+    if (this.progressMemory && this.options.stofrogress) {
       await this.loadProgressData(true);
     }
   }
