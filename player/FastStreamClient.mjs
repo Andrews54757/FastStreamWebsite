@@ -18,6 +18,8 @@ import {MiniplayerPositions} from './options/defaults/MiniplayerPositions.mjs';
 import {SecureMemory} from './modules/SecureMemory.mjs';
 import {CSSFilterUtils} from './utils/CSSFilterUtils.mjs';
 import {DaltonizerTypes} from './options/defaults/DaltonizerTypes.mjs';
+import {Utils} from './utils/Utils.mjs';
+import {DefaultToolSettings} from './options/defaults/ToolSettings.mjs';
 export class FastStreamClient extends EventEmitter {
   constructor() {
     super();
@@ -51,6 +53,7 @@ export class FastStreamClient extends EventEmitter {
       seekStepSize: 0.2,
       defaultPlaybackRate: 1,
       qualityMultiplier: 1,
+      toolSettings: Utils.mergeOptions(DefaultToolSettings, {}),
     };
     this.persistent = {
       playing: false,
@@ -75,6 +78,9 @@ export class FastStreamClient extends EventEmitter {
     this.interfaceController.updateVolumeBar();
     this.player = null;
     this.previewPlayer = null;
+    this.loopStart = null;
+    this.loopEnd = null;
+    this.loopTimeout = null;
     this.saveSeek = true;
     this.pastSeeks = [];
     this.pastUnseeks = [];
@@ -96,6 +102,14 @@ export class FastStreamClient extends EventEmitter {
     }
     if (this.progressMemory) {
       await this.progressMemory.pruneOld(Date.now() - 1000 * 60 * 60 * 24 * 365); // 1 year
+    }
+    try {
+      Utils.loadAndParseOptions('toolSettings', DefaultToolSettings).then((settings) => {
+        this.options.toolSettings = settings;
+        this.interfaceController.updateToolVisibility();
+      });
+    } catch (e) {
+      console.error(e);
     }
   }
   shouldDownloadAll() {
@@ -174,6 +188,10 @@ export class FastStreamClient extends EventEmitter {
     if (this.interfaceController.miniPlayerActive) {
       this.interfaceController.requestMiniplayer(true);
     }
+    if (options.toolSettings) {
+      this.options.toolSettings = options.toolSettings;
+      this.interfaceController.updateToolVisibility();
+    }
   }
   updateCSSFilters() {
     if (this.options.videoDaltonizerType !== DaltonizerTypes.NONE && this.options.videoDaltonizerStrength > 0) {
@@ -211,6 +229,7 @@ export class FastStreamClient extends EventEmitter {
   updateDuration() {
     this.interfaceController.durationChanged();
     this.updateHasDownloadSpace();
+    this.updateLoop();
   }
   updateTime(time) {
     this.persistent.currentTime = time;
@@ -455,6 +474,31 @@ export class FastStreamClient extends EventEmitter {
       }
     }
   }
+  checkLoop() {
+    if (!this.player || this.loopStart >= this.duration) {
+      return;
+    }
+    if (this.shouldLoopManually) {
+      if (this.persistent.currentTime >= this.loopEnd) {
+        clearTimeout(this.loopTimeout);
+        this.currentTime = this.loopStart;
+      } else if (this.persistent.currentTime >= this.loopEnd - 5) {
+        clearTimeout(this.loopTimeout);
+        this.loopTimeout = setTimeout(() => {
+          this.currentTime = this.loopStart;
+        }, (this.loopEnd - this.persistent.currentTime) * 1000 / this.playbackRate);
+      }
+    } else if (this.player.getVideo().loop && this.loopStart > 0) {
+      clearTimeout(this.loopTimeout);
+      if (this.persistent.currentTime < this.loopStart) {
+        this.currentTime = this.loopStart;
+      } else if (this.persistent.currentTime > this.duration - 5) {
+        this.loopTimeout = setTimeout(() => {
+          this.checkLoop();
+        }, (this.duration - this.persistent.currentTime) * 1000 / this.playbackRate + 100);
+      }
+    }
+  }
   mainloop() {
     if (this.destroyed) return;
     setTimeout(this.mainloop.bind(this), 1000);
@@ -470,6 +514,7 @@ export class FastStreamClient extends EventEmitter {
     this.checkLevelChange();
     this.videoAnalyzer.update();
     this.videoAnalyzer.saveAnalyzerData();
+    this.checkLoop();
   }
   predownloadFragments() {
     // Don't pre-download if user is offline
@@ -548,6 +593,33 @@ export class FastStreamClient extends EventEmitter {
       }
     }
   }
+  setLoop(start, end) {
+    this.loopStart = start;
+    this.loopEnd = end;
+    clearTimeout(this.loopTimeout);
+    this.updateLoop();
+  }
+  updateLoop() {
+    if (!this.player) {
+      return;
+    }
+    const start = this.loopStart;
+    const end = this.loopEnd;
+    this.shouldLoopManually = false;
+    if (start === null || end === null) {
+      this.player.getVideo().loop = false;
+      return;
+    }
+    this.player.getVideo().loop = true;
+    if (
+      (start <= 0 && (end > this.duration || end <= 0)) ||
+      end <= start
+    ) {
+      return;
+    }
+    this.shouldLoopManually = true;
+    this.checkLoop();
+  }
   freeFragment(fragment) {
     this.downloadManager.removeFile(fragment.getContext());
     fragment.status = DownloadStatus.WAITING;
@@ -569,6 +641,8 @@ export class FastStreamClient extends EventEmitter {
     this.interfaceController.failedToLoad(reason);
   }
   async resetPlayer() {
+    clearTimeout(this.loopTimeout);
+    this.loopTimeout = null;
     const promises = [];
     this.lastTime = 0;
     this.fragmentsStore = {};

@@ -7,7 +7,9 @@ export class VideoQualityChanger extends EventEmitter {
     this.stayOpen = false;
   }
   openUI(dontSetStayVisible = false) {
-    this.emit('open');
+    this.emit('open', {
+      target: DOMElements.videoSource,
+    });
     DOMElements.videoSourceList.style.display = '';
     if (!dontSetStayVisible) {
       this.stayOpen = true;
@@ -80,14 +82,20 @@ export class VideoQualityChanger extends EventEmitter {
         e.stopPropagation();
       }
     });
+    DOMElements.videoSourceList.addEventListener('mousedown', (e) => {
+      e.stopPropagation();
+    });
+    DOMElements.videoSourceList.addEventListener('mouseup', (e) => {
+      e.stopPropagation();
+    });
   }
   updateQualityLevels(client) {
     const levels = client.levels;
     if (!levels || levels.size <= 1) {
-      DOMElements.videoSource.style.display = 'none';
+      DOMElements.videoSource.classList.add('hidden');
       return;
     } else {
-      DOMElements.videoSource.style.display = '';
+      DOMElements.videoSource.classList.remove('hidden');
     }
     const currentLevel = client.currentLevel;
     DOMElements.videoSourceList.replaceChildren();

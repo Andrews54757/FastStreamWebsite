@@ -57,4 +57,10 @@ export const DOMElements = {
   playinfo: document.querySelector('.mainplayer .playinfo'),
   languageButton: document.querySelector('.mainplayer .fluid_control_language'),
   languageMenu: document.querySelector('.mainplayer .fluid_control_language .fluid_language_list'),
+  toolsContainer: document.querySelector('.mainplayer .fluid_controls_right'),
+  disabledTools: document.querySelector('.mainplayer .fluid_controls_disabled_tools'),
+  moreButton: document.querySelector('.mainplayer .fluid_control_more'),
+  loopButton: document.querySelector('.mainplayer .fluid_control_loop'),
+  loopMenu: document.querySelector('.mainplayer .loop_menu'),
+  dragDemoTutorial: document.querySelector('.mainplayer .fluid_controls_dragdemo'),
 };

@@ -7,6 +7,8 @@ body {
 
     --font-size-small: 16px;
     --font-size-medium: 18px;
+
+    --volume-block-width: 210px;
 }
 
 .fluid_video_wrapper {
@@ -421,7 +423,7 @@ body {
 
 .fluid_video_wrapper.fluid_player_layout_default .fluid_controls_container .volume_block:focus .fluid_control_volume_container,
 .fluid_video_wrapper.fluid_player_layout_default .fluid_controls_container .volume_block:hover .fluid_control_volume_container {
-    width: 210px;
+    width: var(--volume-block-width);
     visibility: visible;
 }
 
@@ -1092,6 +1094,7 @@ body {
     background-color: var(--menu-textbutton-hover-background-color);
 }
 
+.loop_menu .option,
 .subtitles_options .option {
     position: relative;
     font-size: var(--font-size-small);
@@ -1100,6 +1103,7 @@ body {
     margin-bottom: 5px;
 }
 
+.loop_menu .option .label,
 .subtitles_options .option div {
     position: absolute;
     top: 50%;
@@ -1108,6 +1112,7 @@ body {
     right: 50%;
 }
 
+.loop_menu .option input,
 .subtitles_options .option input {
     border: 1px solid rgba(255, 255, 255, 0.3);
     background-color: rgba(0, 0, 0, 0.2);
@@ -1122,6 +1127,7 @@ body {
 
 }
 
+.loop_menu .option input:focus,
 .subtitles_options .option input:focus {
     outline: none;
     border: 1px solid rgba(255, 255, 255, 0.5);
@@ -2624,11 +2630,138 @@ input.crosstalk_calculator_input {
     font-size: 14px;
 }
 
+.fluid_controls_right:not(.reordering) > .hidden,
+.fluid_controls_disabled_tools:not(.reordering) > .hidden {
+    display: none !important;
+}
+
+.fluid_controls_right.reordering > .hidden,
+.fluid_controls_disabled_tools.reordering > .hidden {
+    opacity: 0.5;
+}
+
+/* Make shake */
+.reordering > div > svg {
+    animation: tilt-shaking 0.25s infinite;
+}
+.reordering > div.sortable-chosen > svg {
+    animation: none;
+}
+
+@keyframes tilt-shaking {
+    0% { transform: rotate(0deg); }
+    25% { transform: rotate(5deg); }
+    50% { transform: rotate(0eg); }
+    75% { transform: rotate(-5deg); }
+    100% { transform: rotate(0deg); }
+  }
+
+.sortable-ghost {
+    opacity: 0 !important;
+}
+
+.fluid_controls_disabled_tools {
+    display: none;
+    z-index: 888888;
+    flex-wrap: wrap;
+    align-content: center;
+    position: absolute;
+    right: 0px;
+    bottom: 45px;
+    background-color: rgba(71, 71, 71, 0.75);
+    border-radius: 4px;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    padding: 5px;
+    gap: 5px;
+}
+
+.fluid_controls_disabled_tools.reordering,
+.fluid_controls_disabled_tools.visible {
+    display: flex;
+}
+
+.fluid_controls_disabled_tools.reordering,
+.fluid_controls_right.reordering {
+    min-width: 390px;
+}
+
+.fluid_controls_right.reordering {
+    justify-content: flex-end;
+}
+
+.fluid_controls_disabled_tools .menu_container {
+    max-height: calc(100vh - 105px);
+}
+
+.expanded .fluid_controls_disabled_tools .menu_container {
+    max-height: calc(100vh - 185px);
+}
+
+.loop_menu {
+    width: 250px;
+    padding: 5px 0px;
+    font-size: var(--font-size-small);
+}
+
+.now_button {
+    position: absolute;
+    right: 50%;
+    width: 20px;
+    border-radius: 5px;
+    cursor: pointer;
+    padding: 0px 10px;
+    line-height: 25px;
+    background-color: var(--menu-textbutton-background-color);
+    color: var(--menu-textbutton-text-color);
+    text-align: center;
+}
+
+.loop_menu_toggle_button {
+    display: inline-block;
+    border-radius: 5px;
+    cursor: pointer;
+    padding: 5px 10px;
+    background-color: var(--menu-textbutton-background-color);
+    color: var(--menu-textbutton-text-color);
+    min-width: 120px;
+    max-width: 200px;
+    text-align: center;
+}
+
+.now_button:hover,
+.loop_menu_toggle_button:hover {
+    background-color: var(--menu-textbutton-hover-background-color);
+}
+
+.fluid_controls_dragdemo {
+    position: absolute;
+    right: 5px;
+    bottom: 50px;
+    border: 1px solid rgba(255, 255, 255, 0.5);
+    border-radius: 4px;
+    overflow: hidden;
+    cursor: pointer;
+}
+
+.fluid_controls_dragdemo > video {
+    width: 290px;
+}
+
 /* when screen is 700x or smaller */
 @media screen and (max-width: 700px) {
     body {
         --font-size-small: 13px;
         --font-size-medium: 16px;
+        --volume-block-width: 150px;
+    }
+
+    .fluid_controls_right.reordering,
+    .fluid_controls_disabled_tools.reordering {
+        min-width: 280px;
+    }
+
+    .fluid_controls_disabled_tools {
+        gap: 2px;
     }
 
     .fluid_button {
@@ -2651,6 +2784,7 @@ input.crosstalk_calculator_input {
         right: 5px;
     }
 
+    .loop_menu,
     .subtitles_menu {
         width: 200px;
     }
@@ -2685,16 +2819,26 @@ input.crosstalk_calculator_input {
 
     body {
         --font-size-small: 9px;
+        --volume-block-width: 100px;
     }
 
-    .fluid_button_soundwave,
-    .fluid_button_link,
-    .fluid_button_settings {
+    .fluid_controls_dragdemo > video {
+        width: 200px;
+    }
+
+    .fluid_controls_right:not(.reordering) > .fluid_button_soundwave,
+    .fluid_controls_right:not(.reordering) > .fluid_button_link,
+    .fluid_controls_right:not(.reordering) > .fluid_button_settings {
         display: none !important;
     }
 
+    .loop_menu,
     .subtitles_menu {
         width: 150px;
+    }
+
+    .now_button {
+        width: 12px;
     }
 
     .subtitles_menu.settings {

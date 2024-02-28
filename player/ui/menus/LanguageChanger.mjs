@@ -7,7 +7,9 @@ export class LanguageChanger extends EventEmitter {
     this.stayOpen = false;
   }
   openUI(dontSetStayVisible = false) {
-    this.emit('open');
+    this.emit('open', {
+      target: DOMElements.languageButton,
+    });
     DOMElements.languageMenu.style.display = '';
     if (!dontSetStayVisible) {
       this.stayOpen = true;
@@ -90,16 +92,22 @@ export class LanguageChanger extends EventEmitter {
       e.preventDefault();
       e.stopPropagation();
     });
+    DOMElements.languageMenu.addEventListener('mousedown', (e) => {
+      e.stopPropagation();
+    });
+    DOMElements.languageMenu.addEventListener('mouseup', (e) => {
+      e.stopPropagation();
+    });
   }
   updateLanguageTracks(client) {
     const tracks = client.languageTracks;
     const videoTracks = tracks.video;
     const audioTracks = tracks.audio;
     if (videoTracks.length < 2 && audioTracks.length < 2) {
-      DOMElements.languageButton.style.display = 'none';
+      DOMElements.languageButton.classList.add('hidden');
       return;
     } else {
-      DOMElements.languageButton.style.display = '';
+      DOMElements.languageButton.classList.remove('hidden');
     }
     DOMElements.languageMenu.replaceChildren();
     const languageTable = document.createElement('div');

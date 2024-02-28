@@ -37,7 +37,8 @@ export default class DirectVideoPlayer extends EventEmitter {
     return this.video.pause();
   }
   destroy() {
-    this.video.src = '';
+    VideoUtils.destroyVideo(this.video);
+    this.video = null;
     this.emit(DefaultPlayerEvents.DESTROYED);
   }
   set currentTime(value) {

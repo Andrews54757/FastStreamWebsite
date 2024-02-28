@@ -620,6 +620,36 @@ const TranslationMap = {
     "Pantalla completa",
     "フルスクリーン"
   ],
+  "player_more_label": [
+    "More tools",
+    "Más utilidades",
+    "その他のツール"
+  ],
+  "player_loop_label": [
+    "Loop",
+    "Repetir",
+    "ループ"
+  ],
+  "loop_menu_start": [
+    "Start",
+    "Inicio",
+    "開始"
+  ],
+  "loop_menu_end": [
+    "End",
+    "Fin",
+    "終了"
+  ],
+  "loop_menu_toggle_enabled": [
+    "Loop Enabled",
+    "Repetir Habilitado",
+    "ループ有効"
+  ],
+  "loop_menu_toggle_disabled": [
+    "Loop Disabled",
+    "Repetir Deshabilitado",
+    "ループ無効"
+  ],
   "player_fragment_failed_singular": [
     "$1 Fragment Failed! Click to retry.",
     "¡$1 fragmento falló! Haz clic para reintentar.",

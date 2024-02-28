@@ -1,6 +1,7 @@
 import {PlayerModes} from '../enums/PlayerModes.mjs';
 import {Coloris} from '../modules/coloris.mjs';
 import {Localize} from '../modules/Localize.mjs';
+import {Sortable} from '../modules/sortable.mjs';
 import {streamSaver} from '../modules/StreamSaver.mjs';
 import {ClickActions} from '../options/defaults/ClickActions.mjs';
 import {MiniplayerPositions} from '../options/defaults/MiniplayerPositions.mjs';
@@ -12,10 +13,12 @@ import {RequestUtils} from '../utils/RequestUtils.mjs';
 import {StringUtils} from '../utils/StringUtils.mjs';
 import {URLUtils} from '../utils/URLUtils.mjs';
 import {Utils} from '../utils/Utils.mjs';
+import {VideoUtils} from '../utils/VideoUtils.mjs';
 import {WebUtils} from '../utils/WebUtils.mjs';
 import {VideoSource} from '../VideoSource.mjs';
 import {DOMElements} from './DOMElements.mjs';
 import {LanguageChanger} from './menus/LanguageChanger.mjs';
+import {LoopMenu} from './menus/LoopMenu.mjs';
 import {PlaybackRateChanger} from './menus/PlaybackRateChanger.mjs';
 import {VideoQualityChanger} from './menus/VideoQualityChanger.mjs';
 import {OptionsWindow} from './OptionsWindow.mjs';
@@ -30,6 +33,8 @@ export class InterfaceController {
     this.lastTime = 0;
     this.lastSpeed = 0;
     this.mouseOverControls = false;
+    this.userIsReordering = false;
+    this.specialReorderModeEnabled = false;
     this.mouseActivityCooldown = 0;
     this.failed = false;
     this.subtitlesManager = new SubtitlesManager(this.client);
@@ -48,10 +53,13 @@ export class InterfaceController {
     this.languageChanger.on('languageChanged', (track) => {
       this.client.setLanguageTrack(track);
     });
+    this.loopControls = new LoopMenu(this.client);
+    this.loopControls.setupUI();
     this.playbackRateChanger.on('open', this.closeAllMenus.bind(this));
     this.videoQualityChanger.on('open', this.closeAllMenus.bind(this));
     this.languageChanger.on('open', this.closeAllMenus.bind(this));
     this.subtitlesManager.on('open', this.closeAllMenus.bind(this));
+    this.loopControls.on('open', this.closeAllMenus.bind(this));
     this.progressBar = new ProgressBar(this.client);
     this.progressBar.on('enteredSkipSegment', (segment)=>{
       this.showControlBar();
@@ -61,12 +69,17 @@ export class InterfaceController {
     this.statusManager = new StatusManager();
     this.optionsWindow = new OptionsWindow();
     this.setupDOM();
+    this.setupDragDemoTutorial();
   }
-  closeAllMenus() {
+  closeAllMenus(e) {
+    if (e && e.target && !DOMElements.disabledTools.contains(e.target)) {
+      DOMElements.disabledTools.classList.remove('visible');
+    }
     this.playbackRateChanger.closeUI();
     this.videoQualityChanger.closeUI();
     this.languageChanger.closeUI();
     this.subtitlesManager.closeUI();
+    this.loopControls.closeUI();
   }
   setStatusMessage(key, message, type, expiry) {
     this.statusManager.setStatusMessage(key, message, type, expiry);
@@ -214,7 +227,15 @@ export class InterfaceController {
       this.playPauseToggle();
       e.stopPropagation();
     });
-    DOMElements.fullscreen.addEventListener('click', this.fullscreenToggle.bind(this));
+    DOMElements.fullscreen.addEventListener('click', (e)=>{
+      if (e.shiftKey) {
+        this.pipToggle();
+        return;
+      }
+      this.fullscreenToggle();
+      e.stopPropagation();
+      e.preventDefault();
+    });
     WebUtils.setupTabIndex(DOMElements.fullscreen);
     document.addEventListener('fullscreenchange', this.updateFullScreenButton.bind(this));
     DOMElements.playerContainer.addEventListener('mousemove', this.onPlayerMouseMove.bind(this));
@@ -322,6 +343,17 @@ export class InterfaceController {
         this.handleVisibilityChange(false);
       }
     });
+    DOMElements.moreButton.addEventListener('click', (e) => {
+      if (!DOMElements.disabledTools.classList.contains('visible')) {
+        this.closeAllMenus();
+        DOMElements.disabledTools.classList.add('visible');
+      } else {
+        DOMElements.disabledTools.classList.remove('visible');
+      }
+      e.stopPropagation();
+      e.preventDefault();
+    });
+    WebUtils.setupTabIndex(DOMElements.moreButton);
     const o = new IntersectionObserver(([entry]) => {
       if (entry.intersectionRatio > 0.25 && !document.hidden) {
         this.handleVisibilityChange(true);
@@ -348,6 +380,75 @@ export class InterfaceController {
       alpha: true,
     });
     this.updateToolVisibility();
+    DOMElements.playerContainer.addEventListener('click', (e) => {
+      this.stopReorderUI();
+      DOMElements.disabledTools.classList.remove('visible');
+    });
+    const options = {
+      animation: 100,
+      group: 'reorder',
+      onStart: ()=>{
+        this.userIsReordering = true;
+        clearTimeout(this.reorderTimeout);
+      },
+      onEnd: (evt)=>{
+        this.userIsReordering = false;
+        this.checkToolsAndSave();
+      },
+    };
+    this.reorderSortEnabled = Sortable.create(DOMElements.toolsContainer, options);
+    this.reorderSortDisabled = Sortable.create(DOMElements.disabledTools, options);
+    const tools = Array.from(DOMElements.toolsContainer.children).concat(Array.from(DOMElements.disabledTools.children));
+    tools.forEach((el) => {
+      let skipClick = false;
+      const reorderMouseDown = (e) => {
+        // check if left mouse button was pressed
+        if (e.button !== 0) return;
+        if (this.specialReorderModeEnabled) return;
+        clearTimeout(this.reorderTimeout);
+        this.reorderTimeout = setTimeout(() => {
+          skipClick = true;
+          this.startReorderUI();
+        }, 800);
+      };
+      el.addEventListener('mousedown', (e) => {
+        reorderMouseDown(e);
+      });
+      el.addEventListener('mouseup', (e)=>{
+        clearTimeout(this.reorderTimeout);
+        if (skipClick) {
+          setTimeout(() => {
+            skipClick = false;
+          }, 100);
+        }
+      });
+      el.addEventListener('click', (e) => {
+        if (this.specialReorderModeEnabled) {
+          if (!skipClick) this.stopReorderUI();
+          e.preventDefault();
+          e.stopPropagation();
+        }
+      }, true);
+      el.addEventListener('focus', (e)=>{
+        if (this.specialReorderModeEnabled) {
+          e.stopPropagation();
+        }
+      }, true);
+    });
+  }
+  startReorderUI() {
+    if (this.specialReorderModeEnabled) return;
+    this.closeAllMenus();
+    this.closeDragDemoTutorial();
+    this.specialReorderModeEnabled = true;
+    DOMElements.toolsContainer.classList.add('reordering');
+    DOMElements.disabledTools.classList.add('reordering');
+  }
+  stopReorderUI() {
+    if (!this.specialReorderModeEnabled) return;
+    this.specialReorderModeEnabled = false;
+    DOMElements.toolsContainer.classList.remove('reordering');
+    DOMElements.disabledTools.classList.remove('reordering');
   }
   async handleVisibilityChange(isVisible) {
     const action = this.client.options.visChangeAction;
@@ -425,10 +526,99 @@ export class InterfaceController {
     }
   }
   updateToolVisibility() {
-    DOMElements.pip.style.display = (this.client.player && document.pictureInPictureEnabled) ? 'inline-block' : 'none';
-    DOMElements.download.style.display = (this.client.player && !this.client.player.canSave().cantSave) ? 'inline-block' : 'none';
-    DOMElements.screenshot.style.display = this.client.player ? 'inline-block' : 'none';
     DOMElements.playinfo.style.display = this.client.player ? 'none' : '';
+    if (this.client.player && document.pictureInPictureEnabled) {
+      DOMElements.pip.classList.remove('hidden');
+    } else {
+      DOMElements.pip.classList.add('hidden');
+    }
+    if (this.client.player) {
+      DOMElements.screenshot.classList.remove('hidden');
+      DOMElements.loopButton.classList.remove('hidden');
+    } else {
+      DOMElements.screenshot.classList.add('hidden');
+      DOMElements.loopButton.classList.add('hidden');
+    }
+    if (this.client.player && !this.client.player.canSave().cantSave) {
+      DOMElements.download.classList.remove('hidden');
+    } else {
+      DOMElements.download.classList.add('hidden');
+    }
+    const toolSettings = this.client.options.toolSettings;
+    const toolElements = {
+      pip: DOMElements.pip,
+      screenshot: DOMElements.screenshot,
+      download: DOMElements.download,
+      playrate: DOMElements.playbackRate,
+      fullscreen: DOMElements.fullscreen,
+      subtitles: DOMElements.subtitles,
+      audioconfig: DOMElements.audioConfigBtn,
+      sources: DOMElements.linkButton,
+      settings: DOMElements.settingsButton,
+      quality: DOMElements.videoSource,
+      languages: DOMElements.languageButton,
+      loop: DOMElements.loopButton,
+      more: DOMElements.moreButton,
+    };
+    if (this.specialReorderModeEnabled) {
+      return;
+    }
+    const enabledToolPairs = [];
+    const disabledToolPairs = [];
+    for (const [tool, element] of Object.entries(toolElements)) {
+      element.dataset.tool = tool;
+      if (toolSettings[tool].enabled) {
+        enabledToolPairs.push([element, toolSettings[tool]]);
+      } else {
+        disabledToolPairs.push([element, toolSettings[tool]]);
+      }
+      element.remove();
+    }
+    enabledToolPairs.sort((a, b) => a[1].priority - b[1].priority);
+    for (const [element] of enabledToolPairs) {
+      DOMElements.toolsContainer.appendChild(element);
+    }
+    disabledToolPairs.sort((a, b) => a[1].priority - b[1].priority);
+    for (const [element] of disabledToolPairs) {
+      DOMElements.disabledTools.appendChild(element);
+    }
+    this.checkMoreTool();
+  }
+  checkMoreTool() {
+    if (Array.from(DOMElements.disabledTools.children).some((el) => {
+      return !el.classList.contains('hidden');
+    })) {
+      DOMElements.moreButton.classList.remove('hidden');
+    } else {
+      DOMElements.moreButton.classList.add('hidden');
+      DOMElements.disabledTools.classList.remove('visible');
+    }
+    if (DOMElements.toolsContainer.children.length === 0) {
+      this.moveMoreTool(DOMElements.disabledTools, DOMElements.toolsContainer);
+    } else if (DOMElements.disabledTools.children.length === 0) {
+      this.moveMoreTool(DOMElements.toolsContainer, DOMElements.disabledTools);
+    }
+  }
+  moveMoreTool(source, dest) {
+    const more = Array.from(source.children).find((el) => el.dataset.tool === 'more');
+    if (more) {
+      more.remove();
+      dest.appendChild(more);
+    }
+  }
+  checkToolsAndSave() {
+    this.checkMoreTool();
+    Array.from(DOMElements.toolsContainer.children).forEach((el, i) => {
+      const tool = el.dataset.tool;
+      this.client.options.toolSettings[tool].priority = (i + 1) * 100;
+      this.client.options.toolSettings[tool].enabled = true;
+    });
+    Array.from(DOMElements.disabledTools.children).forEach((el, i) => {
+      const tool = el.dataset.tool;
+      this.client.options.toolSettings[tool].priority = (i + 1) * 100;
+      this.client.options.toolSettings[tool].enabled = false;
+    });
+    Utils.setConfig('toolSettings', JSON.stringify(this.client.options.toolSettings));
   }
   toggleHide() {
     if (this.hidden) {
@@ -501,6 +691,9 @@ export class InterfaceController {
     e.preventDefault();
     const dt = e.dataTransfer;
     const files = dt.files;
+    if (files.length === 0) {
+      return;
+    }
     const captions = [];
     const audioFormats = [
       'mp3',
@@ -791,7 +984,7 @@ export class InterfaceController {
   queueControlsHide(time) {
     clearTimeout(this.hideControlBarTimeout);
     this.hideControlBarTimeout = setTimeout(() => {
-      if (!this.focusingControls && !this.mouseOverControls && !this.isBigPlayButtonVisible() && this.persistent.playing) {
+      if (!this.focusingControls && !this.mouseOverControls && !this.isBigPlayButtonVisible() && this.persistent.playing && !this.specialReorderModeEnabled && !this.userIsReordering) {
         this.hideControlBar();
       }
     }, time || 2000);
@@ -1003,5 +1196,34 @@ export class InterfaceController {
         },
         450,
     );
+  }
+  setupDragDemoTutorial() {
+    Utils.getConfig('dragDemoTutorialSeen').then((seen) => {
+      if (!seen) {
+        this.showDragDemoTutorial();
+      }
+    });
+    DOMElements.dragDemoTutorial.addEventListener('click', (e) => {
+      this.closeDragDemoTutorial();
+      e.stopPropagation();
+    });
+  }
+  showDragDemoTutorial() {
+    if (DOMElements.dragDemoTutorial.style.display !== 'none' ) return;
+    DOMElements.dragDemoTutorial.style.display = '';
+    const video = document.createElement('video');
+    video.src = './assets/dragdemo.mp4';
+    video.muted = true;
+    video.autoplay = true;
+    video.loop = true;
+    DOMElements.dragDemoTutorial.appendChild(video);
+    WebUtils.setupTabIndex(DOMElements.dragDemoTutorial);
+  }
+  closeDragDemoTutorial() {
+    if (DOMElements.dragDemoTutorial.style.display !== '') return;
+    DOMElements.dragDemoTutorial.style.display = 'none';
+    VideoUtils.destroyVideo(DOMElements.dragDemoTutorial.children[0]);
+    DOMElements.dragDemoTutorial.replaceChildren();
+    Utils.setConfig('dragDemoTutorialSeen', true);
   }
 }

@@ -389,6 +389,8 @@ export default class MP4Player extends EventEmitter {
     this.videoTracks = null;
     this.audioTracks = null;
     clearTimeout(this.loopTimeout);
+    VideoUtils.destroyVideo(this.video);
+    this.video = null;
     this.emit(DefaultPlayerEvents.DESTROYED);
   }
   resetHLS(noLoad) {

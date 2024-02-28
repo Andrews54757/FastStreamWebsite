@@ -10,7 +10,9 @@ export class PlaybackRateChanger extends EventEmitter {
     this.playbackElements = [];
   }
   openUI(dontSetStayVisible = false) {
-    this.emit('open');
+    this.emit('open', {
+      target: DOMElements.playbackRate,
+    });
     DOMElements.rateMenuContainer.style.display = '';
     this.scrollToPosition();
     if (!dontSetStayVisible) {
@@ -80,6 +82,12 @@ export class PlaybackRateChanger extends EventEmitter {
         e.preventDefault();
         e.stopPropagation();
       }
+    });
+    DOMElements.rateMenu.addEventListener('mousedown', (e) => {
+      e.stopPropagation();
+    });
+    DOMElements.rateMenu.addEventListener('mouseup', (e) => {
+      e.stopPropagation();
     });
   }
   shiftPlaybackRate(shift) {

@@ -10,6 +10,7 @@ import {VisChangeActions} from './defaults/VisChangeActions.mjs';
 import {MiniplayerPositions} from './defaults/MiniplayerPositions.mjs';
 import {DefaultSubtitlesSettings} from './defaults/DefaultSubtitlesSettings.mjs';
 import {DaltonizerTypes} from './defaults/DaltonizerTypes.mjs';
+import {DefaultToolSettings} from './defaults/ToolSettings.mjs';
 let Options = {};
 const analyzeVideos = document.getElementById('analyzevideos');
 const playStreamURLs = document.getElementById('playstreamurls');
@@ -338,9 +339,11 @@ importButton.addEventListener('click', () => {
       const newOptionsObj = JSON.parse(text);
       const newOptions = Utils.mergeOptions(DefaultOptions, newOptionsObj);
       const subtitlesSettings = Utils.mergeOptions(DefaultSubtitlesSettings, newOptionsObj.subtitlesSettings || {});
+      const toolSettings = Utils.mergeOptions(DefaultToolSettings, newOptionsObj.toolSettings || {});
       loadOptions(newOptions);
       optionChanged();
       Utils.setConfig('subtitlesSettings', JSON.stringify(subtitlesSettings));
+      Utils.setConfig('toolSettings', JSON.stringify(toolSettings));
     };
     reader.readAsText(file);
   });
@@ -352,6 +355,7 @@ exportButton.addEventListener('click', async () => {
   const blob = new Blob([JSON.stringify({
     ...(await Utils.getOptionsFromStorage()),
     subtitlesSettings: await Utils.getSubtitlesSettingsFromStorage(),
+    toolSettings: await Utils.loadAndParseOptions('toolSettings', DefaultToolSettings),
   }, null, 2)], {type: 'application/json'});
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');

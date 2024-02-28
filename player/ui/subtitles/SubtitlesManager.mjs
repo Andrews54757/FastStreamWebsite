@@ -108,7 +108,9 @@ export class SubtitlesManager extends EventEmitter {
     DOMElements.subtitlesMenu.style.display = 'none';
   }
   openUI() {
-    this.emit('open');
+    this.emit('open', {
+      target: DOMElements.subtitles,
+    });
     DOMElements.subtitlesMenu.style.display = '';
   }
   setupUI() {
@@ -216,6 +218,12 @@ export class SubtitlesManager extends EventEmitter {
     });
     window.addEventListener('resize', () => {
       this.checkTrackBounds();
+    });
+    DOMElements.subtitlesMenu.addEventListener('mousedown', (e) => {
+      e.stopPropagation();
+    });
+    DOMElements.subtitlesMenu.addEventListener('mouseup', (e) => {
+      e.stopPropagation();
     });
   }
   createTrackEntryElements(i) {

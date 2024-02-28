@@ -180,6 +180,8 @@ export default class DashPlayer extends EventEmitter {
     } catch (e) {
     }
     this.dash = null;
+    VideoUtils.destroyVideo(this.video);
+    this.video = null;
     this.emit(DefaultPlayerEvents.DESTROYED);
   }
   set currentTime(value) {
