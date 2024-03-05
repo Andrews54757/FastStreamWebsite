@@ -390,7 +390,7 @@ export class FastStreamClient extends EventEmitter {
       document.body.appendChild(el);
       console.error(e);
     }
-    if (this.progressMemory && this.options.stofrogress) {
+    if (this.progressMemory && this.options.storeProgress) {
       await this.loadProgressData(true);
     }
   }

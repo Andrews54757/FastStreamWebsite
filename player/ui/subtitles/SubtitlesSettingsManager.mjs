@@ -37,6 +37,9 @@ export class SubtitlesSettingsManager extends EventEmitter {
       this.closeUI();
       e.stopPropagation();
     });
+    DOMElements.subtitlesOptionsList.addEventListener('click', (e) => {
+      Coloris.close();
+    }, true);
     this.updateSettingsUI();
   }
   applyStyles(element) {
@@ -125,5 +128,6 @@ export class SubtitlesSettingsManager extends EventEmitter {
   }
   closeUI() {
     DOMElements.subtitlesMenu.classList.remove('settings');
+    Coloris.close();
   }
 }

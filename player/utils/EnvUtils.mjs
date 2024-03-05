@@ -19,7 +19,7 @@ export class EnvUtils {
   static getVersion() {
     // eslint-disable-next-line prefer-const
     let version = '1.0.0.web';
-version = '1.2.25';
+version = '1.2.25.1';
     return this.isExtension() ? chrome.runtime.getManifest().version : version;
   }
   static isIncognito() {
