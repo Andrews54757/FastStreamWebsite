@@ -1,5 +1,6 @@
 import {DefaultPlayerEvents} from '../../enums/DefaultPlayerEvents.mjs';
 import {DownloadStatus} from '../../enums/DownloadStatus.mjs';
+import {ReferenceTypes} from '../../enums/ReferenceTypes.mjs';
 import {EmitterCancel, EmitterRelay, EventEmitter} from '../../modules/eventemitter.mjs';
 import {MP4Box} from '../../modules/mp4box.mjs';
 import {Utils} from '../../utils/Utils.mjs';
@@ -13,7 +14,8 @@ export default class MP4Player extends EventEmitter {
     super();
     this.client = client;
     this.isPreview = config?.isPreview || false;
-    this.video = document.createElement('video');
+    this.isAudioOnly = config?.isAudioOnly || false;
+    this.video = document.createElement(this.isAudioOnly ? 'audio' : 'video');
     this.mp4box = MP4Box.createFile(false);
     this.options = {
       backBufferLength: 10,
@@ -281,7 +283,7 @@ export default class MP4Player extends EventEmitter {
       if (frag.sn >= currentFragment.sn) continue;
       if (frag.end < time - this.options.backBufferLength) {
         this.currentFragments.splice(i, 1);
-        frag.removeReference();
+        frag.removeReference(ReferenceTypes.MP4PLAYER);
         i--;
       }
     }
@@ -315,15 +317,17 @@ export default class MP4Player extends EventEmitter {
               if (!rangeHeader) {
                 console.log(entry.responseHeaders);
                 this.running = false;
+                this.emit(DefaultPlayerEvents.ERROR, 'No content range');
                 throw new Error('No content length');
+              } else {
+                this.fileLength = parseInt(rangeHeader.split('/')[1]);
               }
-              this.fileLength = parseInt(rangeHeader.split('/')[1]);
               this.initializeFragments();
             }
             // console.log("append", frag)
             this.mp4box.appendBuffer(data);
             this.currentFragments.push(frag);
-            frag.addReference();
+            frag.addReference(ReferenceTypes.MP4PLAYER, true);
             this.runLoad();
           },
           onProgress: (stats, context, data, xhr) => {
@@ -353,6 +357,9 @@ export default class MP4Player extends EventEmitter {
         },
         onFail: (entry) => {
           reject(new Error('Failed to download fragment'));
+        },
+        onAbort: (e) => {
+          reject(new Error('Aborted download'));
         },
       }, null, priority);
     });
@@ -407,7 +414,7 @@ export default class MP4Player extends EventEmitter {
       this.loader = null;
     }
     this.currentFragments.forEach((frag) => {
-      frag.removeReference();
+      frag.removeReference(ReferenceTypes.MP4PLAYER);
     });
     this.currentFragments.length = 0;
     this.mp4box.seek(this.currentTime, true);
@@ -574,26 +581,42 @@ export default class MP4Player extends EventEmitter {
     } else {
       lastFrag = frags.length;
     }
-    for (let i = 0; i < lastFrag; i++) {
-      const frag = frags[i];
-      if (!options.partialSave) {
-        await this.downloadFragment(frag, -1);
-      }
-      if (frag.status === DownloadStatus.DOWNLOAD_COMPLETE) {
-        const entry = this.client.downloadManager.getEntry(frag.getContext());
-        await writer.write(new Uint8Array(await entry.getDataFromBlob()));
-      } else {
-        await writer.write(emptyTemplate);
-      }
-      if (options.onProgress) {
-        options.onProgress(i / lastFrag);
+    if (!options.partialSave) {
+      for (let i = 0; i < lastFrag; i++) {
+        const frag = frags[i];
+        frag.addReference(ReferenceTypes.SAVER);
       }
     }
-    writer.close();
-    return {
-      extension: 'mp4',
-      blob: null,
-    };
+    try {
+      for (let i = 0; i < lastFrag; i++) {
+        const frag = frags[i];
+        if (!options.partialSave) {
+          await this.downloadFragment(frag, -1);
+          frag.removeReference(ReferenceTypes.SAVER);
+        }
+        if (frag.status === DownloadStatus.DOWNLOAD_COMPLETE) {
+          const entry = this.client.downloadManager.getEntry(frag.getContext());
+          await writer.write(new Uint8Array(await entry.getDataFromBlob()));
+        } else {
+          await writer.write(emptyTemplate);
+        }
+        if (options.onProgress) {
+          options.onProgress(i / lastFrag);
+        }
+      }
+      writer.close();
+      return {
+        extension: 'mp4',
+        blob: null,
+      };
+    } catch (e) {
+      for (let i = 0; i < lastFrag; i++) {
+        const frag = frags[i];
+        frag.removeReference(ReferenceTypes.SAVER);
+      }
+      writer.abort();
+      throw e;
+    }
   }
   get volume() {
     return this.video.volume;

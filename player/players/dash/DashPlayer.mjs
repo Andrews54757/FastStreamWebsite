@@ -1,5 +1,6 @@
 import {DefaultPlayerEvents} from '../../enums/DefaultPlayerEvents.mjs';
 import {DownloadStatus} from '../../enums/DownloadStatus.mjs';
+import {ReferenceTypes} from '../../enums/ReferenceTypes.mjs';
 import {DashJS} from '../../modules/dash.mjs';
 import {EmitterRelay, EventEmitter} from '../../modules/eventemitter.mjs';
 import {Utils} from '../../utils/Utils.mjs';
@@ -12,9 +13,10 @@ export default class DashPlayer extends EventEmitter {
   constructor(client, options) {
     super();
     this.client = client;
-    this.video = document.createElement('video');
     this.isPreview = options?.isPreview || false;
+    this.isAudioOnly = options?.isAudioOnly || false;
     this.qualityMultiplier = options?.qualityMultiplier || 1.1;
+    this.video = document.createElement(this.isAudioOnly ? 'audio' : 'video');
     this.fragmentRequester = new DashFragmentRequester(this);
     this.desiredVideoLevel = null;
     this.desiredAudioLevel = null;
@@ -41,7 +43,7 @@ export default class DashPlayer extends EventEmitter {
         },
       },
       // 'debug': {
-      //   'logLevel': DashJS.Debug.LOG_LEVEL_INFO,
+      //   'logLevel': DashJS.Debug.LOG_LEVEL_DEBUG,
       // },
     });
     this.dash.setCustomInitialTrackSelectionFunction((tracks)=>{
@@ -68,14 +70,6 @@ export default class DashPlayer extends EventEmitter {
     this.dash.on('currentTrackChanged', (a)=>{
       this.extractAllFragments();
     });
-    this.dash.on('initFragmentNeeded', ()=>{
-      if (this.desiredVideoLevel && this.currentLevel !== this.desiredVideoLevel) {
-        this.currentLevel = this.desiredVideoLevel;
-      }
-      if (this.desiredAudioLevel && this.currentAudioLevel !== this.desiredAudioLevel) {
-        this.currentAudioLevel = this.desiredAudioLevel;
-      }
-    });
     this.dash.on(DashJS.MediaPlayer.events.STREAM_INITIALIZED, (e) => {
       this.emit(DefaultPlayerEvents.LANGUAGE_TRACKS);
     });
@@ -97,14 +91,13 @@ export default class DashPlayer extends EventEmitter {
     if (!processor) {
       return;
     }
-    const streamIndex = processor.getStreamInfo().index;
     const mediaInfo = processor.getMediaInfo();
     const segmentsController = processor.getSegmentsController();
     const dashHandler = processor.getDashHandler();
     if (rep.hasInitialization()) {
       const init = dashHandler.getInitRequest(mediaInfo, rep);
       if (init) {
-        init.level = this.getLevelIdentifier(streamIndex, mediaInfo.index, rep.index);
+        init.level = rep.id;
         init.index = -1;
         init.startTime = init.duration = 0;
         if (!this.client.getFragment(init.level, -1)) {
@@ -117,24 +110,13 @@ export default class DashPlayer extends EventEmitter {
         return dashHandler._getRequestForSegment(mediaInfo, segment);
       });
       segments.forEach((request) => {
-        request.level = this.getLevelIdentifier(streamIndex, mediaInfo.index, rep.index);
+        request.level = rep.id;
         const fragment = new DashFragment(request);
         if (!this.client.getFragment(fragment.level, fragment.sn)) {
           this.client.makeFragment(fragment.level, fragment.sn, fragment);
         }
       });
     }
-  }
-  getLevelIdentifier(streamIndex, mediaIndex, repIndex) {
-    return streamIndex + ':' + mediaIndex + ':' + repIndex;
-  }
-  getLevelIndexes(identifier) {
-    const indexes = identifier.split(':');
-    return {
-      streamIndex: parseInt(indexes[0]),
-      mediaIndex: parseInt(indexes[1]),
-      repIndex: parseInt(indexes[2]),
-    };
   }
   load() {
   }
@@ -161,6 +143,9 @@ export default class DashPlayer extends EventEmitter {
         },
         onFail: (e) => {
           reject(new Error('Failed to download fragment'));
+        },
+        onAbort: (e) => {
+          reject(new Error('Aborted download'));
         },
       }, null, priority);
     });
@@ -202,31 +187,43 @@ export default class DashPlayer extends EventEmitter {
     return this.video.paused;
   }
   get levels() {
-    const tracks = this.dash.getTracksFor('video');
-    const currentLang = this.dash.getCurrentTrackFor('video')?.lang || navigator.language || 'en';
-    return TrackFilter.getLevelList(tracks, currentLang);
+    try {
+      const tracks = this.dash.getTracksFor('video');
+      const currentLang = this.getCurrentLang();
+      return TrackFilter.getLevelList(tracks, currentLang);
+    } catch (e) {
+      console.warn(e);
+      return new Map();
+    }
+  }
+  getCurrentLang() {
+    try {
+      return this.dash.getCurrentTrackFor('video')?.lang || navigator.language || 'en';
+    } catch (e) {
+      return navigator.language || 'en';
+    }
+  }
+  getProcessor(adaptationIndex) {
+    const processors = this.dash.getStreamController().getActiveStream().getProcessors();
+    for (let i = 0; i < processors.length; i++) {
+      const processor = processors[i];
+      if (processor.getMediaInfo().index === adaptationIndex) {
+        return processor;
+      }
+    }
+    return null;
   }
   get currentLevel() {
     const processor = this.dash.getStreamController()?.getActiveStream()?.getProcessors()?.find((o) => o.getType() === 'video');
     if (!processor) {
       return -1;
     }
-    return this.getLevelIdentifier(processor.getStreamInfo().index, processor.getMediaInfo().index, processor.getRepresentationController().getCurrentRepresentation().index);
+    return processor.getRepresentationController().getCurrentRepresentation().id;
   }
   set currentLevel(value) {
     if (typeof value !== 'string') return;
     try {
-      const tracks = this.dash.getTracksFor('video');
-      const {mediaIndex, repIndex} = this.getLevelIndexes(value);
-      const track = tracks.find((track) => {
-        return track.index === mediaIndex;
-      });
-      if (!track) {
-        console.warn('Could not find video track', value);
-      }
-      this.desiredVideoLevel = value;
-      this.dash.setCurrentTrack(track);
-      this.dash.setQualityFor('video', repIndex, true);
+      this.dash.setRepresentationForTypeById('video', value, true);
     } catch (e) {
       console.warn(e);
     }
@@ -236,21 +233,15 @@ export default class DashPlayer extends EventEmitter {
     if (!processor) {
       return -1;
     }
-    return this.getLevelIdentifier(processor.getStreamInfo().index, processor.getMediaInfo().index, processor.getRepresentationController().getCurrentRepresentation().index);
+    return processor.getRepresentationController().getCurrentRepresentation().id;
   }
   set currentAudioLevel(value) {
     if (typeof value !== 'string') return;
-    const tracks = this.dash.getTracksFor('audio');
-    const {mediaIndex, repIndex} = this.getLevelIndexes(value);
-    const track = tracks.find((track) => {
-      return track.index === mediaIndex;
-    });
-    if (!track) {
-      console.warn('Could not find audio track', value);
+    try {
+      this.dash.setRepresentationForTypeById('audio', value, true);
+    } catch (e) {
+      console.warn(e);
     }
-    this.desiredAudioLevel = value;
-    this.dash.setCurrentTrack(track);
-    this.dash.setQualityFor('audio', repIndex, true);
   }
   get duration() {
     return this.video.duration;
@@ -341,10 +332,12 @@ export default class DashPlayer extends EventEmitter {
       });
     }
     zippedFragments.forEach((data) => {
+      data.fragment.addReference(ReferenceTypes.SAVER);
       data.getEntry = async () => {
         if (data.fragment.status !== DownloadStatus.DOWNLOAD_COMPLETE) {
           await this.downloadFragment(data.fragment, -1);
         }
+        data.fragment.removeReference(ReferenceTypes.SAVER);
         return this.client.downloadManager.getEntry(data.fragment.getContext());
       };
     });
@@ -363,11 +356,18 @@ export default class DashPlayer extends EventEmitter {
         options.onProgress(progress);
       }
     });
-    const blob = await dash2mp4.convert(videoDuration, videoInitSegmentData, audioDuration, audioInitSegmentData, zippedFragments);
-    return {
-      extension: 'mp4',
-      blob: blob,
-    };
+    try {
+      const blob = await dash2mp4.convert(videoDuration, videoInitSegmentData, audioDuration, audioInitSegmentData, zippedFragments);
+      return {
+        extension: 'mp4',
+        blob: blob,
+      };
+    } catch (e) {
+      zippedFragments.forEach((data) => {
+        data.fragment.removeReference(ReferenceTypes.SAVER);
+      });
+      throw e;
+    }
   }
   get volume() {
     return this.video.volume;

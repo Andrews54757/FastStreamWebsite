@@ -16,14 +16,12 @@ const analyzeVideos = document.getElementById('analyzevideos');
 const playStreamURLs = document.getElementById('playstreamurls');
 const playMP4URLs = document.getElementById('playmp4urls');
 const downloadAll = document.getElementById('downloadall');
-const freeUnusedChannels = document.getElementById('freeunusedchannels');
 const keybindsList = document.getElementById('keybindslist');
 const autoEnableURLSInput = document.getElementById('autoEnableURLs');
 const autoSub = document.getElementById('autosub');
 const maxSpeed = document.getElementById('maxspeed');
 const maxSize = document.getElementById('maxsize');
 const seekStepSize = document.getElementById('seekstepsize');
-const playbackRate = document.getElementById('playbackrate');
 const autoplayYoutube = document.getElementById('autoplayyt');
 const qualityMultiplier = document.getElementById('qualitymultiplier');
 const importButton = document.getElementById('import');
@@ -64,16 +62,14 @@ async function loadOptions(newOptions) {
   newOptions = newOptions || await Utils.getOptionsFromStorage();
   Options = newOptions;
   downloadAll.checked = !!Options.downloadAll;
-  freeUnusedChannels.checked = !!Options.freeUnusedChannels;
   analyzeVideos.checked = !!Options.analyzeVideos;
   playStreamURLs.checked = !!Options.playStreamURLs;
   playMP4URLs.checked = !!Options.playMP4URLs;
   autoSub.checked = !!Options.autoEnableBestSubtitles;
   autoplayYoutube.checked = !!Options.autoplayYoutube;
   maxSpeed.value = StringUtils.getSpeedString(Options.maxSpeed, true);
-  maxSize.value = StringUtils.getSizeString(Options.maxSize);
+  maxSize.value = StringUtils.getSizeString(Options.maxVideoSize);
   seekStepSize.value = Math.round(Options.seekStepSize * 100) / 100;
-  playbackRate.value = Options.playbackRate;
   qualityMultiplier.value = Options.qualityMultiplier;
   customSourcePatterns.value = Options.customSourcePatterns || '';
   miniSize.value = Options.miniSize;
@@ -280,10 +276,6 @@ storeProgress.addEventListener('change', () => {
   Options.storeProgress = storeProgress.checked;
   optionChanged();
 });
-freeUnusedChannels.addEventListener('change', () => {
-  Options.freeUnusedChannels = freeUnusedChannels.checked;
-  optionChanged();
-});
 autoplayYoutube.addEventListener('change', () => {
   Options.autoplayYoutube = autoplayYoutube.checked;
   optionChanged();
@@ -296,16 +288,12 @@ maxSpeed.addEventListener('change', () => {
 });
 maxSize.addEventListener('change', () => {
   // parse value, number unit
-  Options.maxSize = StringUtils.getSizeValue(maxSize.value);
-  maxSize.value = StringUtils.getSizeString(Options.maxSize);
+  Options.maxVideoSize = StringUtils.getSizeValue(maxSize.value);
+  maxSize.value = StringUtils.getSizeString(Options.maxVideoSize);
   optionChanged();
 });
 seekStepSize.addEventListener('change', () => {
   Options.seekStepSize = parseFloat(seekStepSize.value);
-  optionChanged();
-});
-playbackRate.addEventListener('change', () => {
-  Options.playbackRate = parseFloat(playbackRate.value) || 1;
   optionChanged();
 });
 qualityMultiplier.addEventListener('change', () => {

@@ -1,14 +1,15 @@
 import {Utils} from './Utils.mjs';
 export class AudioUtils {
   static getVolume(analyser) {
-    const bufferLength = analyser.frequencyBinCount;
-    const dataArray = new Uint8Array(bufferLength);
-    analyser.getByteFrequencyData(dataArray);
-    let sum = 0;
+    const bufferLength = analyser.fftSize;
+    const dataArray = new Float32Array(bufferLength);
+    analyser.getFloatTimeDomainData(dataArray);
+    let rms = 0;
     for (let i = 0; i < bufferLength; i++) {
-      sum += dataArray[i];
+      rms += dataArray[i] * dataArray[i];
     }
-    return sum / bufferLength / 255;
+    rms = rms / bufferLength;
+    return 10 * Math.log10(rms);
   }
   static dbToGain(db) {
     return Math.pow(10, db / 20);

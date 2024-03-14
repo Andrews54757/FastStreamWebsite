@@ -642,6 +642,12 @@ const TranslationMap = {
     "再同期ツール",
     "Синхронизация"
   ],
+  "player_subtitlesmenu_resynctool_instructions": [
+    "Drag subtitles to resync",
+    "Arrastra los subtítulos para resincronizar",
+    "字幕をドラッグして再同期してください",
+    "Перетащите субтитры для повторной синхронизации"
+  ],
   "player_subtitlesmenu_savetool_label": [
     "Save subtitle file",
     "Guardar archivo de subtítulos",
@@ -779,6 +785,36 @@ const TranslationMap = {
     "Repetir Deshabilitado",
     "ループ無効",
     "Зацикливание отключено"
+  ],
+  "loop_menu_gif_start": [
+    "Recording GIF at 4x speed...",
+    "Grabando GIF a velocidad 4x...",
+    "4倍速でGIFを録画中...",
+    "Запись GIF c ускорением 4x..."
+  ],
+  "loop_menu_gif_end": [
+    "Finished recording GIF. Now saving...",
+    "Finalizó la grabación del GIF. Ahora guardando...",
+    "GIFの録画が終了しました。現在保存中...",
+    "Запись GIF завершена. Сохранение..."
+  ],
+  "loop_menu_gif_abort": [
+    "Aborted GIF recording!",
+    "¡Grabación de GIF abortada!",
+    "GIFの録画が中断されました!",
+    "Запись GIF прервана!"
+  ],
+  "loop_menu_gif_progress": [
+    "Saving GIF $1%",
+    "Guardando GIF $1%",
+    "GIFを保存中 $1%",
+    "Сохранение GIF $1%"
+  ],
+  "loop_menu_gif_finished": [
+    "Finished saving GIF!",
+    "¡Finalizó el guardado del GIF!",
+    "GIFの保存が完了しました!",
+    "Сохранение GIF завершено!"
   ],
   "player_fragment_failed_singular": [
     "$1 Fragment Failed! Click to retry.",
@@ -931,10 +967,10 @@ const TranslationMap = {
     "Недостаточно места для предзагрузки в режиме инкогнито, будет буферизована $1с"
   ],
   "player_buffer_storage_warning": [
-    "Not enough space to predownload, will buffer $1s",
-    "No hay suficiente espacio para predescargar, se almacenará en búfer $1s",
-    "プリダウンロードに必要な空き容量がないため、$1 がバッファーされます",
-    "Недостаточно места для предзагрузки, будет буферизована $1с"
+    "Video size exceeds limits, will buffer $1s",
+    "El tamaño del video excede los límites, se almacenará en búfer durante $1s",
+    "ビデオのサイズが制限を超えています、$1秒バッファリングします",
+    "Размер видео превышает лимиты, будет буферизация $1s"
   ],
   "player_error_drm": [
     "Failed to load! DRM is not supported!",
@@ -1524,12 +1560,6 @@ const TranslationMap = {
     "プリダウンローダーの最大サイズ",
     "Максимальный размер предзагружаемого видео"
   ],
-  "options_general_freeunused": [
-    "Free unused channel buffers when switching quality levels",
-    "Libera los búferes de canal no utilizados al cambiar los niveles de calidad",
-    "品質レベル切り替え時に未使用のチャンネルバッファーを解放する",
-    "Выгружать неиспользуемые буферы каналов при изменении качества видео"
-  ],
   "options_general_analyze": [
     "Automatically analyze sequential videos for intros/outros\n(turn off if you have CPU performance issues)",
     "Analiza automáticamente videos secuenciales para intros/outros\n(desactiva si tienes problemas de rendimiento de CPU)",
@@ -1565,12 +1595,6 @@ const TranslationMap = {
     "Buscar tamaño de paso base de la tecla de acceso rápido (segundos)",
     "シークキーバインドのベースステップサイズ (秒)",
     "Размер шага перемотки горячими клавишами (секунды)"
-  ],
-  "options_general_playbackrate": [
-    "Default playback rate",
-    "Velocidad de reproducción predeterminada",
-    "デフォルトの再生速度",
-    "Скорость воспроизведения по умолчанию"
   ],
   "options_general_autoplayyt": [
     "Autoplay YouTube videos",

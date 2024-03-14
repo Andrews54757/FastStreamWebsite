@@ -5,7 +5,7 @@ export default class DirectVideoPlayer extends EventEmitter {
   constructor(client, config) {
     super();
     this.client = client;
-    this.video = document.createElement('video');
+    this.video = document.createElement(config?.isAudioOnly ? 'audio' : 'video');
   }
   load() {
   }

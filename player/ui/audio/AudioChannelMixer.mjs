@@ -62,7 +62,12 @@ export class AudioChannelMixer {
       canvas.width = width;
       canvas.height = height;
       ctx.clearRect(0, 0, width, height);
-      const volume = AudioUtils.getVolume(analyzer);
+      const minDB = -60;
+      const maxDB = 10;
+      const dbRange = maxDB - minDB;
+      const lastVolume = analyzer._lastVolume || 0;
+      const volume = Math.max((Utils.clamp(AudioUtils.getVolume(analyzer), minDB, maxDB) - minDB) / dbRange, lastVolume * 0.95);
+      analyzer._lastVolume = volume;
       const yScale = height;
       const rectHeight = height / 50;
       const volHeight = volume * yScale;
@@ -187,7 +192,7 @@ export class AudioChannelMixer {
       if (e.deltaX !== 0) return; // ignore horizontal scrolling (for trackpad)
       e.preventDefault();
       e.stopPropagation();
-      const delta = Math.sign(e.deltaY);
+      const delta = Utils.clamp(e.deltaY, -1, 1);
       const ratio = parseFloat(els.volumeHandle.style.top) / 100;
       const db = AudioUtils.mixerPositionRatioToDB(ratio - delta * 0.05);
       els.volumeHandle.style.top = `${AudioUtils.mixerDBToPositionRatio(db) * 100}%`;
@@ -281,8 +286,7 @@ export class AudioChannelMixer {
     }
     this.channelGains.forEach((gain) => {
       const analyser = this.audioContext.createAnalyser();
-      analyser.fftSize = 32;
-      analyser.maxDecibels = -20;
+      analyser.fftSize = 256;
       this.channelAnalyzers.push(analyser);
       gain.connect(analyser);
     });

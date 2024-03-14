@@ -5,6 +5,7 @@ import {PlayerModes} from '../../enums/PlayerModes.mjs';
 import {EventEmitter} from '../eventemitter.mjs';
 import {EnvUtils} from '../../utils/EnvUtils.mjs';
 import {VideoAligner} from './VideoAligner.mjs';
+import {ReferenceTypes} from '../../enums/ReferenceTypes.mjs';
 const AnalyzerStatus = {
   IDLE: 'idle',
   RUNNING: 'running',
@@ -170,7 +171,7 @@ export class VideoAnalyzer extends EventEmitter {
   }
   dereferenceFragments(fragments) {
     for (let i = 0; i < fragments.length; i++) {
-      fragments[i].removeReference();
+      fragments[i].removeReference(ReferenceTypes.ANALYZER);
     }
     fragments.length = 0;
   }
@@ -190,7 +191,7 @@ export class VideoAnalyzer extends EventEmitter {
       if (fragments[i].end > timeEnd) {
         break;
       }
-      fragments[i].addReference();
+      fragments[i].addReference(ReferenceTypes.ANALYZER);
       reserved.push(fragments[i]);
     }
     return reserved;
@@ -232,9 +233,9 @@ export class VideoAnalyzer extends EventEmitter {
     return true;
   }
   getMarkerPosition() {
-    if (this.introStatus === AnalyzerStatus.RUNNING) {
+    if (this.introStatus === AnalyzerStatus.RUNNING && this.introPlayer) {
       return this.introPlayer.currentTime;
-    } else if (this.outroStatus === AnalyzerStatus.RUNNING) {
+    } else if (this.outroStatus === AnalyzerStatus.RUNNING && this.outroPlayer) {
       return this.outroPlayer.currentTime;
     }
     return null;
@@ -244,6 +245,7 @@ export class VideoAnalyzer extends EventEmitter {
     player.currentTime = timeStart;
     player.playbackRate = 6;
     player.volume = 0;
+    player.muted = true;
     player.play();
     let destroyed = false;
     let completed = false;
@@ -260,6 +262,12 @@ export class VideoAnalyzer extends EventEmitter {
     let pauseTimeout;
     let lastTime = -1;
     let lastCalculate = Date.now();
+    const pauseHandler = () => {
+      if (!destroyed && player.readyState >= 1) {
+        player.pause();
+        console.log('[VideoAnalyzer] Paused analyzer');
+      }
+    };
     const onAnimFrame = () => {
       if (destroyed) {
         aligner.calculate();
@@ -272,12 +280,7 @@ export class VideoAnalyzer extends EventEmitter {
       }
       requestAnimationFrame(onAnimFrame);
       clearTimeout(pauseTimeout);
-      pauseTimeout = setTimeout(() => {
-        if (!destroyed && player.readyState >= 1) {
-          player.pause();
-          console.log('[VideoAnalyzer] Paused analyzer');
-        }
-      }, 100);
+      pauseTimeout = setTimeout(pauseHandler, 100);
       if (player.readyState < 2) {
         return;
       }
@@ -310,7 +313,7 @@ export class VideoAnalyzer extends EventEmitter {
     };
     requestAnimationFrame(onAnimFrame);
   }
-  setLevel(level) {
+  setLevel(level, audioLevel) {
     this.destroyPlayers();
     if (this.introStatus === AnalyzerStatus.FAILED) {
       this.introStatus = AnalyzerStatus.IDLE;

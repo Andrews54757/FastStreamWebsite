@@ -20,14 +20,28 @@ export class KeybindManager extends EventEmitter {
     this.on('HidePlayer', (e) => {
       this.client.interfaceController.toggleHide();
     });
+    this.on('NextChapter', (e) =>{
+      const chapters = this.client.chapters;
+      const time = this.client.currentTime;
+      const chapter = chapters.findIndex((chapter) => chapter.startTime <= time && chapter.endTime >= time);
+      if (chapter === -1) {
+        return;
+      }
+      if (chapter + 1 < chapters.length) {
+        this.client.currentTime = chapters[chapter + 1].startTime;
+      }
+    });
     this.on('GoToStart', (e) => {
       this.client.currentTime = 0;
     });
     this.on('VolumeUp', (e) => {
-      this.client.volume = Math.min(this.client.volume + 0.10, 3);
+      this.client.volume = Math.round(Math.min(this.client.volume + 0.10, 3) * 100) / 100;
     });
     this.on('VolumeDown', (e) => {
-      this.client.volume = Math.max(this.client.volume - 0.10, 0);
+      this.client.volume = Math.round(Math.max(this.client.volume - 0.10, 0) * 100) / 100;
+    });
+    this.on('Mute', (e)=>{
+      this.client.interfaceController.muteToggle();
     });
     this.on('SeekForward', (e) => {
       this.client.setSeekSave(false);
@@ -39,14 +53,15 @@ export class KeybindManager extends EventEmitter {
       this.client.currentTime += -this.client.options.seekStepSize;
       this.client.setSeekSave(true);
     });
-    this.on('SeekForwardSmall', (e) => {
+    const frameStep = 1 / 30;
+    this.on('SeekForwardFrame', (e) => {
       this.client.setSeekSave(false);
-      this.client.currentTime += this.client.options.seekStepSize / 10;
+      this.client.currentTime += frameStep;
       this.client.setSeekSave(true);
     });
-    this.on('SeekBackwardSmall', (e) => {
+    this.on('SeekBackwardFrame', (e) => {
       this.client.setSeekSave(false);
-      this.client.currentTime += -this.client.options.seekStepSize / 10;
+      this.client.currentTime += -frameStep;
       this.client.setSeekSave(true);
     });
     this.on('PlayPause', (e) => {
@@ -104,6 +119,9 @@ export class KeybindManager extends EventEmitter {
     });
     this.on('SubtrackShiftLeft', (e) => {
       this.client.interfaceController.subtitlesManager.subtitleSyncer.shiftSubtitles(-0.2);
+    });
+    this.on('ToggleSubtitles', (e)=>{
+      this.client.interfaceController.subtitlesManager.toggleSubtitles();
     });
     this.on('keybind', (keybind, e) => {
       // console.log("Keybind", keybind);

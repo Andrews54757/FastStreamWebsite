@@ -19,6 +19,9 @@ export class WebUtils {
   static getOffsetLeft(elem) {
     return elem.getBoundingClientRect().left;
   }
+  static getOffsetTop(elem) {
+    return elem.getBoundingClientRect().top;
+  }
   static createKnob(name, minValue, maxValue, callback, units = '') {
     const knobContainer = this.create('div', null, 'knob_container');
     const knobName = this.create('div', null, 'knob_name');
@@ -135,7 +138,7 @@ export class WebUtils {
     container.addEventListener('wheel', function(e) {
       // reset the position in case knob moved
       knob.setPosition(container.offsetLeft, container.offsetTop);
-      const delta = -e.wheelDelta;
+      const delta = -Utils.clamp(e.wheelDelta, -1, 1);
       knob.doMouseScroll(delta, e.timeStamp, e.pageX, e.pageY);
       e.preventDefault();
     });

@@ -15,6 +15,46 @@ export class ProgressBar extends EventEmitter {
     this.hasShownSkip = false;
     this.isSeeking = false;
     this.isMouseOverProgressbar = false;
+    this.preciseMode = false;
+    this.keepPreciseModeOpen = false;
+    this.onPreciseModeStartHandle = this.onPreciseModeStart.bind(this);
+    this.onPreciseModeEndHandle = this.onPreciseModeEnd.bind(this);
+  }
+  onPreciseModeStart() {
+    const fineTimeControls = this.client.interfaceController.fineTimeControls;
+    fineTimeControls.ui.timelineAudio.style.height = '22px';
+    fineTimeControls.ui.timelineAudio.style.top = '52px';
+    fineTimeControls.shouldRenderFrames(true);
+  }
+  onPreciseModeEnd() {
+    const fineTimeControls = this.client.interfaceController.fineTimeControls;
+    fineTimeControls.ui.timelineAudio.style.height = '';
+    fineTimeControls.ui.timelineAudio.style.top = '';
+    fineTimeControls.shouldRenderFrames(false);
+  }
+  startPreciseMode(keepOpen = false) {
+    if (!this.client.player) {
+      return;
+    }
+    const fineTimeControls = this.client.interfaceController.fineTimeControls;
+    if (this.preciseMode) {
+      fineTimeControls.prioritizeState(this.onPreciseModeStartHandle);
+      return;
+    }
+    if (keepOpen) {
+      this.keepPreciseModeOpen = true;
+    }
+    this.preciseMode = true;
+    fineTimeControls.pushState(this.onPreciseModeStartHandle, this.onPreciseModeEndHandle);
+  }
+  endPreciseMode() {
+    if (!this.preciseMode) {
+      return;
+    }
+    this.preciseMode = false;
+    this.keepPreciseModeOpen = false;
+    const fineTimeControls = this.client.interfaceController.fineTimeControls;
+    fineTimeControls.removeState(this.onPreciseModeStartHandle);
   }
   setupUI() {
     this.seekMarker = document.createElement('div');
@@ -26,10 +66,20 @@ export class ProgressBar extends EventEmitter {
     this.unseekMarker.classList.add('unseek_marker');
     DOMElements.markerContainer.appendChild(this.unseekMarker);
     this.unseekMarker.style.display = 'none';
-    this.analyzerMarker = document.createElement('div');
-    this.analyzerMarker.classList.add('analyzer_marker');
-    DOMElements.markerContainer.appendChild(this.analyzerMarker);
-    this.analyzerMarker.style.display = 'none';
+    this.videoAnalyzerMarker = document.createElement('div');
+    this.videoAnalyzerMarker.classList.add('analyzer_marker');
+    DOMElements.markerContainer.appendChild(this.videoAnalyzerMarker);
+    this.videoAnalyzerMarker.style.display = 'none';
+    this.audioAnalyzerMarker = document.createElement('div');
+    this.audioAnalyzerMarker.classList.add('analyzer_marker');
+    this.audioAnalyzerMarker.style.backgroundColor = '#ff0';
+    DOMElements.markerContainer.appendChild(this.audioAnalyzerMarker);
+    this.audioAnalyzerMarker.style.display = 'none';
+    this.frameExtractorMarker = document.createElement('div');
+    this.frameExtractorMarker.classList.add('analyzer_marker');
+    this.frameExtractorMarker.style.backgroundColor = '#f00';
+    DOMElements.markerContainer.appendChild(this.frameExtractorMarker);
+    this.frameExtractorMarker.style.display = 'none';
     DOMElements.progressContainer.addEventListener('mousedown', this.onProgressbarMouseDown.bind(this));
     DOMElements.progressContainer.addEventListener('mouseenter', this.onProgressbarMouseEnter.bind(this));
     DOMElements.progressContainer.addEventListener('mouseleave', this.onProgressbarMouseLeave.bind(this));
@@ -323,28 +373,54 @@ export class ProgressBar extends EventEmitter {
     this.client.seekPreview(time);
   }
   onProgressbarMouseDown(event) {
+    // check if left mouse button was pressed
+    if (event.button !== 0) {
+      return;
+    }
     let shouldPlay = false;
     if (this.client.persistent.playing) {
       this.client.player.pause();
       shouldPlay = true;
     }
     this.isSeeking = true;
-    this.showPreview();
     this.client.savePosition();
     this.client.setSeekSave(false);
     DOMElements.progressContainer.classList.add('freeze');
     // we need an initial position for touchstart events, as mouse up has no offset x for iOS
     let initialPosition = Math.min(Math.max(event.clientX - WebUtils.getOffsetLeft(DOMElements.progressContainer), 0), DOMElements.progressContainer.clientWidth);
+    let preciseSavedTime = null;
+    let preciseSavedPosition = null;
     const shiftTime = (timeBarX) => {
       const totalWidth = DOMElements.progressContainer.clientWidth;
       if (totalWidth) {
-        const newTime = this.client.duration * timeBarX / totalWidth;
+        let newTime;
+        if (preciseSavedPosition !== null) {
+          newTime = preciseSavedTime + 60 * (timeBarX - preciseSavedPosition) / totalWidth;
+        } else {
+          newTime = this.client.duration * timeBarX / totalWidth;
+        }
         this.client.currentTime = newTime;
         this.client.updateTime(newTime);
+        DOMElements.currentProgress.style.width = Utils.clamp(newTime / this.client.duration, 0, 1) * 100 + '%';
       }
     };
     const onProgressbarMouseMove = (event) => {
+      this.hidePreview();
+      const currentY = Math.min(Math.max(event.clientY - WebUtils.getOffsetTop(DOMElements.progressContainer), -100), 50);
       const currentX = Math.min(Math.max(event.clientX - WebUtils.getOffsetLeft(DOMElements.progressContainer), 0), DOMElements.progressContainer.clientWidth);
+      const isExpanded = DOMElements.playerContainer.classList.contains('expanded');
+      const offset = isExpanded ? 0 : 80;
+      if ((this.preciseMode || preciseSavedPosition !== null) && currentY > 20) {
+        preciseSavedTime = null;
+        preciseSavedPosition = null;
+        if (!this.keepPreciseModeOpen) {
+          this.endPreciseMode();
+        }
+      } else if (preciseSavedPosition === null && currentY <= -10 - offset) {
+        preciseSavedTime = this.client.currentTime;
+        preciseSavedPosition = currentX;
+        this.startPreciseMode();
+      }
       initialPosition = NaN; // mouse up will fire after the move, we don't want to trigger the initial position in the event of iOS
       shiftTime(currentX);
     };
@@ -353,9 +429,12 @@ export class ProgressBar extends EventEmitter {
       document.removeEventListener('touchmove', onProgressbarMouseMove);
       document.removeEventListener('mouseup', onProgressbarMouseUp);
       document.removeEventListener('touchend', onProgressbarMouseUp);
+      if (!this.keepPreciseModeOpen) {
+        this.endPreciseMode();
+      }
       this.isSeeking = false;
-      if (!this.isMouseOverProgressbar) {
-        this.hidePreview();
+      if (this.isMouseOverProgressbar) {
+        this.showPreview();
       }
       let clickedX = Math.min(Math.max(event.clientX - WebUtils.getOffsetLeft(DOMElements.progressContainer), 0), DOMElements.progressContainer.clientWidth);
       if (isNaN(clickedX) && !isNaN(initialPosition)) {
@@ -412,12 +491,26 @@ export class ProgressBar extends EventEmitter {
     } else {
       this.unseekMarker.style.display = 'none';
     }
-    const analyzerMarkerPosition = this.client.videoAnalyzer.getMarkerPosition(); ;
-    if (analyzerMarkerPosition !== null) {
-      this.analyzerMarker.style.left = (analyzerMarkerPosition / duration * 100) + '%';
-      this.analyzerMarker.style.display = '';
+    const videoAnalyzerMarkerPosition = this.client.videoAnalyzer.getMarkerPosition();
+    if (videoAnalyzerMarkerPosition !== null) {
+      this.videoAnalyzerMarker.style.left = (videoAnalyzerMarkerPosition / duration * 100) + '%';
+      this.videoAnalyzerMarker.style.display = '';
     } else {
-      this.analyzerMarker.style.display = 'none';
+      this.videoAnalyzerMarker.style.display = 'none';
+    }
+    const audioAnalyzerMarkerPosition = this.client.audioAnalyzer.getMarkerPosition();
+    if (audioAnalyzerMarkerPosition !== null) {
+      this.audioAnalyzerMarker.style.left = (audioAnalyzerMarkerPosition / duration * 100) + '%';
+      this.audioAnalyzerMarker.style.display = '';
+    } else {
+      this.audioAnalyzerMarker.style.display = 'none';
+    }
+    const frameExtractorMarkerPosition = this.client.frameExtractor.getMarkerPosition();
+    if (frameExtractorMarkerPosition !== null) {
+      this.frameExtractorMarker.style.left = (frameExtractorMarkerPosition / duration * 100) + '%';
+      this.frameExtractorMarker.style.display = '';
+    } else {
+      this.frameExtractorMarker.style.display = 'none';
     }
   }
 }

@@ -68,6 +68,22 @@ export class SubtitlesManager extends EventEmitter {
       this.updateTrackList();
     }
   }
+  toggleSubtitles() {
+    if (this.activeTracks.length === 0) {
+      if (this.lastActiveTracks) {
+        this.lastActiveTracks.forEach((track) => {
+          this.activateTrack(track);
+        });
+        this.lastActiveTracks = null;
+      } else {
+        this.activateTrack(this.tracks[0]);
+      }
+    } else {
+      this.lastActiveTracks = this.activeTracks.slice();
+      this.activeTracks.length = 0;
+      this.updateTrackList();
+    }
+  }
   clearTracks() {
     this.tracks.length = 0;
     this.activeTracks.length = 0;
@@ -86,7 +102,6 @@ export class SubtitlesManager extends EventEmitter {
     this.openSubtitlesSearch.setLanguageInputValue(settings.defaultLanguage);
     this.refreshSubtitleStyles();
     this.renderSubtitles();
-    this.subtitleSyncer.onVideoTimeUpdate();
   }
   onSubtitleTrackDownloaded(track) {
     this.activateTrack(this.addTrack(track));
@@ -138,7 +153,6 @@ export class SubtitlesManager extends EventEmitter {
         DOMElements.playerContainer.style.backgroundImage = '';
       }
       this.renderSubtitles();
-      this.subtitleSyncer.onVideoTimeUpdate();
     });
     WebUtils.setupTabIndex(DOMElements.subtitlesOptionsTestButton);
     const filechooser = document.createElement('input');
@@ -306,7 +320,6 @@ export class SubtitlesManager extends EventEmitter {
     shiftLTrack.addEventListener('click', (e) => {
       this.tracks[i].shift(-0.2);
       this.renderSubtitles();
-      this.subtitleSyncer.onVideoTimeUpdate();
       this.client.interfaceController.setStatusMessage('subtitles', Localize.getMessage('player_subtitlesmenu_shifttool_message', ['-0.2']), 'info', 700);
       e.stopPropagation();
     }, true);
@@ -318,7 +331,6 @@ export class SubtitlesManager extends EventEmitter {
     shiftRTrack.addEventListener('click', (e) => {
       this.tracks[i].shift(0.2);
       this.renderSubtitles();
-      this.subtitleSyncer.onVideoTimeUpdate();
       this.client.interfaceController.setStatusMessage('subtitles', Localize.getMessage('player_subtitlesmenu_shifttool_message', ['+0.2']), 'info', 700);
       e.stopPropagation();
     }, true);
@@ -393,7 +405,6 @@ export class SubtitlesManager extends EventEmitter {
       cachedElements[i].update();
     }
     this.renderSubtitles();
-    this.subtitleSyncer.onVideoTimeUpdate();
   }
   applyStyles(trackContainer) {
     return this.settingsManager.applyStyles(trackContainer);
@@ -470,6 +481,17 @@ export class SubtitlesManager extends EventEmitter {
       trackWrapper.style.marginBottom = newMarginBottom + 'px';
       shrinkAmount -= (marginBottom - newMarginBottom);
     }
+  }
+  getSubtitlesVisibleNow() {
+    const cachedElements = this.subtitleTrackDisplayElements;
+    return cachedElements.map((el, i) => {
+      return {
+        track: this.activeTracks[i],
+        visible: el.style.opacity !== '0',
+        text: el.textContent,
+        marginBottom: parseInt(el.parentElement.style.marginBottom),
+      };
+    });
   }
   renderSubtitles() {
     const cachedElements = this.subtitleTrackDisplayElements;

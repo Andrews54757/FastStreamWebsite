@@ -1,5 +1,6 @@
 import {DefaultPlayerEvents} from '../../enums/DefaultPlayerEvents.mjs';
 import {DownloadStatus} from '../../enums/DownloadStatus.mjs';
+import {ReferenceTypes} from '../../enums/ReferenceTypes.mjs';
 import {EmitterRelay, EventEmitter} from '../../modules/eventemitter.mjs';
 import {Hls} from '../../modules/hls.mjs';
 import {Utils} from '../../utils/Utils.mjs';
@@ -12,13 +13,18 @@ export default class HLSPlayer extends EventEmitter {
     super();
     this.client = client;
     this.isPreview = config?.isPreview || false;
+    this.isAudioOnly = config?.isAudioOnly || false;
     this.qualityMultiplier = config?.qualityMultiplier || 1.1;
     this.source = null;
     this.fragmentRequester = new HLSFragmentRequester(this);
-    this.video = document.createElement('video');
+    this.video = document.createElement(this.isAudioOnly ? 'audio' : 'video');
     if (!Hls.isSupported()) {
       throw new Error('HLS Not supported');
     }
+    const workerLocation = 'modules/hls.worker.js';
+    const split = import.meta.url.split('/');
+    const basePath = split.slice(0, split.length - 3).join('/');
+    const workerPath = `${basePath}/${workerLocation}`;
     this.hls = new Hls({
       autoStartLoad: false,
       startPosition: -1,
@@ -40,6 +46,7 @@ export default class HLSPlayer extends EventEmitter {
       liveMaxLatencyDurationCount: Infinity,
       liveDurationInfinity: false,
       enableWorker: true,
+      workerPath: workerPath,
       enableSoftwareAES: true,
       startLevel: 5,
       startFragPrefetch: false,
@@ -109,10 +116,12 @@ export default class HLSPlayer extends EventEmitter {
       });
     }
     zippedFragments.forEach((data) => {
+      data.fragment.addReference(ReferenceTypes.SAVER);
       data.getEntry = async () => {
         if (data.fragment.status !== DownloadStatus.DOWNLOAD_COMPLETE) {
           await this.downloadFragment(data.fragment, -1);
         }
+        data.fragment.removeReference(ReferenceTypes.SAVER);
         return this.client.downloadManager.getEntry(data.fragment.getContext());
       };
     });
@@ -126,35 +135,42 @@ export default class HLSPlayer extends EventEmitter {
     if (audioFragments[-1]) {
       audioLevelInitData = new Uint8Array(await this.client.downloadManager.getEntry(audioFragments[-1].getContext()).getDataFromBlob());
     }
-    if (levelInitData && audioLevelInitData) {
-      const {DASH2MP4} = await import('../../modules/dash2mp4/dash2mp4.mjs');
-      const dash2mp4 = new DASH2MP4();
-      dash2mp4.on('progress', (progress) => {
-        if (options?.onProgress) {
-          options.onProgress(progress);
+    try {
+      if (levelInitData && audioLevelInitData) {
+        const {DASH2MP4} = await import('../../modules/dash2mp4/dash2mp4.mjs');
+        const dash2mp4 = new DASH2MP4();
+        dash2mp4.on('progress', (progress) => {
+          if (options?.onProgress) {
+            options.onProgress(progress);
+          }
+        });
+        const blob = await dash2mp4.convert(level.details.totalduration, levelInitData.buffer, audioLevel.details.totalduration, audioLevelInitData.buffer, zippedFragments);
+        return {
+          extension: 'mp4',
+          blob: blob,
+        };
+      } else {
+        if (levelInitData || audioLevelInitData) {
+          console.warn('Unexpected init data');
         }
-      });
-      const blob = await dash2mp4.convert(level.details.totalduration, levelInitData.buffer, audioLevel.details.totalduration, audioLevelInitData.buffer, zippedFragments);
-      return {
-        extension: 'mp4',
-        blob: blob,
-      };
-    } else {
-      if (levelInitData || audioLevelInitData) {
-        console.warn('Unexpected init data');
+        const {HLS2MP4} = await import('../../modules/hls2mp4/hls2mp4.mjs');
+        const hls2mp4 = new HLS2MP4();
+        hls2mp4.on('progress', (progress) => {
+          if (options?.onProgress) {
+            options.onProgress(progress);
+          }
+        });
+        const blob = await hls2mp4.convert(level, levelInitData, audioLevel, audioLevelInitData, zippedFragments);
+        return {
+          extension: 'mp4',
+          blob: blob,
+        };
       }
-      const {HLS2MP4} = await import('../../modules/hls2mp4/hls2mp4.mjs');
-      const hls2mp4 = new HLS2MP4();
-      hls2mp4.on('progress', (progress) => {
-        if (options?.onProgress) {
-          options.onProgress(progress);
-        }
+    } catch (e) {
+      zippedFragments.forEach((data) => {
+        data.fragment.removeReference(ReferenceTypes.SAVER);
       });
-      const blob = await hls2mp4.convert(level, levelInitData, audioLevel, audioLevelInitData, zippedFragments);
-      return {
-        extension: 'mp4',
-        blob: blob,
-      };
+      throw e;
     }
   }
   load() {
@@ -252,6 +268,9 @@ export default class HLSPlayer extends EventEmitter {
         },
         onFail: (e) => {
           reject(new Error('Failed to download fragment'));
+        },
+        onAbort: (e) => {
+          reject(new Error('Aborted download'));
         },
       }, null, priority);
     });

@@ -228,7 +228,7 @@ body {
 }
 
 /* Duration */
-.fluid_video_wrapper.fluid_player_layout_default .fluid_controls_container .fluid_fluid_control_duration {
+.fluid_video_wrapper.fluid_player_layout_default .fluid_controls_container .fluid_control_duration {
     display: inline-block;
     vertical-align: top;
     height: 24px;
@@ -239,6 +239,7 @@ body {
     text-decoration: none;
     line-height: 22px;
     padding: 0px 2px;
+    user-select: text;
 }
 
 .fluid_video_wrapper.fluid_player_layout_default .fluid_controls_container {
@@ -677,6 +678,19 @@ body {
     }
 }
 
+.volume_banner,
+.rate_menu_banner {
+    position: absolute;
+    bottom: 0px;
+    right: 0px;
+    background-color: rgb(180,0,0);
+    font-weight: medium;
+    border-radius: 2px;
+    z-index: 2;
+    font-size: 8px;
+    padding: 1px 2px;
+}
+
 .fluid_button_video_source .fluid_video_sources_list,
 .fluid_button_language .fluid_language_list,
 .fluid_video_playback_rates {
@@ -841,7 +855,7 @@ body {
     z-index: 888888;
     position: absolute;
     right: 0px;
-    bottom: 36px;
+    bottom: 40px;
     white-space: normal;
     word-wrap: break-word;
     overflow-y: auto;
@@ -853,10 +867,12 @@ body {
     background-color: var(--menu-background-color);
 }
 
+.rate_menu_container,
 .menu_container {
     max-height: calc(100vh - 55px);
 }
 
+.expanded .rate_menu_container,
 .expanded .menu_container {
     max-height: calc(100vh - 135px);
 }
@@ -1510,9 +1526,16 @@ body {
     cursor: grab;
 }
 
-.timeline_track {
+.timeline_track_container {
     position: absolute;
     top: 52px;
+    left: 0px;
+    right: 0px;
+}
+
+.timeline_track {
+    position: absolute;
+    top: 0px;
     height: 30px;
     left: 0px;
     right: 0px;
@@ -1537,7 +1560,39 @@ body {
     text-overflow: ellipsis;
 }
 
-.timeline_vod {
+.timeline_audio {
+    position: absolute;
+    top: 22px;
+    height: 54px;
+    left: 0px;
+    right: 0px;
+    transition: height 0.2s, top 0.2s;
+    overflow: hidden;
+}
+
+
+.timeline_audio_canvas_container {
+    position: absolute;
+    top: 0px;
+    left: 0px;
+    right: 0px;
+    height: 100%;
+    transition: height 0.2s, top 0.2s;
+}
+
+.threshold_bar {
+    position: absolute;
+    height: 2px;
+    bottom: 0px;
+    background-color: rgba(255, 0, 217, 1);
+    left: 0px;
+    right: 0px;
+    border-radius: 1px;
+    z-index: 100;
+    transform: translate(0, 50%);
+}
+
+.timeline_images {
     position: absolute;
     top: 22px;
     height: 22px;
@@ -1582,9 +1637,18 @@ body {
     cursor: auto;
 }
 
-.timeline_vod_canvas {
+.timeline_frame,
+.timeline_audio_canvas {
     position: absolute;
-    height: 20px;
+    user-select: none;
+}
+
+.timeline_frame {
+    max-height: 100%;
+}
+
+.timeline_audio_canvas {
+    height: 100%;
 }
 
 /* total width */
@@ -1770,7 +1834,7 @@ body {
 
 .rate_menu_container {
     position: absolute;
-    bottom: 36px;
+    bottom: 40px;
     width: 60px;
     transform: translate(-50%, 0%);
     left: 13px;
@@ -2689,10 +2753,12 @@ input.crosstalk_calculator_input {
     justify-content: flex-end;
 }
 
+.fluid_controls_disabled_tools .rate_menu_container,
 .fluid_controls_disabled_tools .menu_container {
     max-height: calc(100vh - 105px);
 }
 
+.expanded .fluid_controls_disabled_tools .rate_menu_container,
 .expanded .fluid_controls_disabled_tools .menu_container {
     max-height: calc(100vh - 185px);
 }
@@ -2728,6 +2794,24 @@ input.crosstalk_calculator_input {
     text-align: center;
 }
 
+.loop_menu_gif_button {
+    display: flex;
+    align-items: center;
+    border-radius: 5px;
+    cursor: pointer;
+    margin-left: 5px;
+    padding: 0px 5px;
+    background-color: var(--menu-textbutton-background-color);
+    color: var(--menu-textbutton-text-color);
+    text-align: center;
+}
+
+.loop_menu_gif_button svg {
+    width: 24px;
+    height: 24px;
+}
+
+.loop_menu_gif_button:hover,
 .now_button:hover,
 .loop_menu_toggle_button:hover {
     background-color: var(--menu-textbutton-hover-background-color);
@@ -2781,7 +2865,7 @@ input.crosstalk_calculator_input {
     }
 
     .status_message,
-    .fluid_video_wrapper.fluid_player_layout_default .fluid_controls_container .fluid_fluid_control_duration {
+    .fluid_video_wrapper.fluid_player_layout_default .fluid_controls_container .fluid_control_duration {
         font-size: 13px;
     }
 
@@ -2809,6 +2893,11 @@ input.crosstalk_calculator_input {
     }
     .rate-changer-list>div {
         width: 50px;
+    }
+
+    .volume_banner,
+    .rate_menu_banner {
+        font-size: 6px;
     }
 
 }

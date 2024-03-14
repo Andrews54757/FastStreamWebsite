@@ -17,6 +17,7 @@ import {VideoUtils} from '../utils/VideoUtils.mjs';
 import {WebUtils} from '../utils/WebUtils.mjs';
 import {VideoSource} from '../VideoSource.mjs';
 import {DOMElements} from './DOMElements.mjs';
+import {FineTimeControls} from './FineTimeControls.mjs';
 import {LanguageChanger} from './menus/LanguageChanger.mjs';
 import {LoopMenu} from './menus/LoopMenu.mjs';
 import {PlaybackRateChanger} from './menus/PlaybackRateChanger.mjs';
@@ -35,10 +36,12 @@ export class InterfaceController {
     this.mouseOverControls = false;
     this.userIsReordering = false;
     this.specialReorderModeEnabled = false;
+    this.controlsVisible = true;
     this.mouseActivityCooldown = 0;
     this.failed = false;
+    this.fineTimeControls = new FineTimeControls(this.client);
     this.subtitlesManager = new SubtitlesManager(this.client);
-    this.playbackRateChanger = new PlaybackRateChanger();
+    this.playbackRateChanger = new PlaybackRateChanger(this.client);
     this.playbackRateChanger.setupUI();
     this.playbackRateChanger.on('rateChanged', (rate) => {
       this.client.playbackRate = rate;
@@ -126,6 +129,7 @@ export class InterfaceController {
     DOMElements.playPauseButtonBigCircle.style.display = '';
     DOMElements.playerContainer.classList.add('controls_visible');
     this.updateToolVisibility();
+    this.fineTimeControls.reset();
   }
   failedToLoad(reason) {
     this.failed = true;
@@ -216,7 +220,7 @@ export class InterfaceController {
       }
     });
     DOMElements.volumeBlock.addEventListener('wheel', (e) => {
-      this.client.volume = Math.max(0, Math.min(3, this.client.volume + e.deltaY * 0.01));
+      this.client.volume = Math.max(0, Math.min(3, this.client.volume + Utils.clamp(e.deltaY, -1, 1) * 0.01));
       e.preventDefault();
       e.stopPropagation();
     });
@@ -392,7 +396,6 @@ export class InterfaceController {
         DOMElements.disabledTools.classList.remove('visible');
       }
       e.stopPropagation();
-      e.preventDefault();
     });
     WebUtils.setupTabIndex(DOMElements.moreButton);
     const o = new IntersectionObserver(([entry]) => {
@@ -436,6 +439,7 @@ export class InterfaceController {
         this.userIsReordering = false;
         this.checkToolsAndSave();
       },
+      filter: '.menu_container, .rate_menu_container',
     };
     this.reorderSortEnabled = Sortable.create(DOMElements.toolsContainer, options);
     this.reorderSortDisabled = Sortable.create(DOMElements.disabledTools, options);
@@ -466,7 +470,6 @@ export class InterfaceController {
       el.addEventListener('click', (e) => {
         if (this.specialReorderModeEnabled) {
           if (!skipClick) this.stopReorderUI();
-          e.preventDefault();
           e.stopPropagation();
         }
       }, true);
@@ -475,6 +478,27 @@ export class InterfaceController {
           e.stopPropagation();
         }
       }, true);
+    });
+    const mouseUpHandler = (e) => {
+      document.removeEventListener('mousemove', mouseMoveHandler);
+      document.removeEventListener('mouseup', mouseUpHandler);
+    };
+    const mouseMoveHandler = (e) => {
+      const currentY = Math.min(Math.max(e.clientY - WebUtils.getOffsetTop(DOMElements.progressContainer), -100), 100);
+      const isExpanded = DOMElements.playerContainer.classList.contains('expanded');
+      const offset = isExpanded ? 0 : 80;
+      if (currentY > 50) {
+        this.fineTimeControls.removeAll();
+        this.progressBar.endPreciseMode();
+        this.subtitlesManager.subtitleSyncer.stop();
+        this.playbackRateChanger.closeSilenceSkipperUI();
+      } else if (currentY <= -5 - offset) {
+        this.progressBar.startPreciseMode(true);
+      }
+    };
+    DOMElements.controlsLeft.addEventListener('mousedown', (e) => {
+      document.addEventListener('mousemove', mouseMoveHandler);
+      document.addEventListener('mouseup', mouseUpHandler);
     });
   }
   startReorderUI() {
@@ -830,13 +854,11 @@ export class InterfaceController {
       return;
     }
     window.requestAnimationFrame(this.progressLoop.bind(this));
-    if (!this.progressBar.isSeeking) {
-      this.client.updateTime(this.client.currentTime);
-    }
+    this.client.updateTime(this.client.currentTime);
   }
   durationChanged() {
     const duration = this.client.duration;
-    if (duration < 5 * 60 || this.subtitlesManager.subtitleSyncer.started) {
+    if (duration < (5 * 60 * this.client.playbackRate) || this.fineTimeControls.started) {
       this.runProgressLoop();
     } else {
       this.stopProgressLoop();
@@ -1046,12 +1068,14 @@ export class InterfaceController {
   }
   hideControlBar() {
     clearTimeout(this.hideControlBarTimeout);
+    this.controlsVisible = false;
     DOMElements.playerContainer.classList.remove('controls_visible');
     DOMElements.controlsContainer.classList.remove('fade_in');
     DOMElements.controlsContainer.classList.add('fade_out');
     DOMElements.progressContainer.classList.remove('freeze');
   }
   showControlBar() {
+    this.controlsVisible = true;
     DOMElements.playerContainer.classList.add('controls_visible');
     DOMElements.controlsContainer.classList.remove('fade_out');
     DOMElements.controlsContainer.classList.add('fade_in');
@@ -1107,6 +1131,7 @@ export class InterfaceController {
   }
   updatePlaybackRate() {
     this.playbackRateChanger.setPlaybackRate(this.persistent.playbackRate, true);
+    this.durationChanged();
   }
   updateLanguageTracks() {
     this.languageChanger.updateLanguageTracks(this.client);
@@ -1131,10 +1156,18 @@ export class InterfaceController {
     }
     currentVolumeTag.style.width = (volume * 100) / 3 + '%';
     DOMElements.currentVolumeText.textContent = Math.round(volume * 100) + '%';
+    DOMElements.volumeBanner.textContent = Math.round(volume * 100) + '%';
+    if (volume === 1 || volume === 0) {
+      DOMElements.volumeBanner.style.display = 'none';
+    } else {
+      DOMElements.volumeBanner.style.display = '';
+    }
   }
   timeUpdated() {
     const duration = this.client.duration;
-    DOMElements.currentProgress.style.width = Utils.clamp(this.persistent.currentTime / duration, 0, 1) * 100 + '%';
+    if (!this.progressBar.isSeeking) {
+      DOMElements.currentProgress.style.width = Utils.clamp(this.persistent.currentTime / duration, 0, 1) * 100 + '%';
+    }
     DOMElements.duration.textContent = StringUtils.formatTime(this.persistent.currentTime) + ' / ' + StringUtils.formatTime(duration);
     const chapters = this.client.chapters;
     if (chapters.length > 0) {
@@ -1147,7 +1180,7 @@ export class InterfaceController {
       this.setStatusMessage('chapter', null, 'info');
     }
     this.subtitlesManager.renderSubtitles();
-    this.subtitlesManager.subtitleSyncer.onVideoTimeUpdate();
+    this.fineTimeControls.onVideoTimeUpdate();
     this.updateSkipSegments();
   }
   fullscreenToggle() {
@@ -1222,7 +1255,7 @@ export class InterfaceController {
     }
   }
   isUserSeeking() {
-    return this.progressBar.isSeeking || this.subtitlesManager.subtitleSyncer.isSeeking;
+    return this.progressBar.isSeeking || this.fineTimeControls.isSeeking;
   }
   playPauseAnimation() {
     if (this.isUserSeeking()) {

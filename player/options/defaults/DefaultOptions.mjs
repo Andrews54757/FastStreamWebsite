@@ -6,10 +6,9 @@ import {MiniplayerPositions} from './MiniplayerPositions.mjs';
 import {VisChangeActions} from './VisChangeActions.mjs';
 export const DefaultOptions = {
   playMP4URLs: false,
-  playStreamURLs: EnvUtils.isExtension(),
-  analyzeVideos: EnvUtils.isExtension() && EnvUtils.hasComputationalResources(),
+  playStreamURLs: false,
+  analyzeVideos: false,
   downloadAll: true,
-  freeUnusedChannels: true,
   autoEnableBestSubtitles: false,
   storeProgress: false,
   autoplayYoutube: EnvUtils.isExtension(),
@@ -26,9 +25,8 @@ export const DefaultOptions = {
   videoDaltonizerType: DaltonizerTypes.NONE,
   videoDaltonizerStrength: 1,
   maxSpeed: -1,
-  maxSize: -1,
+  maxVideoSize: 5000000000, // 5GB max size
   seekStepSize: 2,
-  playbackRate: 1,
   qualityMultiplier: 1.1,
   singleClickAction: ClickActions.HIDE_CONTROLS,
   doubleClickAction: ClickActions.PLAY_PAUSE,
