@@ -790,13 +790,13 @@ const TranslationMap = {
     "Recording GIF at 4x speed...",
     "Grabando GIF a velocidad 4x...",
     "4倍速でGIFを録画中...",
-    "Запись GIF c ускорением 4x..."
+    "Запись GIF на скорости 4x…"
   ],
   "loop_menu_gif_end": [
     "Finished recording GIF. Now saving...",
     "Finalizó la grabación del GIF. Ahora guardando...",
     "GIFの録画が終了しました。現在保存中...",
-    "Запись GIF завершена. Сохранение..."
+    "Запись GIF завершена. Сохранение…"
   ],
   "loop_menu_gif_abort": [
     "Aborted GIF recording!",
@@ -970,7 +970,7 @@ const TranslationMap = {
     "Video size exceeds limits, will buffer $1s",
     "El tamaño del video excede los límites, se almacenará en búfer durante $1s",
     "ビデオのサイズが制限を超えています、$1秒バッファリングします",
-    "Размер видео превышает лимиты, будет буферизация $1s"
+    "Размер видео превышает лимит, будет буферизировано $1c"
   ],
   "player_error_drm": [
     "Failed to load! DRM is not supported!",

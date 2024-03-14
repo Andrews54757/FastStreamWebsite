@@ -21,7 +21,7 @@ export class PlaybackRateChanger extends EventEmitter {
     this.silenceSkipSpeed = this.maxPlaybackRate; // Firefox mutes audio if playback rate is too high
     this.regularSpeed = 1;
     this.silenceThreshold = 0;
-    this.audioPaddingStart = 0.25;
+    this.audioPaddingStart = 0.5;
     this.audioPaddingEnd = 0.25;
     this.setupOptionsUI();
     this.silenceSkipperLoopHandle = this.silenceSkipperLoop.bind(this);
@@ -40,13 +40,13 @@ export class PlaybackRateChanger extends EventEmitter {
     const state = await Utils.loadAndParseOptions('playbackRateConfig', {
       playbackRate: 1,
       silenceSkipSpeed: this.maxPlaybackRate,
-      audioPaddingStart: 0.25,
-      audioPaddingEnd: 0.25,
+      // audioPaddingStart: 0.25,
+      // audioPaddingEnd: 0.25,
     });
     this.client.playbackRate = state.playbackRate;
     this.silenceSkipSpeed = state.silenceSkipSpeed;
-    this.audioPaddingStart = state.audioPaddingStart;
-    this.audioPaddingEnd = state.audioPaddingEnd;
+    // this.audioPaddingStart = state.audioPaddingStart;
+    // this.audioPaddingEnd = state.audioPaddingEnd;
   }
   onAudioMouseDown(e) {
     const startY = e.clientY;
@@ -122,6 +122,10 @@ export class PlaybackRateChanger extends EventEmitter {
     const time = this.client.currentTime;
     if (this.shouldSkipSilence(time)) {
       if (playbackRate !== this.silenceSkipSpeed) {
+        // Fix for chrome desync bug
+        if (EnvUtils.isChrome()) {
+          this.client.player.currentTime = this.client.player.currentTime;
+        }
         this.client.playbackRate = this.silenceSkipSpeed;
       }
     } else {
@@ -136,8 +140,8 @@ export class PlaybackRateChanger extends EventEmitter {
     const dbRange = maxDB - minDB;
     const volumeBuffer = this.client.audioAnalyzer.getVolumeData();
     const outputRate = this.client.audioAnalyzer.getOutputRate();
-    const minIndex = Math.floor((time - this.audioPaddingStart) * outputRate);
-    const maxIndex = Math.floor((time + this.audioPaddingEnd) * outputRate);
+    const minIndex = Math.floor((time - this.audioPaddingEnd) * outputRate);
+    const maxIndex = Math.floor((time + this.audioPaddingStart) * outputRate);
     for (let i = minIndex; i < maxIndex; i++) {
       if (volumeBuffer[i] === undefined) continue;
       const volume = Utils.clamp((volumeBuffer[i] - minDB) / dbRange, 0, 1);

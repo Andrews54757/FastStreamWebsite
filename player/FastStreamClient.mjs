@@ -699,7 +699,7 @@ export class FastStreamClient extends EventEmitter {
     this.interfaceController.reset();
     this.persistent.buffering = false;
     this.storageAvailable = 0;
-    this.hasDownloadSpace = false;
+    this.hasDownloadSpace = true;
     this.previousLevel = -1;
     this.previousAudioLevel = -1;
     await Promise.all(promises);
@@ -989,10 +989,6 @@ export class FastStreamClient extends EventEmitter {
     this.persistent.playbackRate = value;
     if (this.player) {
       this.player.playbackRate = value;
-      // Fix for chrome desync bug
-      if (EnvUtils.isChrome()) {
-        this.player.currentTime = this.player.currentTime;
-      }
     }
     this.interfaceController.updatePlaybackRate();
   }

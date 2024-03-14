@@ -108,7 +108,7 @@ export class FineTimeControls extends EventEmitter {
     this.ui.timelineImages.style.display = 'none';
     this.currentFrameCanvas = document.createElement('canvas');
     this.currentFrameCanvas.classList.add('timeline_frame');
-    this.currentFrameCanvas.height = 128;
+    this.currentFrameCanvas.height = 64;
     this.currentFrameCtx = this.currentFrameCanvas.getContext('2d');
     this.ui.timelineAudio = WebUtils.create('div', '', 'timeline_audio');
     this.ui.timelineContainer.appendChild(this.ui.timelineAudio);
@@ -319,7 +319,7 @@ export class FineTimeControls extends EventEmitter {
       this.lastFrameRenderIndex = currentFrame;
       this.lastFrameRenderTime = currentTime;
       const aspect = video.videoWidth / video.videoHeight;
-      const newWidth = Math.round(64 * aspect);
+      const newWidth = Math.round(this.currentFrameCanvas.height * aspect);
       if (this.currentFrameCanvas.width !== newWidth) {
         this.currentFrameCanvas.width = newWidth;
       }

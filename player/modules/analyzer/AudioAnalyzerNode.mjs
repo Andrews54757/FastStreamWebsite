@@ -19,14 +19,14 @@ export class AudioAnalyzerNode extends EventEmitter {
     const isSpeechProb = Math.round(probs.isSpeech * 255);
     const audioElement = this.audioElement;
     if (!audioElement || audioElement.readyState < 4 || audioElement.paused) return;
-    const time = audioElement.currentTime - audioElement.playbackRate * (this.audioContext.outputLatency - this.audioContext.baseLatency);
+    const time = audioElement.currentTime - audioElement.playbackRate * 0.02;
     this.emit('vad', time, isSpeechProb);
   }
   recordVolume() {
     const audioElement = this.audioElement;
     if (!this.volumeAnalyserNode || !audioElement || audioElement.readyState < 4 || audioElement.paused) return;
     const volume = AudioUtils.getVolume(this.volumeAnalyserNode);
-    const time = audioElement.currentTime - audioElement.playbackRate * (this.audioContext.outputLatency - this.audioContext.baseLatency) * 0.75;
+    const time = audioElement.currentTime - audioElement.playbackRate * 0.02;
     this.emit('volume', time, volume);
   }
   startRecordingVolume() {
