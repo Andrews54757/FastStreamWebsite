@@ -37,7 +37,7 @@ class EventEmitterContext {
     if (!this.events.has(event)) {
       return this;
     }
-    this.events.get(event).every((callback) => {
+    if (!this.events.get(event).every((callback) => {
       try {
         const result = callback(...args);
         if (result === EmitterCancel) {
@@ -48,7 +48,9 @@ class EventEmitterContext {
         console.error(e);
       }
       return true;
-    });
+    })) {
+      return EmitterCancel;
+    }
     return this;
   }
 }
@@ -88,7 +90,15 @@ export class EventEmitter {
     if (this.debug) {
       console.log(event, ...args);
     }
-    this.contexts.forEach((context) => context.emit(event, ...args));
+    if (!this.contexts.every((context) => {
+      const val = context.emit(event, ...args);
+      if (val === EmitterCancel) {
+        return false;
+      }
+      return true;
+    })) {
+      return EmitterCancel;
+    }
     return this;
   }
 }

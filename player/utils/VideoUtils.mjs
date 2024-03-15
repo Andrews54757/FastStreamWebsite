@@ -23,7 +23,7 @@ export class VideoUtils {
       emitter.emit(DefaultPlayerEvents.ENDED);
     });
     video.addEventListener(DefaultPlayerEvents.ERROR, (event) => {
-      emitter.emit(DefaultPlayerEvents.ERROR);
+      emitter.emit(DefaultPlayerEvents.ERROR, event);
     });
     video.addEventListener(DefaultPlayerEvents.LOADEDDATA, (event) => {
       emitter.emit(DefaultPlayerEvents.LOADEDDATA);

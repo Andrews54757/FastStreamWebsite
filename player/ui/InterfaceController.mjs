@@ -238,7 +238,6 @@ export class InterfaceController {
       }
       this.fullscreenToggle();
       e.stopPropagation();
-      e.preventDefault();
     });
     WebUtils.setupTabIndex(DOMElements.fullscreen);
     document.addEventListener('fullscreenchange', this.updateFullScreenButton.bind(this));
@@ -422,6 +421,7 @@ export class InterfaceController {
         '#d56062',
       ],
       alpha: true,
+      focusInput: false,
     });
     this.updateToolVisibility();
     DOMElements.playerContainer.addEventListener('click', (e) => {
@@ -440,6 +440,7 @@ export class InterfaceController {
         this.checkToolsAndSave();
       },
       filter: '.menu_container, .rate_menu_container',
+      preventOnFilter: false,
     };
     this.reorderSortEnabled = Sortable.create(DOMElements.toolsContainer, options);
     this.reorderSortDisabled = Sortable.create(DOMElements.disabledTools, options);

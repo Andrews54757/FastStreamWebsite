@@ -228,7 +228,6 @@ export class SubtitlesManager extends EventEmitter {
     DOMElements.subtitlesView.appendChild(optionsbutton);
     DOMElements.subtitlesMenu.addEventListener('click', (e) => {
       e.stopPropagation();
-      e.preventDefault();
     });
     window.addEventListener('resize', () => {
       this.checkTrackBounds();
@@ -252,7 +251,6 @@ export class SubtitlesManager extends EventEmitter {
         this.activateTrack(track);
       }
       e.stopPropagation();
-      e.preventDefault();
     });
     WebUtils.setupTabIndex(trackElement);
     const trackName = document.createElement('div');

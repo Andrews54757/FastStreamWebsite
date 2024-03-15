@@ -62,6 +62,10 @@ export class PreviewFrameExtractor extends EventEmitter {
     if (!this.client.player || this.backgroundAnalyzerStatus !== AnalyzerStatus.IDLE) {
       return;
     }
+    const video = this.client.player?.getVideo();
+    if (!video || video.videoWidth === 0 || video.videoHeight === 0) {
+      return;
+    }
     const newSource = this.client.player.getSource();
     if (this.backgroundAnalyzerSource === newSource) {
       return;
@@ -246,7 +250,7 @@ export class PreviewFrameExtractor extends EventEmitter {
         currentRange.end = Math.max(currentRange.end, doneRanges[currentRangeIndex + 1].end);
         doneRanges.splice(currentRangeIndex + 1, 1);
       }
-      if (currentRange.end - currentRange.start >= player.duration - 10) {
+      if (currentRange.end - currentRange.start >= player.duration - 5) {
         onEnd();
         return;
       }

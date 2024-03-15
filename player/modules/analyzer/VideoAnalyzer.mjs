@@ -230,6 +230,10 @@ export class VideoAnalyzer extends EventEmitter {
     if (duration > 90 * 60) { // Video is likely a movie
       return false;
     }
+    const video = this.client.player?.getVideo();
+    if (!video || video.videoWidth === 0 || video.videoHeight === 0) {
+      return false;
+    }
     return true;
   }
   getMarkerPosition() {
