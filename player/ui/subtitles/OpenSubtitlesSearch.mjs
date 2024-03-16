@@ -5,6 +5,8 @@ import {InterfaceUtils} from '../../utils/InterfaceUtils.mjs';
 import {RequestUtils} from '../../utils/RequestUtils.mjs';
 import {WebUtils} from '../../utils/WebUtils.mjs';
 import {DOMElements} from '../DOMElements.mjs';
+import {createDropdown} from '../components/Dropdown.mjs';
+import {createPagesBar} from '../components/PagesBar.mjs';
 const API_KEY = 'jolY3ZCVYguxFxl8CkIKl52zpHJT2eTw';
 export const OpenSubtitlesSearchEvents = {
   TRACK_DOWNLOADED: 'trackDownloaded',
@@ -86,7 +88,7 @@ export class OpenSubtitlesSearch extends EventEmitter {
     episodeInput.addEventListener('keydown', (e) => {
       e.stopPropagation();
     });
-    const typeSelector = WebUtils.createDropdown('all',
+    const typeSelector = createDropdown('all',
         'Type', {
           'all': Localize.getMessage('player_opensubtitles_type_all'),
           'movie': Localize.getMessage('player_opensubtitles_type_movie'),
@@ -120,7 +122,7 @@ export class OpenSubtitlesSearch extends EventEmitter {
     yearInput.addEventListener('keydown', (e) => {
       e.stopPropagation();
     });
-    const sortSelector = WebUtils.createDropdown('download_count',
+    const sortSelector = createDropdown('download_count',
         Localize.getMessage('player_opensubtitles_sortby'), {
           'download_count': Localize.getMessage('player_opensubtitles_sortby_downloads'),
           'upload_date': Localize.getMessage('player_opensubtitles_sortby_date'),
@@ -130,7 +132,7 @@ export class OpenSubtitlesSearch extends EventEmitter {
     );
     sortSelector.classList.add('subtitle-sort-selector');
     this.subui.searchContainer.appendChild(sortSelector);
-    const sortDirectionSelector = WebUtils.createDropdown('desc',
+    const sortDirectionSelector = createDropdown('desc',
         Localize.getMessage('player_opensubtitles_sort'), {
           'desc': Localize.getMessage('player_opensubtitles_sort_desc'),
           'asc': Localize.getMessage('player_opensubtitles_sort_asc'),
@@ -253,10 +255,10 @@ export class OpenSubtitlesSearch extends EventEmitter {
       return;
     }
     if (response.total_pages > 1) {
-      const responseBar = WebUtils.createPagesBar(response.page, response.total_pages, (page) => {
+      const responseBar = createPagesBar(response.page, response.total_pages, (page) => {
         query.page = page;
         this.subui.pages.replaceChildren();
-        this.subui.pages.appendChild(WebUtils.createPagesBar(page, response.total_pages, ()=>{
+        this.subui.pages.appendChild(createPagesBar(page, response.total_pages, ()=>{
           this.queryOpenSubtitles(query);
         }));
         this.queryOpenSubtitles(query);

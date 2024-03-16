@@ -3,6 +3,7 @@ import {CrosstalkNode} from '../../modules/crosstalk/crosstalk.mjs';
 import {AudioUtils} from '../../utils/AudioUtils.mjs';
 import {Utils} from '../../utils/Utils.mjs';
 import {WebUtils} from '../../utils/WebUtils.mjs';
+import {createKnob} from '../components/Knob.mjs';
 export class AudioCrosstalk {
   constructor() {
     this.crosstalkNode = null;
@@ -160,31 +161,31 @@ export class AudioCrosstalk {
     headDistanceInput.addEventListener('keydown', (e) => {
       e.stopPropagation();
     });
-    this.crosstalkKnobs.decaygain = WebUtils.createKnob(Localize.getMessage('audiocrosstalk_decaygain'), -1000, -1, (val) => {
+    this.crosstalkKnobs.decaygain = createKnob(Localize.getMessage('audiocrosstalk_decaygain'), -1000, -1, (val) => {
       if (this.crosstalkConfig && val !== this.crosstalkConfig.decaygain) {
         this.crosstalkConfig.decaygain = val;
         this.updateCrosstalk();
       }
     }, 'mdB');
-    this.crosstalkKnobs.colorgain = WebUtils.createKnob(Localize.getMessage('audiocrosstalk_colorgain'), 0, 20, (val) => {
+    this.crosstalkKnobs.colorgain = createKnob(Localize.getMessage('audiocrosstalk_colorgain'), 0, 20, (val) => {
       if (this.crosstalkConfig && val !== this.crosstalkConfig.colorgain) {
         this.crosstalkConfig.colorgain = val;
         this.updateCrosstalk();
       }
     }, 'dB');
-    this.crosstalkKnobs.microdelay = WebUtils.createKnob(Localize.getMessage('audiocrosstalk_microdelay'), 30, 200, (val) => {
+    this.crosstalkKnobs.microdelay = createKnob(Localize.getMessage('audiocrosstalk_microdelay'), 30, 200, (val) => {
       if (this.crosstalkConfig && val !== this.crosstalkConfig.microdelay) {
         this.crosstalkConfig.microdelay = val;
         this.updateCrosstalk();
       }
     }, 'µs');
-    this.crosstalkKnobs.lowbypass = WebUtils.createKnob(Localize.getMessage('audiocrosstalk_lowbypass'), 20, 2000, (val) => {
+    this.crosstalkKnobs.lowbypass = createKnob(Localize.getMessage('audiocrosstalk_lowbypass'), 20, 2000, (val) => {
       if (this.crosstalkConfig && val !== this.crosstalkConfig.lowbypass) {
         this.crosstalkConfig.lowbypass = val;
         this.updateCrosstalk();
       }
     }, 'Hz');
-    this.crosstalkKnobs.highbypass = WebUtils.createKnob(Localize.getMessage('audiocrosstalk_highbypass'), 2000, 20000, (val) => {
+    this.crosstalkKnobs.highbypass = createKnob(Localize.getMessage('audiocrosstalk_highbypass'), 2000, 20000, (val) => {
       if (this.crosstalkConfig && val !== this.crosstalkConfig.highbypass) {
         this.crosstalkConfig.highbypass = val;
         this.updateCrosstalk();

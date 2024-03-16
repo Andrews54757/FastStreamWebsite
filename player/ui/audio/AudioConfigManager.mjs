@@ -4,6 +4,7 @@ import {InterfaceUtils} from '../../utils/InterfaceUtils.mjs';
 import {Utils} from '../../utils/Utils.mjs';
 import {WebUtils} from '../../utils/WebUtils.mjs';
 import {DOMElements} from '../DOMElements.mjs';
+import {createDropdown} from '../components/Dropdown.mjs';
 import {AudioChannelMixer} from './AudioChannelMixer.mjs';
 import {AudioCompressor} from './AudioCompressor.mjs';
 import {AudioCrosstalk} from './AudioCrosstalk.mjs';
@@ -115,7 +116,7 @@ export class AudioConfigManager extends EventEmitter {
     if (!this.profiles.find((profile) => profile.id === id)) {
       id = this.profiles[0]?.id || 0;
     }
-    this.ui.profileDropdown = WebUtils.createDropdown('p' + id,
+    this.ui.profileDropdown = createDropdown('p' + id,
         Localize.getMessage('player_audioconfig_profile'), optionsList, (val, prevVal) => {
           if (val === 'create') {
             this.newProfile();
