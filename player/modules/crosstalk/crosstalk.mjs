@@ -82,7 +82,7 @@ export class CrosstalkNode {
       mappings: this.mappings,
       numOutputs: 2,
     });
-    const ConvolutionXTC = await import('./convolution.mjs');
+    const {ConvolutionXTC} = await import('./convolution.mjs');
     this.xtc = new ConvolutionXTC(ctx, this.cachedOptions);
     await this.crossover.init();
     this.input.connect(this.crossover.getNode());
