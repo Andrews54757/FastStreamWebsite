@@ -58,6 +58,10 @@ if (!EnvUtils.isExtension()) {
   customSourcePatterns.disabled = true;
   miniSize.disabled = true;
 }
+if (EnvUtils.isSafari()) {
+  daltonizerType.disabled = true;
+  daltonizerStrength.disabled = true;
+}
 async function loadOptions(newOptions) {
   newOptions = newOptions || await Utils.getOptionsFromStorage();
   Options = newOptions;
