@@ -405,10 +405,12 @@ if (EnvUtils.isExtension()) {
       rateus: 'yes',
     });
     ratebox.style.display = 'none';
-    let url = 'https://addons.mozilla.org/en-US/firefox/addon/faststream/reviews/';
-    // SPLICER:FIREFOX:REMOVE_START
-    url = 'https://chromewebstore.google.com/u/1/detail/faststream-video-player/kkeakohpadmbldjaiggikmnldlfkdfog/reviews';
-    // SPLICER:FIREFOX:REMOVE_END
+    let url;
+    if (EnvUtils.isChrome()) {
+      url = 'https://chromewebstore.google.com/u/1/detail/faststream-video-player/kkeakohpadmbldjaiggikmnldlfkdfog/reviews';
+    } else {
+      url = 'https://addons.mozilla.org/en-US/firefox/addon/faststream/reviews/';
+    }
     chrome?.tabs?.create({
       url,
     });
