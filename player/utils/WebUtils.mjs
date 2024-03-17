@@ -28,4 +28,11 @@ export class WebUtils {
     const key = e.key === ' ' ? 'Space' : e.code;
     return (metaPressed ? 'Meta+' : '') + (ctrlPressed ? 'Control+' : '') + (altPressed ? 'Alt+' : '') + (shiftPressed ? 'Shift+' : '') + key;
   }
+  static createSVGIcon(iconPath) {
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    const use = document.createElementNS('http://www.w3.org/2000/svg', 'use');
+    use.setAttributeNS('http://www.w3.org/1999/xlink', 'href', iconPath);
+    svg.appendChild(use);
+    return svg;
+  }
 }

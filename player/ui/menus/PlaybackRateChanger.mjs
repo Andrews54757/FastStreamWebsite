@@ -23,9 +23,7 @@ export class PlaybackRateChanger extends EventEmitter {
     this.silenceThreshold = 0;
     this.audioPaddingStart = 0.5;
     this.audioPaddingEnd = 0.25;
-    this.setupOptionsUI();
     this.silenceSkipperLoopHandle = this.silenceSkipperLoop.bind(this);
-    this.loadState();
   }
   async saveState() {
     const state = {
@@ -293,6 +291,8 @@ export class PlaybackRateChanger extends EventEmitter {
     DOMElements.rateMenu.addEventListener('mouseup', (e) => {
       e.stopPropagation();
     });
+    this.setupOptionsUI();
+    this.loadState();
   }
   shiftPlaybackRate(shift) {
     this.setPlaybackRate(Math.round((this.playbackRate + shift) * 10) / 10);

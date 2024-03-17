@@ -13,6 +13,9 @@ export class EnvUtils {
   static isChrome() {
     return navigator.userAgent.indexOf('Chrome') !== -1;
   }
+  static isSafari() {
+    return /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+  }
   static isExtension() {
     return typeof chrome !== 'undefined' && !!chrome?.extension;
   }

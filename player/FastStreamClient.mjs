@@ -64,7 +64,6 @@ export class FastStreamClient extends EventEmitter {
       currentTime: 0,
       volume: 1,
       muted: false,
-      latestVolume: 1,
       playbackRate: 1,
     };
     this.progressMemory = null;
@@ -80,7 +79,6 @@ export class FastStreamClient extends EventEmitter {
     this.videoAnalyzer.on(AnalyzerEvents.MATCH, () => {
       this.interfaceController.updateSkipSegments();
     });
-    this.interfaceController.updateVolumeBar();
     this.player = null;
     this.previewPlayer = null;
     this.saveSeek = true;
@@ -90,19 +88,6 @@ export class FastStreamClient extends EventEmitter {
     this.audioContext = new AudioContext();
     this.audioConfigManager.setupNodes();
     this.mainloop();
-    this.loadVolumeState();
-  }
-  async loadVolumeState() {
-    const state = await Utils.loadAndParseOptions('volumeState', {
-      volume: 1,
-    });
-    this.persistent.volume = state.volume;
-    this.updateVolume();
-  }
-  async saveVolumeState() {
-    await Utils.setConfig('volumeState', JSON.stringify({
-      volume: this.volume,
-    }));
   }
   async setup() {
     await this.downloadManager.setup();
@@ -391,12 +376,7 @@ export class FastStreamClient extends EventEmitter {
       this.bindPlayer(this.player);
       await this.player.setSource(source);
       this.interfaceController.addVideo(this.player.getVideo());
-      this.audioContext = new AudioContext();
-      this.audioSource = this.audioContext.createMediaElementSource(this.player.getVideo());
-      this.audioAnalyzer.setupAnalyzerNodeForMainPlayer(this.player.getVideo(), this.audioSource, this.audioContext);
-      this.audioConfigManager.setupNodes();
-      this.audioConfigManager.getOutputNode().connect(this.audioContext.destination);
-      this.updateVolume();
+      this.setVolume(this.persistent.volume);
       this.player.playbackRate = this.persistent.playbackRate;
       this.setSeekSave(false);
       this.currentTime = 0;
@@ -833,9 +813,19 @@ export class FastStreamClient extends EventEmitter {
     if (!this.player) {
       throw new Error('No source is loaded!');
     }
+    // Will throw if browser blocks autoplay
     await this.player.play();
+    // Everything below will only run if browser allows playing the video
+    // (e.g. not blocked by autoplay policy)
     this.interfaceController.play();
-    if (this.audioContext && this.audioContext.state === 'suspended') {
+    if (!this.audioContext) {
+      this.audioContext = new AudioContext();
+      this.audioSource = this.audioContext.createMediaElementSource(this.player.getVideo());
+      this.audioAnalyzer.setupAnalyzerNodeForMainPlayer(this.player.getVideo(), this.audioSource, this.audioContext);
+      this.audioConfigManager.setupNodes();
+      this.audioConfigManager.getOutputNode().connect(this.audioContext.destination);
+      this.setVolume(this.persistent.volume);
+    } else if (this.audioContext && this.audioContext.state === 'suspended') {
       await this.audioContext.resume();
     }
     this.audioAnalyzer.updateBackgroundAnalyzer();
@@ -968,19 +958,21 @@ export class FastStreamClient extends EventEmitter {
   getFragments(level) {
     return this.fragmentsStore[level];
   }
-  updateVolume() {
-    const value = this.persistent.volume;
-    if (this.player) this.player.volume = 1;
-    this.audioConfigManager.updateVolume(value);
-    this.interfaceController.updateVolumeBar();
+  setVolume(volume) {
+    this.persistent.volume = volume;
+    if (volume > 1) {
+      if (this.player) this.player.volume = 1;
+      this.audioConfigManager.updateVolume(volume);
+    } else {
+      if (this.player) this.player.volume = volume;
+      this.audioConfigManager.updateVolume(1);
+    }
   }
   get volume() {
     return this.persistent.volume;
   }
   set volume(value) {
-    this.persistent.volume = value;
-    this.updateVolume();
-    this.saveVolumeState();
+    this.interfaceController.setVolume(value);
   }
   get playbackRate() {
     return this.player?.playbackRate || this.persistent.playbackRate;

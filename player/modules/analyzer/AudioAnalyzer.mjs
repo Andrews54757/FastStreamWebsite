@@ -137,6 +137,10 @@ export class AudioAnalyzer extends EventEmitter {
     if (!this.client.player || this.backgroundAnalyzerStatus !== AnalyzerStatus.IDLE) {
       return;
     }
+    if (EnvUtils.isSafari()) {
+      console.log('[AudioAnalyzer] Background analyzer is not supported on Safari');
+      return;
+    }
     const newSource = this.client.player.getSource();
     if (this.backgroundAnalyzerSource === newSource) {
       return;

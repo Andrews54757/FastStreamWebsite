@@ -10,6 +10,7 @@ export class AudioEqualizer {
     this.preAnalyzer = null;
     this.postAnalyzer = null;
     this.equalizerDbResponse = null;
+    this.renderCache = {};
     this.setupUI();
   }
   setEqualizerConfig(config) {
@@ -157,10 +158,14 @@ export class AudioEqualizer {
     const dataArrayPost = new Uint8Array(bufferLength);
     this.preAnalyzer.getByteFrequencyData(dataArrayPre);
     this.postAnalyzer.getByteFrequencyData(dataArrayPost);
-    this.ui.spectrumCanvas.width = this.ui.equalizer.clientWidth * window.devicePixelRatio;
-    this.ui.spectrumCanvas.height = this.ui.equalizer.clientHeight * window.devicePixelRatio;
-    const width = this.ui.spectrumCanvas.width;
-    const height = this.ui.spectrumCanvas.height;
+    const width = this.ui.equalizer.clientWidth * window.devicePixelRatio;
+    const height = this.ui.equalizer.clientHeight * window.devicePixelRatio;
+    if (this.renderCache.width !== width || this.renderCache.height !== height) {
+      this.ui.spectrumCanvas.width = width;
+      this.ui.spectrumCanvas.height = height;
+      this.renderCache.width = width;
+      this.renderCache.height = height;
+    }
     this.spectrumCtx.clearRect(0, 0, width, height);
     const sampleRate = this.audioContext.sampleRate;
     const maxFreq = sampleRate / 2;

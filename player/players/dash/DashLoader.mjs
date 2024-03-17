@@ -9,7 +9,6 @@ export function DASHLoaderFactory(player) {
         loadFragmentInternal(httpRequest);
         return;
       }
-      // console.log(httpRequest.request)
       request(httpRequest);
     }
     function loadFragmentInternal(httpRequest) {

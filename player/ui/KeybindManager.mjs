@@ -41,7 +41,7 @@ export class KeybindManager extends EventEmitter {
       this.client.volume = Math.round(Math.max(this.client.volume - 0.10, 0) * 100) / 100;
     });
     this.on('Mute', (e)=>{
-      this.client.interfaceController.muteToggle();
+      this.client.interfaceController.volumeControls.muteToggle();
     });
     this.on('SeekForward', (e) => {
       this.client.setSeekSave(false);
