@@ -16,6 +16,7 @@ export default class HLSPlayer extends EventEmitter {
     this.isAudioOnly = config?.isAudioOnly || false;
     this.qualityMultiplier = config?.qualityMultiplier || 1.1;
     this.source = null;
+    this.activeRequests = [];
     this.fragmentRequester = new HLSFragmentRequester(this);
     this.video = document.createElement(this.isAudioOnly ? 'audio' : 'video');
     if (!Hls.isSupported()) {
@@ -292,6 +293,12 @@ export default class HLSPlayer extends EventEmitter {
     this.emit(DefaultPlayerEvents.DESTROYED);
   }
   set currentTime(value) {
+    if (this.isPreview && this.activeRequests.length > 0 && !VideoUtils.isBuffered(this.video.buffered, value)) {
+      this.activeRequests.forEach((loader) => {
+        loader.abort();
+      });
+      this.activeRequests.length = 0;
+    }
     this.video.currentTime = value;
   }
   get currentTime() {

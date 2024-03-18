@@ -39,6 +39,7 @@ export class FastStreamClient extends EventEmitter {
       downloadAll: false,
       freeUnusedChannels: true,
       storeProgress: false,
+      previewEnabled: true,
       singleClickAction: ClickActions.HIDE_CONTROLS,
       doubleClickAction: ClickActions.PLAY_PAUSE,
       tripleClickAction: ClickActions.FULLSCREEN,
@@ -171,6 +172,18 @@ export class FastStreamClient extends EventEmitter {
     this.options.videoHueRotate = options.videoHueRotate;
     this.options.videoDaltonizerType = options.videoDaltonizerType;
     this.options.videoDaltonizerStrength = options.videoDaltonizerStrength;
+    this.options.previewEnabled = options.previewEnabled;
+    if (this.options.previewEnabled) {
+      this.setupPreviewPlayer().catch((e) => {
+        console.error(e);
+      });
+    } else {
+      if (this.previewPlayer) {
+        this.previewPlayer.destroy();
+        this.previewPlayer = null;
+        this.interfaceController.resetPreviewVideo();
+      }
+    }
     this.options.qualityMultiplier = options.qualityMultiplier;
     this.updateCSSFilters();
     if (options.keybinds) {
@@ -360,6 +373,21 @@ export class FastStreamClient extends EventEmitter {
     console.log('setAutoPlay', value);
     this.options.autoPlay = value;
   }
+  async setupPreviewPlayer() {
+    if (!this.player || this.previewPlayer || !this.options.previewEnabled) {
+      return;
+    }
+    if (this.player.getSource()) {
+      this.previewPlayer = await this.playerLoader.createPlayer(this.player.getSource().mode, this, {
+        isPreview: true,
+      });
+      await this.previewPlayer.setup();
+      this.bindPreviewPlayer(this.previewPlayer);
+      await this.previewPlayer.setSource(this.player.getSource());
+      this.interfaceController.addPreviewVideo(this.previewPlayer.getVideo());
+      this.updateCSSFilters();
+    }
+  }
   async setSource(source) {
     try {
       source = source.copy();
@@ -387,13 +415,7 @@ export class FastStreamClient extends EventEmitter {
       this.currentTime = 0;
       this.setSeekSave(true);
       if (this.player.getSource()) {
-        this.previewPlayer = await this.playerLoader.createPlayer(this.player.getSource().mode, this, {
-          isPreview: true,
-        });
-        await this.previewPlayer.setup();
-        this.bindPreviewPlayer(this.previewPlayer);
-        await this.previewPlayer.setSource(this.player.getSource());
-        this.interfaceController.addPreviewVideo(this.previewPlayer.getVideo());
+        await this.setupPreviewPlayer();
         await this.videoAnalyzer.setSource(this.player.getSource());
         this.frameExtractor.updateBackground();
       }
@@ -812,6 +834,13 @@ export class FastStreamClient extends EventEmitter {
     });
     this.previewContext.on(DefaultPlayerEvents.ERROR, (e) => {
       console.log('Preview player error', e);
+      this.previewPlayer.destroy();
+      this.previewPlayer = null;
+      this.interfaceController.resetPreviewVideo();
+      if (!this.interfaceController.failed) {
+        console.error('Reloading preview player');
+        this.setupPreviewPlayer();
+      }
     });
   }
   async play() {

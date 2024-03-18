@@ -21,6 +21,7 @@ export default class DashPlayer extends EventEmitter {
     this.fragmentRequester = new DashFragmentRequester(this);
     this.desiredVideoLevel = null;
     this.desiredAudioLevel = null;
+    this.activeRequests = [];
   }
   async setup() {
     // eslint-disable-next-line new-cap
@@ -43,8 +44,13 @@ export default class DashPlayer extends EventEmitter {
           defaultEnabled: false,
         },
       },
+      'errors': {
+        recoverAttempts: {
+          mediaErrorDecode: 1000000,
+        },
+      },
     };
-    // if (!this.isPreview && !this.isAnalyzer) {
+    // if (this.isPreview) {
     //   newSettings.debug ={
     //     'logLevel': DashJS.Debug.LOG_LEVEL_DEBUG,
     //   };
@@ -114,6 +120,7 @@ export default class DashPlayer extends EventEmitter {
         return dashHandler._getRequestForSegment(mediaInfo, segment);
       });
       segments.forEach((request) => {
+        if (!request) return;
         request.level = rep.id;
         const fragment = new DashFragment(request);
         if (!this.client.getFragment(fragment.level, fragment.sn)) {
@@ -174,9 +181,15 @@ export default class DashPlayer extends EventEmitter {
     this.emit(DefaultPlayerEvents.DESTROYED);
   }
   set currentTime(value) {
+    if (this.isPreview && this.activeRequests.length > 0 && !VideoUtils.isBuffered(this.video.buffered, value)) {
+      this.activeRequests.forEach((loader) => {
+        loader.abort();
+      });
+      this.activeRequests.length = 0;
+    }
     this.video.currentTime = value;
     try {
-      this.dash.seek(value);
+      // this.dash.seek(value);
     } catch (e) {
       console.warn(e);
     }

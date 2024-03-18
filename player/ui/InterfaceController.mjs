@@ -126,6 +126,7 @@ export class InterfaceController {
   }
   reset() {
     DOMElements.videoContainer.replaceChildren();
+    this.resetPreviewVideo();
     this.progressBar.reset();
     this.saveManager.reset();
     this.failed = false;
@@ -170,6 +171,14 @@ export class InterfaceController {
     this.dressVideo(video);
     DOMElements.seekPreviewVideo.style.display = '';
     DOMElements.seekPreviewVideo.appendChild(video);
+  }
+  resetPreviewVideo() {
+    DOMElements.seekPreviewVideo.replaceChildren();
+    const spinner = document.createElement('div');
+    spinner.classList.add('spinner');
+    DOMElements.seekPreviewVideo.appendChild(spinner);
+    DOMElements.seekPreviewVideo.classList.remove('loading');
+    DOMElements.seekPreviewVideo.style.display = 'none';
   }
   updateMarkers() {
     this.progressBar.updateMarkers();

@@ -1560,6 +1560,12 @@ const TranslationMap = {
     "プリダウンローダーの最大サイズ",
     "Максимальный размер предзагружаемого видео"
   ],
+  "options_general_previewenabled": [
+    "Show preview when hovering over the timeline",
+    "Muestra la vista previa al pasar el cursor sobre la línea de tiempo",
+    "タイムライン上でマウスを移動するとプレビューが表示されます",
+    "При наведении на временную шкалу отображается предварительный просмотр"
+  ],
   "options_general_analyze": [
     "Automatically analyze sequential videos for intros/outros\n(turn off if you have CPU performance issues)",
     "Analiza automáticamente videos secuenciales para intros/outros\n(desactiva si tienes problemas de rendimiento de CPU)",
