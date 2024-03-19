@@ -181,18 +181,7 @@ export default class DashPlayer extends EventEmitter {
     this.emit(DefaultPlayerEvents.DESTROYED);
   }
   set currentTime(value) {
-    if (this.isPreview && this.activeRequests.length > 0 && !VideoUtils.isBuffered(this.video.buffered, value)) {
-      this.activeRequests.forEach((loader) => {
-        loader.abort();
-      });
-      this.activeRequests.length = 0;
-    }
     this.video.currentTime = value;
-    try {
-      // this.dash.seek(value);
-    } catch (e) {
-      console.warn(e);
-    }
   }
   get currentTime() {
     return this.video.currentTime;
