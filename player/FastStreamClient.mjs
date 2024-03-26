@@ -23,6 +23,7 @@ import {DefaultToolSettings} from './options/defaults/ToolSettings.mjs';
 import {AudioAnalyzer} from './modules/analyzer/AudioAnalyzer.mjs';
 import {PreviewFrameExtractor} from './modules/analyzer/PreviewFrameExtractor.mjs';
 import {ReferenceTypes} from './enums/ReferenceTypes.mjs';
+const SET_VOLUME_USING_NODE = !EnvUtils.isSafari();
 export class FastStreamClient extends EventEmitter {
   constructor() {
     super();
@@ -992,7 +993,7 @@ export class FastStreamClient extends EventEmitter {
   }
   setVolume(volume) {
     this.persistent.volume = volume;
-    if (volume > 1) {
+    if (SET_VOLUME_USING_NODE || volume > 1) {
       if (this.player) this.player.volume = 1;
       this.audioConfigManager.updateVolume(volume);
     } else {

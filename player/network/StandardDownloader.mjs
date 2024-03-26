@@ -24,7 +24,7 @@ export class StandardDownloader {
     entry.downloader = this;
     entry.status = DownloadStatus.DOWNLOAD_INITIATED;
     const defaultConfig = {
-      timeout: 20000,
+      timeout: 30000,
       maxRetry: 6,
       retryDelay: 1000,
       maxRetryDelay: 64000,

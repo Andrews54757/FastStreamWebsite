@@ -298,7 +298,7 @@ export class AudioCompressor {
       ctx.lineTo(x2, height);
       ctx.stroke();
     }
-    if (reduction > 0) {
+    if (reduction !== 0) {
       // reduction line
       ctx.beginPath();
       ctx.strokeStyle = 'rgba(0, 200, 0, 0.7)';

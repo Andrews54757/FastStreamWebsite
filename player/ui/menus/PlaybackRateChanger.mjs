@@ -23,6 +23,7 @@ export class PlaybackRateChanger extends EventEmitter {
     this.silenceThreshold = 0;
     this.audioPaddingStart = 0.5;
     this.audioPaddingEnd = 0.25;
+    this.resyncCounter = 0;
     this.silenceSkipperLoopHandle = this.silenceSkipperLoop.bind(this);
   }
   async saveState() {
@@ -122,7 +123,11 @@ export class PlaybackRateChanger extends EventEmitter {
       if (playbackRate !== this.silenceSkipSpeed) {
         // Fix for chrome desync bug
         if (EnvUtils.isChrome()) {
-          this.client.player.currentTime = this.client.player.currentTime;
+          this.resyncCounter++;
+          if (this.resyncCounter > 4) {
+            this.resyncCounter = 0;
+            this.client.player.currentTime = this.client.player.currentTime;
+          }
         }
         this.client.playbackRate = this.silenceSkipSpeed;
       }
