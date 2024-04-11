@@ -232,11 +232,18 @@ export class InterfaceController {
       if (e.shiftKey) {
         this.pipToggle();
         return;
+      } else if (e.altKey) {
+        this.toggleWindowedFullscreen();
+        return;
       }
       this.fullscreenToggle();
       e.stopPropagation();
     });
     WebUtils.setupTabIndex(DOMElements.fullscreen);
+    DOMElements.windowedFullscreen.addEventListener('click', (e)=>{
+      this.toggleWindowedFullscreen();
+    });
+    WebUtils.setupTabIndex(DOMElements.windowedFullscreen);
     document.addEventListener('fullscreenchange', this.updateFullScreenButton.bind(this));
     DOMElements.playerContainer.addEventListener('mousemove', this.onPlayerMouseMove.bind(this));
     DOMElements.controlsContainer.addEventListener('mouseenter', this.onControlsMouseEnter.bind(this));
@@ -675,6 +682,12 @@ export class InterfaceController {
     this.subtitlesManager.renderSubtitles();
     this.fineTimeControls.onVideoTimeUpdate();
     this.updateSkipSegments();
+  }
+  toggleWindowedFullscreen() {
+    chrome.runtime.sendMessage({
+      type: 'request_windowed_fullscreen',
+    }, (response) => {
+    });
   }
   fullscreenToggle() {
     try {

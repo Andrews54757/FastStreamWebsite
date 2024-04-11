@@ -750,6 +750,12 @@ const TranslationMap = {
     "フルスクリーン",
     "Во весь экран"
   ],
+  "player_windowed_fullscreen_label": [
+    "Windowed Fullscreen",
+    "Pantalla completa de ventana",
+    "ウィンドウ化されたフルスクリーン",
+    "Оконный режим"
+  ],
   "player_more_label": [
     "More tools",
     "Más utilidades",
