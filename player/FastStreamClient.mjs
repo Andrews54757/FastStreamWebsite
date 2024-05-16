@@ -57,7 +57,7 @@ export class FastStreamClient extends EventEmitter {
       videoDaltonizerType: DaltonizerTypes.NONE,
       videoDaltonizerStrength: 1,
       seekStepSize: 0.2,
-      qualityMultiplier: 1,
+      defaultQuality: 'Auto',
       toolSettings: Utils.mergeOptions(DefaultToolSettings, {}),
     };
     this.persistent = {
@@ -185,7 +185,7 @@ export class FastStreamClient extends EventEmitter {
         this.interfaceController.resetPreviewVideo();
       }
     }
-    this.options.qualityMultiplier = options.qualityMultiplier;
+    this.options.defaultQuality = options.defaultQuality;
     this.updateCSSFilters();
     if (options.keybinds) {
       this.keybindManager.setKeybinds(options.keybinds);
@@ -398,9 +398,7 @@ export class FastStreamClient extends EventEmitter {
       this.source = source;
       const estimate = await navigator.storage.estimate();
       this.storageAvailable = estimate.quota - estimate.usage;
-      this.player = await this.playerLoader.createPlayer(source.mode, this, {
-        qualityMultiplier: this.options.qualityMultiplier,
-      });
+      this.player = await this.playerLoader.createPlayer(source.mode, this, {});
       await this.player.setup();
       this.bindPlayer(this.player);
       await this.player.setSource(source);
@@ -898,7 +896,7 @@ export class FastStreamClient extends EventEmitter {
     }
     for (let i = 0; i < fragments.length; i++) {
       const fragment = fragments[i];
-      if (fragment.end >= start && fragment.start <= end) {
+      if (fragment && fragment.end >= start && fragment.start <= end) {
         if (fragment.status !== DownloadStatus.DOWNLOAD_COMPLETE) {
           return false;
         }

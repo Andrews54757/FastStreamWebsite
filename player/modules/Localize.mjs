@@ -13,10 +13,10 @@ const TranslationMap = {
     "FastStream Video Player"
   ],
   "extension_description": [
-    "Stream without buffering, a great video player and download accelerator all in one.",
-    "Reproduce videos en línea sin interrupciones, un excelente reproductor de video y acelerador de descargas todo en uno.",
-    "Stream without buffering, a great video player and download accelerator all in one.",
-    "Потоковая передача без буферизации, отличный видеоплеер и ускоритель загрузки - всё в одном."
+    "Stream without buffering. Fix bad video players on the internet.",
+    "Transmisión sin almacenamiento en búfer. Soluciona los reproductores de video deficientes en Internet.",
+    "バッファリングなしでストリーム。インターネット上の悪質なビデオプレーヤーを修正します。",
+    "Трансляция без буферизации. Исправьте плохие видеоплееры в интернете."
   ],
   "extension_toggle_label": [
     "Toggle FastStream",
@@ -1615,10 +1615,10 @@ const TranslationMap = {
     "Автовоспроизведение на YouTube"
   ],
   "options_general_quality": [
-    "Quality multiplier factor for quality selection algorithm (higher will choose higher quality)",
-    "Factor multiplicador de calidad para el algoritmo de selección de calidad (mayor elegirá mayor calidad)",
-    "品質選択アルゴリズムの品質倍率係数 (高いほど高品質を選択します)",
-    "Множитель качества для алгоритма выбора качества (чем выше, тем выше качество)"
+    "Default video quality",
+    "Calidad de video predeterminada",
+    "動画の品質",
+    "Качество видео"
   ],
   "options_general_clickaction": [
     "Single click action",

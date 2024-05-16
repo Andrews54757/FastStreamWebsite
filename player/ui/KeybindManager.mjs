@@ -144,6 +144,9 @@ export class KeybindManager extends EventEmitter {
       rotateIndex = (rotateIndex + 1) % 4;
       updateVideoTransform();
     });
+    this.on('WindowedFullscreen', (e) => {
+      this.client.interfaceController.toggleWindowedFullscreen();
+    });
     this.on('keybind', (keybind, e) => {
       // console.log("Keybind", keybind);
     });
