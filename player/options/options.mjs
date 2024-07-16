@@ -39,6 +39,7 @@ const miniPos = document.getElementById('minipos');
 const daltonizerType = document.getElementById('daltonizerType');
 const daltonizerStrength = document.getElementById('daltonizerStrength');
 const previewEnabled = document.getElementById('previewenabled');
+const replaceDelay = document.getElementById('replacedelay');
 autoEnableURLSInput.setAttribute('autocapitalize', 'off');
 autoEnableURLSInput.setAttribute('autocomplete', 'off');
 autoEnableURLSInput.setAttribute('autocorrect', 'off');
@@ -80,6 +81,7 @@ async function loadOptions(newOptions) {
   customSourcePatterns.value = Options.customSourcePatterns || '';
   miniSize.value = Options.miniSize;
   storeProgress.checked = !!Options.storeProgress;
+  replaceDelay.value = Options.replaceDelay;
   setSelectMenuValue(daltonizerType, Options.videoDaltonizerType);
   setSelectMenuValue(clickAction, Options.singleClickAction);
   setSelectMenuValue(dblclickAction, Options.doubleClickAction);
@@ -309,6 +311,10 @@ maxSize.addEventListener('change', () => {
 });
 seekStepSize.addEventListener('change', () => {
   Options.seekStepSize = parseFloat(seekStepSize.value);
+  optionChanged();
+});
+replaceDelay.addEventListener('change', () => {
+  Options.replaceDelay = parseInt(replaceDelay.value);
   optionChanged();
 });
 miniSize.addEventListener('change', () => {

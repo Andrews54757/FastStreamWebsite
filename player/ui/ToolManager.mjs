@@ -103,9 +103,13 @@ export class ToolManager {
     if (this.client.player) {
       DOMElements.screenshot.classList.remove('hidden');
       DOMElements.loopButton.classList.remove('hidden');
+      DOMElements.skipForwardButton.classList.remove('hidden');
+      DOMElements.skipBackwardButton.classList.remove('hidden');
     } else {
       DOMElements.screenshot.classList.add('hidden');
       DOMElements.loopButton.classList.add('hidden');
+      DOMElements.skipForwardButton.classList.add('hidden');
+      DOMElements.skipBackwardButton.classList.add('hidden');
     }
     if (this.client.player && !this.client.player.canSave().cantSave) {
       DOMElements.download.classList.remove('hidden');
@@ -138,6 +142,8 @@ export class ToolManager {
       languages: DOMElements.languageButton,
       loop: DOMElements.loopButton,
       more: DOMElements.moreButton,
+      forward: DOMElements.skipForwardButton,
+      backward: DOMElements.skipBackwardButton,
     };
     if (this.specialReorderModeEnabled) {
       return;
