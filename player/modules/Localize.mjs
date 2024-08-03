@@ -1169,6 +1169,34 @@ const TranslationMap = {
     "Gagal memuatkan video!",
     "Не удалось загрузить видео!"
   ],
+  "source_copied": [
+    "Copied URL to clipboard!",
+    "¡URL copiada al portapapeles!",
+    "URL をクリップボードにコピーしました!",
+    "URL disalin ke papan keratan!",
+    "Скопировано!"
+  ],
+  "player_source_copybtn": [
+    "Copy",
+    "Copiar",
+    "コピー",
+    "Salin",
+    "Копировать"
+  ],
+  "player_source_copybtn_label": [
+    "Copy source URL, headers, and mode to clipboard",
+    "Copiar URL de origen, encabezados y modo al portapapeles",
+    "ソースの URL、ヘッダー、モードをクリップボードにコピー",
+    "Salin URL sumber, pengepala, dan mod ke papan keratan",
+    "Копировать адрес источника, заголовки и режим в буфер обмена"
+  ],
+  "player_source_copybtn_copied": [
+    "Copied!",
+    "¡Copiado!",
+    "コピー済み!",
+    "Disalin!",
+    "Скопировано!"
+  ],
   "player_source_autodetect": [
     "Auto Detect",
     "Detección Auto",

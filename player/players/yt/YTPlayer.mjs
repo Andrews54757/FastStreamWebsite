@@ -1,12 +1,18 @@
 import {DefaultPlayerEvents} from '../../enums/DefaultPlayerEvents.mjs';
 import {PlayerModes} from '../../enums/PlayerModes.mjs';
-import {ClientType, Innertube, UniversalCache} from '../../modules/yt.mjs';
+import {ClientType, Innertube, UniversalCache, Log} from '../../modules/yt.mjs';
 import {IndexedDBManager} from '../../network/IndexedDBManager.mjs';
 import {SubtitleTrack} from '../../SubtitleTrack.mjs';
 import {EnvUtils} from '../../utils/EnvUtils.mjs';
 import {URLUtils} from '../../utils/URLUtils.mjs';
 import {VideoSource} from '../../VideoSource.mjs';
 import DashPlayer from '../dash/DashPlayer.mjs';
+Log.setLevel(
+    Log.Level.WARNING,
+    Log.Level.ERROR,
+    Log.Level.INFO,
+    Log.Level.DEBUG,
+);
 export default class YTPlayer extends DashPlayer {
   constructor(client, options) {
     super(client, options);
@@ -31,6 +37,8 @@ export default class YTPlayer extends DashPlayer {
       });
       const uri = URL.createObjectURL(blob);
       this.source = new VideoSource(uri, source.headers, PlayerModes.ACCELERATED_DASH);
+      this.source.headers['origin'] = 'https://www.youtube.com';
+      this.source.headers['referer'] = 'https://www.youtube.com/';
       this.source.identifier = 'yt-' + identifier;
     } catch (e) {
       console.error(e);
@@ -111,13 +119,14 @@ export default class YTPlayer extends DashPlayer {
     });
   }
   async getVideoInfo(identifier, tvMode = false) {
-    const cache = (await IndexedDBManager.isSupportedAndAvailable()) ? new UniversalCache() : undefined;
+    const cache = (await IndexedDBManager.isSupportedAndAvailable() && !EnvUtils.isIncognito()) ? new UniversalCache() : undefined;
+    const mode = tvMode ? ClientType.TV_EMBEDDED : ClientType.IOS;
     const youtube = await Innertube.create({
       cache,
       fetch: this.youtubeFetch.bind(this),
-      clientType: tvMode ? ClientType.TV_EMBEDDED : ClientType.WEB,
+      clientType: mode,
     });
-    return youtube.getInfo(identifier, tvMode ? 'TV_EMBEDDED' : 'WEB');
+    return youtube.getInfo(identifier, mode);
   }
   fetchSponsorBlock(identifier) {
     if (EnvUtils.isExtension()) {
