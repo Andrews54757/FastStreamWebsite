@@ -22,7 +22,7 @@ export class EnvUtils {
   static getVersion() {
     // eslint-disable-next-line prefer-const
     let version = '1.0.0.web';
-version = '1.3.18';
+version = '1.3.18.1';
     return this.isExtension() ? chrome.runtime.getManifest().version : version;
   }
   static isIncognito() {
@@ -30,5 +30,8 @@ version = '1.3.18';
   }
   static isMacOS() {
     return navigator.userAgent.indexOf('Mac OS') !== -1;
+  }
+  static isWebAudioSupported() {
+    return !!window.AudioContext;
   }
 }

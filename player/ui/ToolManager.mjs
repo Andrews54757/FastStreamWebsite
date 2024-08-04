@@ -121,7 +121,7 @@ export class ToolManager {
     } else {
       DOMElements.windowedFullscreen.classList.add('hidden');
     }
-    if (EnvUtils.isSafari() && this.client.player && this.client.player.getSource().mode !== PlayerModes.DIRECT ) {
+    if ((EnvUtils.isSafari() && this.client.player && this.client.player.getSource().mode !== PlayerModes.DIRECT) || !EnvUtils.isWebAudioSupported()) {
       DOMElements.audioConfigBtn.classList.add('hidden');
     } else {
       DOMElements.audioConfigBtn.classList.remove('hidden');
