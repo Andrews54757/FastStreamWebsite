@@ -65,7 +65,13 @@ export class SaveManager {
       return;
     }
     if (this.makingDownload) {
-      alert(Localize.getMessage('player_savevideo_inprogress_alert'));
+      if (this.downloadCancel) {
+        this.downloadCancel();
+        DOMElements.saveNotifBanner.style.color = 'gold';
+        this.setStatusMessage('save-video', Localize.getMessage('player_savevideo_cancelling'), 'info');
+      } else {
+        alert(Localize.getMessage('player_savevideo_inprogress_alert'));
+      }
       return;
     }
     const doPartial = e.altKey;
@@ -109,11 +115,16 @@ export class SaveManager {
       let result;
       this.makingDownload = true;
       this.setStatusMessage('save-video', Localize.getMessage('player_savevideo_start'), 'info');
+      DOMElements.saveNotifBanner.style.display = '';
+      DOMElements.saveNotifBanner.style.color = '';
       try {
         const start = performance.now();
         result = await player.saveVideo({
           onProgress: (progress) => {
             this.setStatusMessage('save-video', Localize.getMessage('player_savevideo_progress', [Math.floor(progress * 100)]), 'info');
+          },
+          registerCancel: (cancel) => {
+            this.downloadCancel = cancel;
           },
           filestream,
           partialSave: doPartial,
@@ -124,17 +135,26 @@ export class SaveManager {
         console.error(e);
         this.setStatusMessage('save-video', Localize.getMessage('player_savevideo_fail'), 'error', 2000);
         this.makingDownload = false;
-        if (confirm(Localize.getMessage('player_savevideo_failed_ask_archive'))) {
-          this.dumpBuffer(name);
+        this.downloadCancel = null;
+        DOMElements.saveNotifBanner.style.display = 'none';
+        if (e.message === 'Cancelled') {
+          console.error(e);
+          this.setStatusMessage('save-video', Localize.getMessage('player_savevideo_cancelled'), 'info', 2000);
+        } else {
+          if (confirm(Localize.getMessage('player_savevideo_failed_ask_archive'))) {
+            this.dumpBuffer(name);
+          }
         }
         return;
       }
-      this.setStatusMessage('save-video', Localize.getMessage('player_savevideo_complete'), 'info', 2000);
+      DOMElements.saveNotifBanner.style.display = 'none';
+      this.downloadCancel = null;
       this.makingDownload = false;
       if (this.downloadURL) {
         URL.revokeObjectURL(this.downloadURL);
         this.downloadURL = null;
       }
+      this.setStatusMessage('save-video', Localize.getMessage('player_savevideo_complete'), 'info', 2000);
       if (!canStream) {
         url = URL.createObjectURL(result.blob);
       }

@@ -1085,6 +1085,27 @@ const TranslationMap = {
     "Mod Inkognito akan menggunakan RAM untuk menimbal video. Komputer anda mungkin tidak mempunyai memori yang mencukupi untuk menyimpan keseluruhan video!\nAdakah anda pasti mahu meneruskan?",
     "Режим инкогнито будет использовать оперативную память для буферизации видео.\nВашему компьютеру может не хватить памяти для сохранения всего видео!\nВы уверены, что хотите продолжить?"
   ],
+  "player_savevideo_reencode": [
+    "Saving will require re-encoding. This may take a long time. Do you want to proceed?",
+    "Guardar requerirá re-codificación. Esto puede llevar mucho tiempo. ¿Quieres proceder?",
+    "保存には再エンコードが必要です。これには時間がかかる場合があります。続行しますか?",
+    "Menyimpan akan memerlukan penyulitan semula. Ini mungkin mengambil masa yang lama. Adakah anda mahu meneruskan?",
+    "Сохранение потребует повторного кодирования. Это может занять много времени. Вы хотите продолжить?"
+  ],
+  "player_savevideo_cancelling": [
+    "Cancelling save...",
+    "Cancelando...",
+    "キャンセル中...",
+    "Membatalkan simpanan...",
+    "Отмена…"
+  ],
+  "player_savevideo_cancelled": [
+    "Save cancelled!",
+    "¡Cancelado!",
+    "保存がキャンセルされました!",
+    "Simpanan dibatalkan!",
+    "Сохранение отменено!"
+  ],
   "player_savevideo_start": [
     "Making save...",
     "Guardando...",
@@ -2071,6 +2092,13 @@ const TranslationMap = {
     "ピクチャー イン ピクチャー (PiP) に切り替え",
     "Toggle picture-in-picture",
     "Картинка в картинке"
+  ],
+  "options_general_ytclient": [
+    "YT client to use. Try changing if you have issues.",
+    "Cliente de YouTube. Intente cambiar si tiene problemas.",
+    "使用する YouTube クライアント (YouTube の問題がある場合に変更してください)",
+    "YT client to use. Try changing if you have issues.",
+    "Клиент YouTube для использования. Попробуйте изменить, если у вас возникли проблемы."
   ],
   "options_export_header": [
     "Import/Export Settings",

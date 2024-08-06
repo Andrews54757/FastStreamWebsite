@@ -573,8 +573,17 @@ export default class MP4Player extends EventEmitter {
         frag.addReference(ReferenceTypes.SAVER);
       }
     }
+    let cancelled = false;
+    if (options?.registerCancel) {
+      options.registerCancel(() => {
+        cancelled = true;
+      });
+    }
     try {
       for (let i = 0; i < lastFrag; i++) {
+        if (cancelled) {
+          throw new Error('Cancelled');
+        }
         const frag = frags[i];
         if (!options.partialSave) {
           await this.downloadFragment(frag, -1);

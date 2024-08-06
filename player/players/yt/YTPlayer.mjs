@@ -11,9 +11,15 @@ Log.setLevel(
     Log.Level.WARNING,
     Log.Level.ERROR,
 );
+const CurrentUA = `com.google.ios.youtube/18.06.35 (iPhone; CPU iPhone OS 14_4 like Mac OS X; en_US)`;
 export default class YTPlayer extends DashPlayer {
   constructor(client, options) {
     super(client, options);
+    if (options?.defaultClient) {
+      this.defaultClient = ClientType[options.defaultClient];
+    } else {
+      this.defaultClient = ClientType.IOS;
+    }
   }
   async setSource(source) {
     const identifier = URLUtils.get_yt_identifier(source.url);
@@ -35,8 +41,19 @@ export default class YTPlayer extends DashPlayer {
       });
       const uri = URL.createObjectURL(blob);
       this.source = new VideoSource(uri, source.headers, PlayerModes.ACCELERATED_DASH);
-      this.source.headers['origin'] = 'https://www.youtube.com';
-      this.source.headers['referer'] = 'https://www.youtube.com/';
+      if (this.videoInfo.client_type === ClientType.IOS) {
+        this.source.headers['user-agent'] = CurrentUA;
+        this.source.headers['sec-ch-ua'] = false;
+        this.source.headers['sec-ch-ua-mobile'] = false;
+        this.source.headers['sec-ch-ua-platform'] = false;
+        this.source.headers['sec-fetch-site'] = false;
+        this.source.headers['sec-fetch-mode'] = false;
+        this.source.headers['sec-fetch-dest'] = false;
+        this.source.headers['x-client-data'] = false;
+      } else {
+        this.source.headers['origin'] = 'https://www.youtube.com';
+        this.source.headers['referer'] = 'https://www.youtube.com/';
+      }
       this.source.identifier = 'yt-' + identifier;
     } catch (e) {
       console.error(e);
@@ -56,6 +73,69 @@ export default class YTPlayer extends DashPlayer {
     }
     this.extractChapters();
     this.fetchSponsorBlock(identifier);
+  }
+  async youtubeFetchIOS(input, init) {
+    // url
+    const url = typeof input === 'string' ?
+                  new URL(input) :
+                  input instanceof URL ?
+                      input :
+                      new URL(input.url);
+    const headers = init?.headers ?
+                  new Headers(init.headers) :
+                  input instanceof Request ?
+                      input.headers :
+                      new Headers();
+    const removeHeaders = [
+      'user-agent',
+      'origin',
+      'referer',
+      'sec-fetch-site',
+      'sec-fetch-mode',
+      'sec-fetch-dest',
+      'sec-ch-ua',
+      'sec-ch-ua-mobile',
+      'sec-ch-ua-platform',
+    ];
+      // now serialize the headers
+    let headersArr = [...headers];
+    const customHeaderCommands = [];
+    headersArr = headersArr.filter((header) => {
+      const name = header[0];
+      if (removeHeaders.includes(name.toLowerCase())) {
+        return false;
+      }
+      return true;
+    });
+    const newHeaders = new Headers(headersArr);
+    removeHeaders.forEach((header) => {
+      if (header === 'user-agent') {
+        customHeaderCommands.push({
+          operation: 'set',
+          header: header,
+          value: CurrentUA,
+        });
+      } else {
+        customHeaderCommands.push({
+          operation: 'remove',
+          header: header,
+        });
+      }
+    });
+    if (EnvUtils.isExtension()) {
+      await chrome.runtime.sendMessage({
+        type: 'header_commands',
+        url: url.toString(),
+        commands: customHeaderCommands,
+      });
+    }
+    // fetch the url
+    return fetch(input, init ? {
+      ...init,
+      headers: newHeaders,
+    } : {
+      headers: newHeaders,
+    });
   }
   async youtubeFetch(input, init) {
     // url
@@ -118,13 +198,15 @@ export default class YTPlayer extends DashPlayer {
   }
   async getVideoInfo(identifier, tvMode = false) {
     const cache = (await IndexedDBManager.isSupportedAndAvailable() && !EnvUtils.isIncognito()) ? new UniversalCache() : undefined;
-    const mode = tvMode ? ClientType.TV_EMBEDDED : ClientType.IOS;
+    const mode = tvMode ? ClientType.TV_EMBEDDED : this.defaultClient;
     const youtube = await Innertube.create({
       cache,
-      fetch: this.youtubeFetch.bind(this),
+      fetch: (mode === ClientType.IOS) ? this.youtubeFetchIOS.bind(this) : this.youtubeFetch.bind(this),
       clientType: mode,
     });
-    return youtube.getInfo(identifier, mode);
+    const info = await youtube.getInfo(identifier, mode);
+    info.client_type = mode;
+    return info;
   }
   fetchSponsorBlock(identifier) {
     if (EnvUtils.isExtension()) {
@@ -219,6 +301,7 @@ export default class YTPlayer extends DashPlayer {
     try {
       return await super.saveVideo(options);
     } catch (e) {
+      options.registerCancel(null); // Not cancellable
       console.warn(e);
       const stream = await this.videoInfo.download({
         type: 'video+audio',

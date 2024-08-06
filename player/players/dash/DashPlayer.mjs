@@ -356,14 +356,16 @@ export default class DashPlayer extends EventEmitter {
     const videoInitSegmentData = videoInitSegment ? await this.client.downloadManager.getEntry(videoInitSegment.getContext()).getDataFromBlob() : null;
     const audioInitSegmentData = audioInitSegment ? await this.client.downloadManager.getEntry(audioInitSegment.getContext()).getDataFromBlob() : null;
     const {DASH2MP4} = await import('../../modules/dash2mp4/dash2mp4.mjs');
-    const dash2mp4 = new DASH2MP4();
+    const dash2mp4 = new DASH2MP4(options.registerCancel);
     dash2mp4.on('progress', (progress) => {
       if (options?.onProgress) {
         options.onProgress(progress);
       }
     });
+    const videoMimeType = videoProcessor.getRepresentation().mimeType;
+    const audioMimeType = audioProcessor.getRepresentation().mimeType;
     try {
-      const blob = await dash2mp4.convert(videoDuration, videoInitSegmentData, audioDuration, audioInitSegmentData, zippedFragments);
+      const blob = await dash2mp4.convert(videoMimeType, videoDuration, videoInitSegmentData, audioMimeType, audioDuration, audioInitSegmentData, zippedFragments);
       return {
         extension: 'mp4',
         blob: blob,

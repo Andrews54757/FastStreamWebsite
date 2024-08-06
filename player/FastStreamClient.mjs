@@ -25,6 +25,7 @@ import {PreviewFrameExtractor} from './modules/analyzer/PreviewFrameExtractor.mj
 import {ReferenceTypes} from './enums/ReferenceTypes.mjs';
 import {PlayerModes} from './enums/PlayerModes.mjs';
 import {URLUtils} from './utils/URLUtils.mjs';
+import {YoutubeClients} from './enums/YoutubeClients.mjs';
 const SET_VOLUME_USING_NODE = !EnvUtils.isSafari() && EnvUtils.isWebAudioSupported();
 export class FastStreamClient extends EventEmitter {
   constructor() {
@@ -47,6 +48,7 @@ export class FastStreamClient extends EventEmitter {
       doubleClickAction: ClickActions.PLAY_PAUSE,
       tripleClickAction: ClickActions.FULLSCREEN,
       visChangeAction: VisChangeActions.NOTHING,
+      defaultYoutubeClient: YoutubeClients.IOS,
       miniSize: 0.25,
       miniPos: MiniplayerPositions.BOTTOM_RIGHT,
       videoBrightness: 1,
@@ -161,6 +163,7 @@ export class FastStreamClient extends EventEmitter {
     this.options.visChangeAction = options.visChangeAction;
     this.options.miniSize = options.miniSize;
     this.options.miniPos = options.miniPos;
+    this.options.defaultYoutubeClient = options.defaultYoutubeClient;
     this.options.videoBrightness = options.videoBrightness;
     this.options.videoContrast = options.videoContrast;
     this.options.videoSaturation = options.videoSaturation;
@@ -422,7 +425,11 @@ export class FastStreamClient extends EventEmitter {
       this.source = source;
       const estimate = await navigator.storage.estimate();
       this.storageAvailable = estimate.quota - estimate.usage;
-      this.player = await this.playerLoader.createPlayer(source.mode, this, {});
+      const options = {};
+      if (source.mode === PlayerModes.ACCELERATED_YT) {
+        options.defaultClient = this.options.defaultYoutubeClient;
+      }
+      this.player = await this.playerLoader.createPlayer(source.mode, this, options);
       await this.player.setup();
       this.bindPlayer(this.player);
       if (!this.initPromise) {

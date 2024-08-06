@@ -138,14 +138,14 @@ export default class HLSPlayer extends EventEmitter {
     }
     try {
       if (levelInitData && audioLevelInitData) {
-        const {DASH2MP4} = await import('../../modules/dash2mp4/dash2mp4.mjs');
-        const dash2mp4 = new DASH2MP4();
-        dash2mp4.on('progress', (progress) => {
+        const {MP4Merger} = await import('../../modules/dash2mp4/mp4merger.mjs');
+        const mp4merger = new MP4Merger(options.registerCancel);
+        mp4merger.on('progress', (progress) => {
           if (options?.onProgress) {
             options.onProgress(progress);
           }
         });
-        const blob = await dash2mp4.convert(level.details.totalduration, levelInitData.buffer, audioLevel.details.totalduration, audioLevelInitData.buffer, zippedFragments);
+        const blob = await mp4merger.convert(level.details.totalduration, levelInitData.buffer, audioLevel.details.totalduration, audioLevelInitData.buffer, zippedFragments);
         return {
           extension: 'mp4',
           blob: blob,
@@ -155,7 +155,7 @@ export default class HLSPlayer extends EventEmitter {
           console.warn('Unexpected init data');
         }
         const {HLS2MP4} = await import('../../modules/hls2mp4/hls2mp4.mjs');
-        const hls2mp4 = new HLS2MP4();
+        const hls2mp4 = new HLS2MP4(options.registerCancel);
         hls2mp4.on('progress', (progress) => {
           if (options?.onProgress) {
             options.onProgress(progress);

@@ -3,9 +3,17 @@ import {FSBlob} from '../FSBlob.mjs';
 import {MP4} from './MP4Generator.mjs';
 import Transmuxer from './transmuxer.mjs';
 export class HLS2MP4 extends EventEmitter {
-  constructor() {
+  constructor(registerCancel) {
     super();
     this.blobManager = new FSBlob();
+    if (registerCancel) {
+      registerCancel(() => {
+        this.cancel();
+      });
+    }
+  }
+  cancel() {
+    this.cancelled = true;
   }
   arrayEquals(a, b) {
     let i;
@@ -245,6 +253,11 @@ export class HLS2MP4 extends EventEmitter {
     this.setup(level, levelInitData, audioLevel, audioInitData);
     let lastProgress = 0;
     for (let i = 0; i < zippedFragments.length; i++) {
+      if (this.cancelled) {
+        this.destroy();
+        this.blobManager.close();
+        throw new Error('Cancelled');
+      }
       if (zippedFragments[i].track === 0) {
         await this.pushFragment(zippedFragments[i]);
       } else {

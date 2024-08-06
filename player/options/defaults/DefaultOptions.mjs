@@ -1,3 +1,4 @@
+import {YoutubeClients} from '../../enums/YoutubeClients.mjs';
 import {EnvUtils} from '../../utils/EnvUtils.mjs';
 import {ClickActions} from './ClickActions.mjs';
 import {DaltonizerTypes} from './DaltonizerTypes.mjs';
@@ -14,6 +15,7 @@ export const DefaultOptions = {
   autoEnableBestSubtitles: false,
   storeProgress: true,
   autoplayYoutube: EnvUtils.isExtension(),
+  defaultYoutubeClient: YoutubeClients.IOS,
   defaultQuality: `Auto`,
   autoEnableURLs: [],
   customSourcePatterns: ``,
