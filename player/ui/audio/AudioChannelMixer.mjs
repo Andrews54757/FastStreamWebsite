@@ -70,8 +70,8 @@ export class AudioChannelMixer extends AbstractAudioModule {
     canvas.width = width;
     canvas.height = height;
     ctx.clearRect(0, 0, width, height);
-    const minDB = -60;
-    const maxDB = 10;
+    const minDB = -40;
+    const maxDB = 20;
     const dbRange = maxDB - minDB;
     const lastVolume = analyzer._lastVolume || 0;
     const volume = Math.max((Utils.clamp(AudioUtils.getVolume(analyzer), minDB, maxDB) - minDB) / dbRange, lastVolume * 0.95);
@@ -162,6 +162,12 @@ export class AudioChannelMixer extends AbstractAudioModule {
     els.volumeHandle.style.top = `${AudioUtils.mixerDBToPositionRatio(AudioUtils.gainToDB(channel.gain)) * 100}%`;
     if (channel.id === 6) { // master
       els.soloButton.style.display = 'none';
+      els.muteButton.textContent = Localize.getMessage('audiomixer_mono');
+      els.muteButton.title = els.muteButton.textContent;
+      els.muteButton.classList.toggle('active', channel.mono);
+    } else {
+      els.soloButton.classList.toggle('active', channel.solo);
+      els.muteButton.classList.toggle('active', channel.muted);
     }
     const zeroPos = AudioUtils.mixerDBToPositionRatio(0);
     const mouseMove = (e) => {
@@ -205,8 +211,13 @@ export class AudioChannelMixer extends AbstractAudioModule {
       this.updateNodes();
     });
     const toggleMute = () => {
-      channel.muted = !channel.muted;
-      els.muteButton.classList.toggle('active', channel.mute);
+      if (channel.id === 6) { // master
+        channel.mono = !channel.mono;
+        els.muteButton.classList.toggle('active', channel.mono);
+      } else {
+        channel.muted = !channel.muted;
+        els.muteButton.classList.toggle('active', channel.mute);
+      }
       this.updateNodes();
     };
     const toggleSolo = () => {
@@ -337,7 +348,8 @@ export class AudioChannelMixer extends AbstractAudioModule {
       return;
     }
     const hasNonUnityMasterGain = gains[6] !== 1;
-    if (hasNonUnityMasterGain) {
+    const isMono = this.channelMixerConfig[6].mono;
+    if (hasNonUnityMasterGain || isMono) {
       if (!this.finalGain) {
         this.finalGain = this.audioContext.createGain();
         this.postMerger.disconnect(this.getOutputNode());
@@ -345,6 +357,12 @@ export class AudioChannelMixer extends AbstractAudioModule {
         this.getOutputNode().connectFrom(this.finalGain);
       }
       this.finalGain.gain.value = gains[6];
+      if (isMono) {
+        this.finalGain.channelCount = 1;
+        this.finalGain.channelCountMode = 'explicit';
+      } else {
+        this.finalGain.channelCountMode = 'max';
+      }
     } else {
       if (this.finalGain) {
         this.postMerger.disconnect(this.finalGain);

@@ -1505,6 +1505,13 @@ const TranslationMap = {
     "Bisu",
     "Отключить звук"
   ],
+  "audiomixer_mono": [
+    "Mono",
+    "Mono",
+    "モノ",
+    "Mono",
+    "Моно"
+  ],
   "audiocrosstalk_title": [
     "Audio Crosstalk Correction",
     "Corrección de Crosstalk de Audio",
