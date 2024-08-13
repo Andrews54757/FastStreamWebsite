@@ -26,7 +26,8 @@ import {ReferenceTypes} from './enums/ReferenceTypes.mjs';
 import {PlayerModes} from './enums/PlayerModes.mjs';
 import {URLUtils} from './utils/URLUtils.mjs';
 import {YoutubeClients} from './enums/YoutubeClients.mjs';
-const SET_VOLUME_USING_NODE = !EnvUtils.isSafari() && EnvUtils.isWebAudioSupported();
+import {StringUtils} from './utils/StringUtils.mjs';
+const SET_VOLUME_USING_NODE = false; // !EnvUtils.isSafari() && EnvUtils.isWebAudioSupported();
 export class FastStreamClient extends EventEmitter {
   constructor() {
     super();
@@ -71,6 +72,8 @@ export class FastStreamClient extends EventEmitter {
       volume: 1,
       muted: false,
       playbackRate: 1,
+      bufferBehind: this.options.bufferBehind,
+      bufferAhead: this.options.bufferAhead,
     };
     this.progressMemory = null;
     this.playerLoader = new PlayerLoader();
@@ -84,7 +87,7 @@ export class FastStreamClient extends EventEmitter {
     if (EnvUtils.isWebAudioSupported()) {
       this.audioConfigManager = new AudioConfigManager(this);
       this.audioContext = new AudioContext();
-      this.audioConfigManager.setupNodes();
+      this.audioConfigManager.setupNodes(this.audioContext);
     }
     this.videoAnalyzer.on(AnalyzerEvents.MATCH, () => {
       this.interfaceController.updateSkipSegments();
@@ -313,7 +316,10 @@ export class FastStreamClient extends EventEmitter {
     if (!level) return;
     if (EnvUtils.isIncognito()) {
       if (this.hasDownloadSpace) {
-        this.interfaceController.setStatusMessage('info', Localize.getMessage('player_buffer_incognito_warning', [this.options.bufferBehind + this.options.bufferAhead]), 'warning', 5000);
+        this.persistent.bufferBehind = this.options.bufferBehind;
+        this.persistent.bufferAhead = this.options.bufferAhead;
+        const timestr = StringUtils.formatDuration(this.persistent.bufferBehind + this.persistent.bufferAhead);
+        this.interfaceController.setStatusMessage('info', Localize.getMessage('player_buffer_incognito_warning', [timestr]), 'warning', 5000);
         this.hasDownloadSpace = false;
       }
     } else {
@@ -336,8 +342,15 @@ export class FastStreamClient extends EventEmitter {
       }
       if (bitrate && this.duration) {
         let storageAvailable = (this.storageAvailable * 8) * 0.6;
-        if (this.options.maxVideoSize > 0) {
-          storageAvailable = Math.min(storageAvailable, this.options.maxVideoSize * 8);
+        let bufferAhead = 0;
+        if (this.options.maxVideoSize > 0 && this.options.maxVideoSize * 8 < storageAvailable) {
+          storageAvailable = this.options.maxVideoSize * 8;
+          const canBufferTime = storageAvailable / bitrate / 1.1;
+          bufferAhead = Math.floor(canBufferTime - this.persistent.bufferBehind);
+        }
+        if (bufferAhead === 0 || !this.options.downloadAll) {
+          this.persistent.bufferAhead = this.options.bufferAhead;
+          bufferAhead = 0;
         }
         const newHasDownloadSpace = (bitrate * this.duration) * (this.hasDownloadSpace ? 1 : 1.1) < storageAvailable;
         if (!newHasDownloadSpace && this.hasDownloadSpace) {
@@ -346,7 +359,13 @@ export class FastStreamClient extends EventEmitter {
               fragment.addReference(ReferenceTypes.GRANDFATHERED); // Don't free already downloaded fragments
             }
           });
-          this.interfaceController.setStatusMessage('info', Localize.getMessage('player_buffer_storage_warning', [this.options.bufferBehind + this.options.bufferAhead]), 'warning', 5000);
+          if (bufferAhead > 0) {
+            this.persistent.bufferAhead = Math.max(bufferAhead, this.options.bufferAhead);
+          }
+          const timestr = StringUtils.formatDuration(this.persistent.bufferBehind + this.persistent.bufferAhead);
+          this.interfaceController.setStatusMessage('info', Localize.getMessage('player_buffer_storage_warning', [timestr]), 'warning', 5000);
+        } else if (bufferAhead > 0) {
+          this.persistent.bufferAhead = Math.max(Math.min(bufferAhead, this.persistent.bufferAhead), this.options.bufferAhead);
         }
         this.hasDownloadSpace = newHasDownloadSpace;
       } else {
@@ -444,7 +463,8 @@ export class FastStreamClient extends EventEmitter {
         this.audioContext = new AudioContext();
         this.audioSource = this.audioContext.createMediaElementSource(this.player.getVideo());
         this.audioAnalyzer.setupAnalyzerNodeForMainPlayer(this.player.getVideo(), this.audioSource, this.audioContext);
-        this.audioConfigManager.setupNodes();
+        this.audioConfigManager.setupNodes(this.audioContext);
+        this.audioConfigManager.getInputNode().connectFrom(this.audioSource);
         this.audioConfigManager.getOutputNode().connect(this.audioContext.destination);
       }
       this.setVolume(this.persistent.volume);
@@ -481,6 +501,9 @@ export class FastStreamClient extends EventEmitter {
           }
         }
         this.disableProgressSave = false;
+        if (autoPlay) {
+          this.play();
+        }
       });
     } catch (e) {
       const msg = 'Please send this error to the developer at https://github.com/Andrews54757/FastStream/issues \n' + e + '\n' + e.stack;
@@ -609,10 +632,10 @@ export class FastStreamClient extends EventEmitter {
     let index = 0;
     while (nextDownload) {
       if (nextDownload.canFree() && !this.shouldDownloadAll()) {
-        if (nextDownload.start > this.persistent.currentTime + this.options.bufferAhead) {
+        if (nextDownload.start > this.persistent.currentTime + this.persistent.bufferAhead) {
           break;
         }
-        if (nextDownload.end < this.persistent.currentTime - this.options.bufferBehind) {
+        if (nextDownload.end < this.persistent.currentTime - this.persistent.bufferBehind) {
           break;
         }
       }
@@ -675,7 +698,7 @@ export class FastStreamClient extends EventEmitter {
     for (let i = 0; i < fragments.length; i++) {
       const fragment = fragments[i];
       if (fragment && fragment.status === DownloadStatus.DOWNLOAD_COMPLETE && fragment.canFree()) {
-        if (fragment.end < this.persistent.currentTime - this.options.bufferBehind || fragment.start > this.persistent.currentTime + this.options.bufferAhead) {
+        if (fragment.end < this.persistent.currentTime - this.persistent.bufferBehind || fragment.start > this.persistent.currentTime + this.persistent.bufferAhead) {
           this.freeFragment(fragment);
         }
       }
@@ -711,6 +734,8 @@ export class FastStreamClient extends EventEmitter {
     this.progressData = null;
     this.disableProgressSave = false;
     this.lastProgressSave = 0;
+    this.persistent.bufferBehind = this.options.bufferBehind;
+    this.persistent.bufferAhead = this.options.bufferAhead;
     if (this.context) {
       this.context.destroy();
       this.context = null;

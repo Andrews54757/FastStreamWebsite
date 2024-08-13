@@ -2,9 +2,11 @@ import {Localize} from '../../modules/Localize.mjs';
 import {StringUtils} from '../../utils/StringUtils.mjs';
 import {Utils} from '../../utils/Utils.mjs';
 import {WebUtils} from '../../utils/WebUtils.mjs';
+import {AbstractAudioModule} from './AbstractAudioModule.mjs';
 import {AudioEQNode} from './config/AudioEQNode.mjs';
-export class AudioEqualizer {
+export class AudioEqualizer extends AbstractAudioModule {
   constructor() {
+    super('AudioEqualizer');
     this.equalizerConfig = null;
     this.equalizerNodes = [];
     this.preAnalyzer = null;
@@ -13,18 +15,23 @@ export class AudioEqualizer {
     this.renderCache = {};
     this.setupUI();
   }
-  setEqualizerConfig(config) {
-    this.equalizerConfig = config;
-    this.refreshEQNodes();
-  }
   getElement() {
     return this.ui.equalizer;
   }
-  getInputNode() {
-    return this.inputNode;
+  setupNodes(audioContext) {
+    super.setupNodes(audioContext);
+    this.preAnalyzer = null;
+    this.postAnalyzer = null;
+    this.getInputNode().connect(this.getOutputNode());
+    this.setupEqualizerFrequencyAxis();
+    this.setupEqualizerDecibelAxis();
+    if (this.equalizerConfig) {
+      this.refreshEQNodes();
+    }
   }
-  getOutputNode() {
-    return this.outputNode;
+  setEqualizerConfig(config) {
+    this.equalizerConfig = config;
+    this.refreshEQNodes();
   }
   setupUI() {
     this.ui = {};
@@ -115,10 +122,16 @@ export class AudioEqualizer {
   }
   refreshEQNodes() {
     try {
-      this.inputNode.disconnect(this.outputNode);
+      this.getInputNode().disconnect(this.getOutputNode());
     } catch (e) {
     }
-    this.equalizerNodes.forEach((node) => {
+    this.equalizerNodes.forEach((node, i) => {
+      if (i === 0) {
+        this.getInputNode().disconnect(node);
+      }
+      if (i === this.equalizerNodes.length - 1) {
+        this.getOutputNode().disconnectFrom(node);
+      }
       node.disconnect();
     });
     this.equalizerNodes = [];
@@ -132,15 +145,15 @@ export class AudioEqualizer {
     });
     this.equalizerNodes.forEach((node, index) => {
       if (index === 0) {
-        this.inputNode.connect(node);
+        this.getInputNode().connect(node);
       } else {
         this.equalizerNodes[index - 1].connect(node);
       }
     });
     if (this.equalizerNodes.length === 0) {
-      this.inputNode.connect(this.outputNode);
+      this.getInputNode().connect(this.getOutputNode());
     } else {
-      this.equalizerNodes[this.equalizerNodes.length - 1].connect(this.outputNode);
+      this.getOutputNode().connectFrom(this.equalizerNodes[this.equalizerNodes.length - 1]);
     }
     this.renderEqualizerResponse();
     this.updateEqualizerNodeMarkers();
@@ -533,26 +546,14 @@ export class AudioEqualizer {
     this.postAnalyzer.smoothingTimeConstant = 0.6;
     this.preAnalyzer.maxDecibels = -20;
     this.postAnalyzer.maxDecibels = -20;
-    this.inputNode.connect(this.preAnalyzer);
-    this.outputNode.connect(this.postAnalyzer);
+    this.getInputNode().connect(this.preAnalyzer);
+    this.getOutputNode().connect(this.postAnalyzer);
   }
   destroyAnalyzers() {
     if (!this.preAnalyzer) return;
-    this.inputNode.disconnect(this.preAnalyzer);
-    this.outputNode.disconnect(this.postAnalyzer);
+    this.getInputNode().disconnect(this.preAnalyzer);
+    this.getOutputNode().disconnect(this.postAnalyzer);
     this.preAnalyzer = null;
     this.postAnalyzer = null;
-  }
-  setupNodes(audioContext) {
-    this.destroyAnalyzers();
-    this.audioContext = audioContext;
-    this.inputNode = audioContext.createGain();
-    this.outputNode = audioContext.createGain();
-    this.inputNode.connect(this.outputNode);
-    this.setupEqualizerFrequencyAxis();
-    this.setupEqualizerDecibelAxis();
-    if (this.equalizerConfig) {
-      this.refreshEQNodes();
-    }
   }
 }

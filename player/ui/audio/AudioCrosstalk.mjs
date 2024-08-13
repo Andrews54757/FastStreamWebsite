@@ -4,25 +4,25 @@ import {AudioUtils} from '../../utils/AudioUtils.mjs';
 import {Utils} from '../../utils/Utils.mjs';
 import {WebUtils} from '../../utils/WebUtils.mjs';
 import {createKnob} from '../components/Knob.mjs';
-export class AudioCrosstalk {
+import {AbstractAudioModule} from './AbstractAudioModule.mjs';
+export class AudioCrosstalk extends AbstractAudioModule {
   constructor() {
+    super('AudioCrosstalk');
     this.crosstalkNode = null;
     this.crosstalkConfig = null;
     this.setupUI();
   }
+  needsUpscaler() {
+    return this.crosstalkConfig && this.crosstalkConfig.enabled;
+  }
   getElement() {
     return this.ui.crosstalk;
-  }
-  getInputNode() {
-    return this.inputNode;
-  }
-  getOutputNode() {
-    return this.outputNode;
   }
   setCrosstalkConfig(config) {
     this.crosstalkConfig = config;
     this.setupCrosstalkControls();
     this.updateCrosstalk();
+    this.emit('upscale');
   }
   setupUI() {
     this.ui = {};
@@ -78,26 +78,27 @@ export class AudioCrosstalk {
       node.destroy();
       return;
     }
-    this.inputNode.disconnect(this.outputNode);
-    this.inputNode.connect(this.crosstalkNode.getInputNode());
-    this.crosstalkNode.getOutputNode().connect(this.outputNode);
+    this.getInputNode().disconnect(this.getOutputNode());
+    this.getInputNode().connect(this.crosstalkNode.getInputNode());
+    this.getOutputNode().connectFrom(this.crosstalkNode.getOutputNode());
   }
   removeCrosstalkNode() {
     if (!this.crosstalkNode) {
       return;
     }
-    this.inputNode.disconnect(this.crosstalkNode.getInputNode());
-    this.crosstalkNode.getOutputNode().disconnect(this.outputNode);
-    this.inputNode.connect(this.outputNode);
+    this.getInputNode().disconnect(this.crosstalkNode.getInputNode());
+    this.getOutputNode().disconnectFrom(this.crosstalkNode.getOutputNode());
+    this.getInputNode().connect(this.getOutputNode());
     this.crosstalkNode.destroy();
     this.crosstalkNode = null;
   }
-  setupNodes(audioContext, inputNode) {
-    this.removeCrosstalkNode();
-    this.audioContext = audioContext;
-    this.inputNode = inputNode;
-    this.outputNode = audioContext.createGain();
-    this.inputNode.connect(this.outputNode);
+  setupNodes(audioContext) {
+    super.setupNodes(audioContext);
+    if (this.crosstalkNode) {
+      this.crosstalkNode.destroy();
+      this.crosstalkNode = null;
+    }
+    this.getInputNode().connect(this.getOutputNode());
     this.updateCrosstalk();
   }
   calculateCrosstalkDelayAndDecay(speakerDistance, headDistance) {
@@ -124,6 +125,7 @@ export class AudioCrosstalk {
     this.ui.crosstalkToggle.addEventListener('click', () => {
       this.crosstalkConfig.enabled = !this.crosstalkConfig.enabled;
       this.updateCrosstalk();
+      this.emit('upscale');
     });
     this.crosstalkKnobs = {};
     const calculatorContainer = WebUtils.create('div', null, 'crosstalk_calculator');
@@ -132,6 +134,7 @@ export class AudioCrosstalk {
     speakerDistanceLabel.textContent = Localize.getMessage('audiocrosstalk_speakerdistance');
     speakerDistanceContainer.appendChild(speakerDistanceLabel);
     const speakerDistanceInput = WebUtils.create('input', null, 'crosstalk_calculator_input');
+    speakerDistanceInput.ariaLabel = speakerDistanceLabel.textContent;
     speakerDistanceContainer.appendChild(speakerDistanceInput);
     calculatorContainer.appendChild(speakerDistanceContainer);
     speakerDistanceInput.addEventListener('input', () => {
@@ -149,6 +152,7 @@ export class AudioCrosstalk {
     headDistanceLabel.textContent = Localize.getMessage('audiocrosstalk_headdistance');
     headDistanceContainer.appendChild(headDistanceLabel);
     const headDistanceInput = WebUtils.create('input', null, 'crosstalk_calculator_input');
+    headDistanceInput.ariaLabel = headDistanceLabel.textContent;
     headDistanceContainer.appendChild(headDistanceInput);
     calculatorContainer.appendChild(headDistanceContainer);
     headDistanceInput.addEventListener('input', () => {

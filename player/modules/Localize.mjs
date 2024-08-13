@@ -1163,18 +1163,18 @@ const TranslationMap = {
     "(текущее)"
   ],
   "player_buffer_incognito_warning": [
-    "Not enough space to predownload in incognito mode, will buffer $1s",
-    "No hay suficiente espacio para predescargar en modo incógnito, se almacenará en búfer $1s",
+    "Not enough space to predownload in incognito mode, will buffer $1",
+    "No hay suficiente espacio para predescargar en modo incógnito, se almacenará en búfer $1",
     "シークレットモードでプリダウンロードに必要な空き容量がないため、$1 がバッファーされます",
-    "Tidak cukup ruang untuk pramuat turun dalam mod inkognito, akan menimbal $1s",
-    "Недостаточно места для предзагрузки в режиме инкогнито, будет буферизована $1 с"
+    "Tidak cukup ruang untuk pramuat turun dalam mod inkognito, akan menimbal $1",
+    "Недостаточно места для предзагрузки в режиме инкогнито, будет буферизована $1"
   ],
   "player_buffer_storage_warning": [
-    "Video size exceeds limits, will buffer $1s",
-    "El tamaño del video excede los límites, se almacenará en búfer durante $1s",
-    "ビデオのサイズが制限を超えています、$1秒バッファリングします",
-    "Saiz video melebihi had, akan menimbal $1s",
-    "Размер видео превышает лимит, будет буферизировано $1 с"
+    "Video size exceeds limits, will buffer $1",
+    "El tamaño del video excede los límites, se almacenará en búfer durante $1",
+    "ビデオのサイズが制限を超えています、$1 バッファリングします",
+    "Saiz video melebihi had, akan menimbal $1",
+    "Размер видео превышает лимит, будет буферизировано $1"
   ],
   "player_error_drm": [
     "Failed to load! DRM is not supported!",

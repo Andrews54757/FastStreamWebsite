@@ -159,6 +159,8 @@ export class SubtitlesManager extends EventEmitter {
     filechooser.type = 'file';
     filechooser.style.display = 'none';
     filechooser.accept = '.vtt, .srt';
+    filechooser.ariaHidden = true;
+    filechooser.ariaLabel = 'Upload subtitle file';
     filechooser.addEventListener('change', () => {
       const files = filechooser.files;
       if (!files || !files[0]) return;
