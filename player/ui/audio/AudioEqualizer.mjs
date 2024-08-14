@@ -20,6 +20,7 @@ export class AudioEqualizer extends AbstractAudioModule {
   }
   setupNodes(audioContext) {
     super.setupNodes(audioContext);
+    this.equalizerNodes = [];
     this.preAnalyzer = null;
     this.postAnalyzer = null;
     this.getInputNode().connect(this.getOutputNode());
