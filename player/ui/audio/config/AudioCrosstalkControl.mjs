@@ -12,6 +12,9 @@ export class AudioCrosstalkControl {
   static fromObj(obj) {
     return new AudioCrosstalkControl(obj.enabled, obj.decaygain, obj.colorgain, obj.microdelay, obj.lowbypass, obj.highbypass, obj.speakerdistance, obj.headdistance);
   }
+  static default() {
+    return new AudioCrosstalkControl(false, -370, 5, 89, 250, 5000, 25, 70);
+  }
   toObj() {
     return {
       enabled: this.enabled,

@@ -27,6 +27,7 @@ import {PlayerModes} from './enums/PlayerModes.mjs';
 import {URLUtils} from './utils/URLUtils.mjs';
 import {YoutubeClients} from './enums/YoutubeClients.mjs';
 import {StringUtils} from './utils/StringUtils.mjs';
+import {StatusTypes} from './ui/StatusManager.mjs';
 const SET_VOLUME_USING_NODE = false; // !EnvUtils.isSafari() && EnvUtils.isWebAudioSupported();
 export class FastStreamClient extends EventEmitter {
   constructor() {
@@ -45,6 +46,7 @@ export class FastStreamClient extends EventEmitter {
       freeUnusedChannels: true,
       storeProgress: false,
       previewEnabled: true,
+      autoplayNext: false,
       singleClickAction: ClickActions.HIDE_CONTROLS,
       doubleClickAction: ClickActions.PLAY_PAUSE,
       tripleClickAction: ClickActions.FULLSCREEN,
@@ -65,16 +67,18 @@ export class FastStreamClient extends EventEmitter {
       defaultQuality: 'Auto',
       toolSettings: Utils.mergeOptions(DefaultToolSettings, {}),
     };
-    this.persistent = {
+    this.state = {
       playing: false,
       buffering: false,
       currentTime: 0,
       volume: 1,
       muted: false,
       playbackRate: 1,
+      hasUserInteracted: false,
       bufferBehind: this.options.bufferBehind,
       bufferAhead: this.options.bufferAhead,
     };
+    this._needsUserInteraction = false;
     this.progressMemory = null;
     this.playerLoader = new PlayerLoader();
     this.interfaceController = new InterfaceController(this);
@@ -126,6 +130,18 @@ export class FastStreamClient extends EventEmitter {
   shouldDownloadAll() {
     return this.options.downloadAll && this.hasDownloadSpace;
   }
+  userInteracted() {
+    if (!this.state.hasUserInteracted) {
+      this.state.hasUserInteracted = true;
+      this.interfaceController.setStatusMessage(StatusTypes.REQINTERACTION, null);
+    }
+  }
+  needsUserInteraction() {
+    return this._needsUserInteraction && !this.state.hasUserInteracted && !this.state.playing;
+  }
+  setNeedsUserInteraction(value) {
+    this._needsUserInteraction = value;
+  }
   setSeekSave(value) {
     this.saveSeek = value;
   }
@@ -167,6 +183,7 @@ export class FastStreamClient extends EventEmitter {
     this.options.miniSize = options.miniSize;
     this.options.miniPos = options.miniPos;
     this.options.defaultYoutubeClient = options.defaultYoutubeClient;
+    this.options.autoplayNext = options.autoplayNext;
     this.options.videoBrightness = options.videoBrightness;
     this.options.videoContrast = options.videoContrast;
     this.options.videoSaturation = options.videoSaturation;
@@ -246,7 +263,7 @@ export class FastStreamClient extends EventEmitter {
     this.updateHasDownloadSpace();
   }
   updateTime(time) {
-    this.persistent.currentTime = time;
+    this.state.currentTime = time;
     this.interfaceController.timeUpdated();
     if (this.options.storeProgress && this.progressData && time !== this.progressData.lastTime && !this.disableProgressSave) {
       const now = Date.now();
@@ -316,9 +333,9 @@ export class FastStreamClient extends EventEmitter {
     if (!level) return;
     if (EnvUtils.isIncognito()) {
       if (this.hasDownloadSpace) {
-        this.persistent.bufferBehind = this.options.bufferBehind;
-        this.persistent.bufferAhead = this.options.bufferAhead;
-        const timestr = StringUtils.formatDuration(this.persistent.bufferBehind + this.persistent.bufferAhead);
+        this.state.bufferBehind = this.options.bufferBehind;
+        this.state.bufferAhead = this.options.bufferAhead;
+        const timestr = StringUtils.formatDuration(this.state.bufferBehind + this.state.bufferAhead);
         this.interfaceController.setStatusMessage('info', Localize.getMessage('player_buffer_incognito_warning', [timestr]), 'warning', 5000);
         this.hasDownloadSpace = false;
       }
@@ -346,10 +363,10 @@ export class FastStreamClient extends EventEmitter {
         if (this.options.maxVideoSize > 0 && this.options.maxVideoSize * 8 < storageAvailable) {
           storageAvailable = this.options.maxVideoSize * 8;
           const canBufferTime = storageAvailable / bitrate / 1.1;
-          bufferAhead = Math.floor(canBufferTime - this.persistent.bufferBehind);
+          bufferAhead = Math.floor(canBufferTime - this.state.bufferBehind);
         }
         if (bufferAhead === 0 || !this.options.downloadAll) {
-          this.persistent.bufferAhead = this.options.bufferAhead;
+          this.state.bufferAhead = this.options.bufferAhead;
           bufferAhead = 0;
         }
         const newHasDownloadSpace = (bitrate * this.duration) * (this.hasDownloadSpace ? 1 : 1.1) < storageAvailable;
@@ -360,12 +377,12 @@ export class FastStreamClient extends EventEmitter {
             }
           });
           if (bufferAhead > 0) {
-            this.persistent.bufferAhead = Math.max(bufferAhead, this.options.bufferAhead);
+            this.state.bufferAhead = Math.max(bufferAhead, this.options.bufferAhead);
           }
-          const timestr = StringUtils.formatDuration(this.persistent.bufferBehind + this.persistent.bufferAhead);
-          this.interfaceController.setStatusMessage('info', Localize.getMessage('player_buffer_storage_warning', [timestr]), 'warning', 5000);
+          const timestr = StringUtils.formatDuration(this.state.bufferBehind + this.state.bufferAhead);
+          this.interfaceController.setStatusMessage(StatusTypes.INFO, Localize.getMessage('player_buffer_storage_warning', [timestr]), 'warning', 5000);
         } else if (bufferAhead > 0) {
-          this.persistent.bufferAhead = Math.max(Math.min(bufferAhead, this.persistent.bufferAhead), this.options.bufferAhead);
+          this.state.bufferAhead = Math.max(Math.min(bufferAhead, this.state.bufferAhead), this.options.bufferAhead);
         }
         this.hasDownloadSpace = newHasDownloadSpace;
       } else {
@@ -467,8 +484,8 @@ export class FastStreamClient extends EventEmitter {
         this.audioConfigManager.getInputNode().connectFrom(this.audioSource);
         this.audioConfigManager.getOutputNode().connect(this.audioContext.destination);
       }
-      this.setVolume(this.persistent.volume);
-      this.player.playbackRate = this.persistent.playbackRate;
+      this.setVolume(this.state.volume);
+      this.player.playbackRate = this.state.playbackRate;
       this.setSeekSave(false);
       this.currentTime = 0;
       this.setSeekSave(true);
@@ -563,8 +580,8 @@ export class FastStreamClient extends EventEmitter {
     if (!nextAudio) {
       return nextVideo;
     }
-    const diffV = Math.abs(nextVideo.start - this.persistent.currentTime);
-    const diffA = Math.abs(nextAudio.start - this.persistent.currentTime);
+    const diffV = Math.abs(nextVideo.start - this.state.currentTime);
+    const diffA = Math.abs(nextAudio.start - this.state.currentTime);
     if (diffV < diffA) {
       return nextVideo;
     } else {
@@ -602,6 +619,11 @@ export class FastStreamClient extends EventEmitter {
   mainloop() {
     if (this.destroyed) return;
     setTimeout(this.mainloop.bind(this), 1000);
+    if (this.needsUserInteraction()) {
+      this.interfaceController.setStatusMessage(StatusTypes.REQINTERACTION, Localize.getMessage('player_needs_interaction'), 'warning clickable');
+    } else {
+      this.interfaceController.setStatusMessage(StatusTypes.REQINTERACTION, null);
+    }
     if (this.player) {
       this.updatePreview();
       this.predownloadFragments();
@@ -622,6 +644,10 @@ export class FastStreamClient extends EventEmitter {
     if (!navigator.onLine) {
       return false;
     }
+    // Don't pre-download if user needs to interact
+    if (this.needsUserInteraction()) {
+      return false;
+    }
     // throttle download speed if needed
     const speed = this.downloadManager.getSpeed();
     if (this.options.maxSpeed >= 0 && speed > this.options.maxSpeed) {
@@ -632,10 +658,10 @@ export class FastStreamClient extends EventEmitter {
     let index = 0;
     while (nextDownload) {
       if (nextDownload.canFree() && !this.shouldDownloadAll()) {
-        if (nextDownload.start > this.persistent.currentTime + this.persistent.bufferAhead) {
+        if (nextDownload.start > this.state.currentTime + this.state.bufferAhead) {
           break;
         }
-        if (nextDownload.end < this.persistent.currentTime - this.persistent.bufferBehind) {
+        if (nextDownload.end < this.state.currentTime - this.state.bufferBehind) {
           break;
         }
       }
@@ -698,7 +724,7 @@ export class FastStreamClient extends EventEmitter {
     for (let i = 0; i < fragments.length; i++) {
       const fragment = fragments[i];
       if (fragment && fragment.status === DownloadStatus.DOWNLOAD_COMPLETE && fragment.canFree()) {
-        if (fragment.end < this.persistent.currentTime - this.persistent.bufferBehind || fragment.start > this.persistent.currentTime + this.persistent.bufferAhead) {
+        if (fragment.end < this.state.currentTime - this.state.bufferBehind || fragment.start > this.state.currentTime + this.state.bufferAhead) {
           this.freeFragment(fragment);
         }
       }
@@ -734,8 +760,8 @@ export class FastStreamClient extends EventEmitter {
     this.progressData = null;
     this.disableProgressSave = false;
     this.lastProgressSave = 0;
-    this.persistent.bufferBehind = this.options.bufferBehind;
-    this.persistent.bufferAhead = this.options.bufferAhead;
+    this.state.bufferBehind = this.options.bufferBehind;
+    this.state.bufferAhead = this.options.bufferAhead;
     if (this.context) {
       this.context.destroy();
       this.context = null;
@@ -776,7 +802,7 @@ export class FastStreamClient extends EventEmitter {
     this.frameExtractor.reset();
     promises.push(this.downloadManager.reset());
     this.interfaceController.reset();
-    this.persistent.buffering = false;
+    this.state.buffering = false;
     this.storageAvailable = 0;
     this.hasDownloadSpace = true;
     this.previousLevel = -1;
@@ -815,8 +841,8 @@ export class FastStreamClient extends EventEmitter {
     });
     let autoPlayTriggered = false;
     this.context.on(DefaultPlayerEvents.CANPLAY, (event) => {
-      this.player.playbackRate = this.persistent.playbackRate;
-      if (!autoPlayTriggered && this.options.autoPlay && this.persistent.playing === false) {
+      this.player.playbackRate = this.state.playbackRate;
+      if (!autoPlayTriggered && this.options.autoPlay && this.state.playing === false) {
         autoPlayTriggered = true;
         this.play();
       }
@@ -833,6 +859,9 @@ export class FastStreamClient extends EventEmitter {
     });
     this.context.on(DefaultPlayerEvents.ENDED, (event) => {
       this.pause();
+      if (this.options.autoplayNext) {
+        this.nextVideo();
+      }
     });
     this.context.on(DefaultPlayerEvents.ERROR, (event, msg) => {
       console.error('ERROR', event);
@@ -953,8 +982,8 @@ export class FastStreamClient extends EventEmitter {
     }
   }
   savePosition() {
-    if (!this.pastSeeks.length || this.pastSeeks[this.pastSeeks.length - 1] != this.persistent.currentTime) {
-      this.pastSeeks.push(this.persistent.currentTime);
+    if (!this.pastSeeks.length || this.pastSeeks[this.pastSeeks.length - 1] != this.state.currentTime) {
+      this.pastSeeks.push(this.state.currentTime);
     }
     if (this.pastSeeks.length > 50) {
       this.pastSeeks.shift();
@@ -981,7 +1010,7 @@ export class FastStreamClient extends EventEmitter {
     if (this.saveSeek) {
       this.savePosition();
     }
-    this.persistent.currentTime = value;
+    this.state.currentTime = value;
     if (this.player) {
       this.player.currentTime = value;
     }
@@ -1047,6 +1076,18 @@ export class FastStreamClient extends EventEmitter {
       this.updateQualityLevels();
     }
   }
+  nextVideo() {
+    if (!this.player || !this.player.nextVideo) {
+      return null;
+    }
+    return this.player.nextVideo();
+  }
+  previousVideo() {
+    if (!this.player || !this.player.previousVideo) {
+      return null;
+    }
+    return this.player.previousVideo();
+  }
   get fragments() {
     return this.fragmentsStore[this.currentLevel];
   }
@@ -1063,7 +1104,7 @@ export class FastStreamClient extends EventEmitter {
     return this.fragmentsStore[level];
   }
   setVolume(volume) {
-    this.persistent.volume = volume;
+    this.state.volume = volume;
     if (SET_VOLUME_USING_NODE || (volume > 1 && EnvUtils.isWebAudioSupported())) {
       if (this.player) this.player.volume = 1;
       this.audioConfigManager.updateVolume(volume);
@@ -1073,16 +1114,16 @@ export class FastStreamClient extends EventEmitter {
     }
   }
   get volume() {
-    return this.persistent.volume;
+    return this.state.volume;
   }
   set volume(value) {
     this.interfaceController.setVolume(value);
   }
   get playbackRate() {
-    return this.player?.playbackRate || this.persistent.playbackRate;
+    return this.player?.playbackRate || this.state.playbackRate;
   }
   set playbackRate(value) {
-    this.persistent.playbackRate = value;
+    this.state.playbackRate = value;
     if (this.player) {
       this.player.playbackRate = value;
     }

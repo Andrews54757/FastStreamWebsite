@@ -147,6 +147,12 @@ export class KeybindManager extends EventEmitter {
     this.on('WindowedFullscreen', (e) => {
       this.client.interfaceController.toggleWindowedFullscreen();
     });
+    this.on('NextVideo', (e) =>{
+      this.client.nextVideo();
+    });
+    this.on('PreviousVideo', (e) =>{
+      this.client.previousVideo();
+    });
     this.on('keybind', (keybind, e) => {
       // console.log("Keybind", keybind);
     });

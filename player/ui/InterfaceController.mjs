@@ -25,7 +25,7 @@ import {VolumeControls} from './VolumeControls.mjs';
 export class InterfaceController {
   constructor(client) {
     this.client = client;
-    this.persistent = client.persistent;
+    this.state = client.state;
     this.hidden = false;
     this.lastTime = 0;
     this.lastSpeed = 0;
@@ -110,7 +110,7 @@ export class InterfaceController {
   }
   checkBuffering() {
     const currentVideo = this.client.currentVideo;
-    if (this.persistent.playing) {
+    if (this.state.playing) {
       const time = this.client.currentTime;
       if (time === this.lastTime) {
         this.setBuffering(true);
@@ -135,7 +135,7 @@ export class InterfaceController {
     this.setStatusMessage('error', null, 'error');
     this.setStatusMessage('chapter', null, 'error');
     this.stopProgressLoop();
-    this.persistent.playing = false;
+    this.state.playing = false;
     this.updatePlayPauseButton();
     DOMElements.playPauseButtonBigCircle.style.display = '';
     DOMElements.playerContainer.classList.add('controls_visible');
@@ -151,10 +151,10 @@ export class InterfaceController {
     if (this.failed) {
       isBuffering = false;
     }
-    if (this.persistent.buffering === isBuffering) {
+    if (this.state.buffering === isBuffering) {
       return;
     }
-    this.persistent.buffering = isBuffering;
+    this.state.buffering = isBuffering;
     if (isBuffering) {
       DOMElements.bufferingSpinner.style.display = '';
     } else {
@@ -223,6 +223,12 @@ export class InterfaceController {
     this.progressBar.updateSkipSegments();
   }
   setupDOM() {
+    const interactHandler = (e) => {
+      this.client.userInteracted();
+    };
+    DOMElements.playerContainer.addEventListener('keydown', interactHandler, true);
+    DOMElements.playerContainer.addEventListener('mousedown', interactHandler, true);
+    DOMElements.playerContainer.addEventListener('touchstart', interactHandler, true);
     DOMElements.playPauseButton.addEventListener('click', this.playPauseToggle.bind(this));
     WebUtils.setupTabIndex(DOMElements.playPauseButton);
     DOMElements.playPauseButtonBigCircle.addEventListener('click', (e) => {
@@ -271,7 +277,7 @@ export class InterfaceController {
           if (lastSpeed !== null || !this.client.player) {
             return;
           }
-          wasPlaying = this.persistent.playing;
+          wasPlaying = this.state.playing;
           lastSpeed = this.client.playbackRate;
           this.client.playbackRate = lastSpeed * 2;
           this.client.play();
@@ -480,7 +486,7 @@ export class InterfaceController {
         break;
       case VisChangeActions.PLAY_PAUSE:
         if (!isVisible) {
-          this.shouldPlay = this.client.persistent.playing;
+          this.shouldPlay = this.client.state.playing;
           await this.client.player?.pause();
         } else {
           if (this.shouldPlay) {
@@ -555,7 +561,7 @@ export class InterfaceController {
     } else {
       DOMElements.playerContainer.classList.add('player-hidden');
       this.hidden = true;
-      this.shouldPlay = this.client.persistent.playing;
+      this.shouldPlay = this.client.state.playing;
       this.client.player?.pause();
     }
   }
@@ -664,7 +670,7 @@ export class InterfaceController {
   queueControlsHide(time) {
     clearTimeout(this.hideControlBarTimeout);
     this.hideControlBarTimeout = setTimeout(() => {
-      if (!this.focusingControls && !this.mouseOverControls && !this.isBigPlayButtonVisible() && this.persistent.playing && this.toolManager.canHideControls()) {
+      if (!this.focusingControls && !this.mouseOverControls && !this.isBigPlayButtonVisible() && this.state.playing && this.toolManager.canHideControls()) {
         this.hideControlBar();
       }
     }, time || 2000);
@@ -698,7 +704,7 @@ export class InterfaceController {
     DOMElements.controlsContainer.classList.add('fade_in');
   }
   updatePlaybackRate() {
-    this.playbackRateChanger.setPlaybackRate(this.persistent.playbackRate, true);
+    this.playbackRateChanger.setPlaybackRate(this.state.playbackRate, true);
     this.durationChanged();
   }
   updateLanguageTracks() {
@@ -713,12 +719,12 @@ export class InterfaceController {
   timeUpdated() {
     const duration = this.client.duration;
     if (!this.progressBar.isSeeking) {
-      DOMElements.currentProgress.style.width = Utils.clamp(this.persistent.currentTime / duration, 0, 1) * 100 + '%';
+      DOMElements.currentProgress.style.width = Utils.clamp(this.state.currentTime / duration, 0, 1) * 100 + '%';
     }
-    DOMElements.duration.textContent = StringUtils.formatTime(this.persistent.currentTime) + ' / ' + StringUtils.formatTime(duration);
+    DOMElements.duration.textContent = StringUtils.formatTime(this.state.currentTime) + ' / ' + StringUtils.formatTime(duration);
     const chapters = this.client.chapters;
     if (chapters.length > 0) {
-      const time = this.persistent.currentTime;
+      const time = this.state.currentTime;
       const chapter = chapters.find((chapter) => chapter.startTime <= time && chapter.endTime >= time);
       if (chapter) {
         this.setStatusMessage('chapter', chapter.name, 'info');
@@ -771,15 +777,15 @@ export class InterfaceController {
   }
   playPauseToggle() {
     if (!this.client.player) return;
-    if (!this.persistent.playing) {
+    if (!this.state.playing) {
       this.client.play();
     } else {
       this.client.pause();
     }
   }
   play() {
-    const previousValue = this.persistent.playing;
-    this.persistent.playing = true;
+    const previousValue = this.state.playing;
+    this.state.playing = true;
     this.hideBigPlayButton();
     this.updatePlayPauseButton();
     if (!previousValue) {
@@ -788,8 +794,8 @@ export class InterfaceController {
     }
   }
   pause() {
-    const previousValue = this.persistent.playing;
-    this.persistent.playing = false;
+    const previousValue = this.state.playing;
+    this.state.playing = false;
     this.updatePlayPauseButton();
     this.showControlBar();
     if (previousValue) {
@@ -799,7 +805,7 @@ export class InterfaceController {
   updatePlayPauseButton() {
     const playButton = DOMElements.playPauseButton;
     const playButtonBig = DOMElements.playPauseButtonBig;
-    if (this.persistent.playing) {
+    if (this.state.playing) {
       playButton.classList.add('playing');
       playButtonBig.classList.replace('fluid_initial_play_button', 'fluid_initial_pause_button');
     } else {

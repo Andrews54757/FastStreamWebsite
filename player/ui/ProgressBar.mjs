@@ -372,7 +372,7 @@ export class ProgressBar extends EventEmitter {
       return;
     }
     let shouldPlay = false;
-    if (this.client.persistent.playing) {
+    if (this.client.state.playing) {
       this.client.player.pause();
       shouldPlay = true;
     }

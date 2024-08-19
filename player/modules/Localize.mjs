@@ -357,6 +357,13 @@ const TranslationMap = {
     "Tidak Diberikan, klik untuk memberikan",
     "Не предоставлено, нажмите, чтобы предоставить"
   ],
+  "player_needs_interaction": [
+    "Interact to enable download acceleration",
+    "Interactuar para habilitar la aceleración de descarga",
+    "ダウンロードの高速化を有効にするには、動画を再生してください",
+    "Berinteraksi untuk mendayakan pecutan muat turun",
+    "Взаимодействуйте, чтобы включить ускорение загрузки"
+  ],
   "player_skipintro": [
     "Skip Intro",
     "Omitir Intro",
@@ -1512,6 +1519,13 @@ const TranslationMap = {
     "Mono",
     "Моно"
   ],
+  "audiomixer_dynamics_label": [
+    "Edit dynamics of channel",
+    "Editar dinámica del canal",
+    "チャンネルのダイナミクスを編集",
+    "Edit dinamik saluran",
+    "Изменить динамику канала"
+  ],
   "audiocrosstalk_title": [
     "Audio Crosstalk Correction",
     "Corrección de Crosstalk de Audio",
@@ -1959,6 +1973,13 @@ const TranslationMap = {
     "YouTube 動画の自動再生",
     "Autoplay YouTube videos",
     "Автовоспроизведение на YouTube"
+  ],
+  "options_general_autoplaynext": [
+    "Autoplay next video on YouTube",
+    "Reproducir automáticamente el siguiente video de YouTube",
+    "YouTube の次の動画を自動再生",
+    "Autoplay next video on YouTube",
+    "Автоматическое воспроизведение следующего видео на YouTube"
   ],
   "options_general_quality": [
     "Default video quality",

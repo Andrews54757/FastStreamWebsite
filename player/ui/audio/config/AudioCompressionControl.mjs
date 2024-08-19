@@ -11,6 +11,9 @@ export class AudioCompressionControl {
   static fromObj(obj) {
     return new AudioCompressionControl(obj.enabled, obj.attack, obj.knee, obj.ratio, obj.release, obj.threshold, obj.gain);
   }
+  static default() {
+    return new AudioCompressionControl(false, 0.003, 30, 12, 0.25, -24, 1);
+  }
   toObj() {
     return {
       enabled: this.enabled,
