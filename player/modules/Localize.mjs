@@ -420,12 +420,26 @@ const TranslationMap = {
     "untuk memuatkan sumber yang dikesan daripada tab lain.",
     "для загрузки источников, обнаруженных на других вкладках."
   ],
-  "player_playpause_label": [
-    "Play or pause video",
-    "Reproducir o pausar vídeo",
-    "動画を再生/一時停止",
-    "Mainkan atau jeda video",
-    "Воспроизведение/Пауза"
+  "player_play_label": [
+    "Play video",
+    "Reproducir video",
+    "ビデオを再生",
+    "Mainkan video",
+    "Воспроизвести видео"
+  ],
+  "player_pause_label": [
+    "Pause video",
+    "Pausar video",
+    "ビデオを一時停止",
+    "Jeda video",
+    "Приостановить видео"
+  ],
+  "player_volume_label": [
+    "Volume is $1%. Use arrow keys to adjust, enter to toggle mute.",
+    "El volumen es $1%. Usa las teclas de flecha para ajustar, enter para silenciar.",
+    "音量は $1% です。矢印キーで調整、ミュートを切り替えるにはエンターキーを使用します。",
+    "Kelantangan $1%. Gunakan anak panah untuk menyesuaikan, enter untuk menogol audio.",
+    "Громкость $1%. Используйте стрелки для регулировки, Enter для отключения звука."
   ],
   "player_mute_label": [
     "Mute audio",
@@ -435,7 +449,7 @@ const TranslationMap = {
     "Отключить звук"
   ],
   "player_timestamp_label": [
-    "Timestamp",
+    "Copy URL with timestamp",
     "Marca de tiempo",
     "タイムスタンプ",
     "Cap masa",
@@ -448,14 +462,14 @@ const TranslationMap = {
     "Sumber Pelayar",
     "Обзор источников"
   ],
-  "player_sourcesbrowser_toggle_label": [
-    "Toggle sources browser",
-    "Alternar navegador de fuentes",
+  "player_sourcesbrowser_open_label": [
+    "Open sources browser",
+    "Abrir navegador de fuentes",
     "ソースの参照を開く",
-    "Togol penyemak imbas sumber",
-    "Обзор источников"
+    "Buka penyemak imbas sumber",
+    "Открыть обзор источников"
   ],
-  "player_sourcesbrowser_closebtn_label": [
+  "player_sourcesbrowser_close_label": [
     "Close sources browser",
     "Cerrar navegador de fuentes",
     "ソースの参照を閉じる",
@@ -469,14 +483,14 @@ const TranslationMap = {
     "Konfigurasi Audio",
     "Конфигурация звука"
   ],
-  "player_audioconfig_toggle_label": [
-    "Toggle audio config window",
-    "Alternar ventana de configuración de audio",
+  "player_audioconfig_open_label": [
+    "Open audio config window",
+    "Abrir ventana de configuración de audio",
     "オーディオ設定ウィンドウを開く",
-    "Togol tetingkap konfigurasi audio",
-    "Настройка звука"
+    "Buka tetingkap konfigurasi audio",
+    "Открыть настройки звука"
   ],
-  "player_audioconfig_toggle_closebtn_label": [
+  "player_audioconfig_close_label": [
     "Close audio config window",
     "Cerrar ventana de configuración de audio",
     "オーディオ設定ウィンドウを閉じる",
@@ -490,7 +504,7 @@ const TranslationMap = {
     "Carian OpenSubtitles",
     "Поиск по OpenSubtitles"
   ],
-  "player_opensubtitles_closebtn_label": [
+  "player_opensubtitles_close_label": [
     "Close OpenSubtitles search window",
     "Cerrar ventana de búsqueda de OpenSubtitles",
     "OpenSubtitles 検索ウィンドウを閉じる",
@@ -672,12 +686,19 @@ const TranslationMap = {
     "Adakah anda ingin membuka laman web OpenSubtitles untuk memuat turun fail sarikata secara manual?",
     "Хотите открыть сайт OpenSubtitles, чтобы загрузить субтитры вручную?"
   ],
-  "player_subtitlesmenu_toggle_label": [
-    "Toggle subtitles menu",
-    "Alternar menú de subtítulos",
+  "player_subtitlesmenu_open_label": [
+    "Open subtitles menu",
+    "Abrir menú de subtítulos",
     "字幕メニューを開く",
-    "Togol menu sarikata",
-    "Субтитры"
+    "Buka tingkap sarikata",
+    "Открыть меню субтитров"
+  ],
+  "player_subtitlesmenu_close_label": [
+    "Close subtitles menu",
+    "Cerrar menú de subtítulos",
+    "字幕メニューを閉じる",
+    "Tutup tingkap sarikata",
+    "Закрыть меню субтитров"
   ],
   "player_subtitlesmenu_backbtn": [
     "Back",
@@ -840,19 +861,19 @@ const TranslationMap = {
     "Tetapan FastStream",
     "Настройки FastStream"
   ],
-  "player_settings_closebtn_label": [
+  "player_settings_open_label": [
+    "Open settings window",
+    "Abrir ventana de configuración",
+    "設定ウィンドウを開く",
+    "Buka tetingkap tetapan",
+    "Открыть окно настроек"
+  ],
+  "player_settings_close_label": [
     "Close settings window",
     "Cerrar ventana de configuración",
     "設定ウィンドウを閉じる",
     "Tutup tetingkap tetapan",
     "Закрыть окно настроек"
-  ],
-  "player_settings_label": [
-    "Settings",
-    "Configuraciones",
-    "設定",
-    "Tetapan",
-    "Настройки"
   ],
   "player_savevideo_label": [
     "Save video. hold ALT to save partial video. hold SHIFT to dump buffer.",
@@ -876,14 +897,14 @@ const TranslationMap = {
     "Картинка в картинке"
   ],
   "player_fullscreen_label": [
-    "Fullscreen",
+    "Toggle fullscreen",
     "Pantalla completa",
     "フルスクリーン",
     "Skrin penuh",
     "Во весь экран"
   ],
   "player_windowed_fullscreen_label": [
-    "Windowed Fullscreen",
+    "Toggle windowed fullscreen",
     "Pantalla completa de ventana",
     "ウィンドウ化されたフルスクリーン",
     "Skrin Penuh Bertingkap",
@@ -1498,6 +1519,20 @@ const TranslationMap = {
     "Pengadun Saluran Audio",
     "Микшер аудиоканала"
   ],
+  "audiomixer_volume_master_handle_label": [
+    "$1 gain is $2 dB. Use arrows to adjust. Press M to toggle mono",
+    "Ganancia de $1 es $2 dB. Usa las flechas para ajustar. Presiona M para alternar mono",
+    "$1 のゲインは $2 dB です。矢印キーで調整します。M キーでモノラルを切り替えます",
+    "$1 gain is $2 dB. Gunakan anak panah untuk menyesuaikan. Tekan M untuk mengalihkan mono",
+    "$1 усиление $2 dB. Используйте стрелки для регулировки. Нажмите M, чтобы переключить моно"
+  ],
+  "audiomixer_volume_handle_label": [
+    "$1 gain is $2 dB. Use arrows to adjust. Press M to toggle mute",
+    "Ganancia de $1 es $2 dB. Usa las flechas para ajustar. Presiona M para alternar silencio",
+    "$1 のゲインは $2 dB です。矢印キーで調整します。M キーでミュートを切り替えます",
+    "$1 gain is $2 dB. Gunakan anak panah untuk menyesuaikan. Tekan M untuk mengalihkan bisu",
+    "$1 усиление $2 dB. Используйте стрелки для регулировки. Нажмите M, чтобы переключить отключение звука"
+  ],
   "audiomixer_solo_label": [
     "Solo",
     "Solo",
@@ -1749,6 +1784,41 @@ const TranslationMap = {
     "評価しない :(",
     "I don't want to review :(",
     "Не хочу оценивать :("
+  ],
+  "options_feedback_header": [
+    "Do you have feedback?",
+    "¿Tienes comentarios?",
+    "フィードバックをお願いします!",
+    "Do you have feedback?",
+    "У вас есть отзыв?"
+  ],
+  "options_feedback_reason": [
+    "We'd love to hear from you! Please fill out a short form. It's the only way we can improve since we don't track you.",
+    "¡Nos encantaría saber de ti! Por favor, completa un formulario corto. Es la única forma en que podemos mejorar ya que no te rastreamos.",
+    "あなたの意見を聞かせてください! 短いフォームを記入してください。私たちはあなたを追跡していないので、改善する唯一の方法です。",
+    "We'd love to hear from you! Please fill out a short form. It's the only way we can improve since we don't track you.",
+    "Мы хотели бы услышать ваше мнение! Пожалуйста, заполните короткую форму. Это единственный способ улучшить нас, поскольку мы не отслеживаем вас."
+  ],
+  "options_feedback_yes": [
+    "Yes, I have feedback",
+    "Sí, tengo comentarios",
+    "はい、フィードバックを送信します",
+    "Yes, I have feedback",
+    "Да, у меня есть отзыв"
+  ],
+  "options_feedback_no": [
+    "No, I'm good",
+    "No, estoy bien",
+    "いいえ、結構です",
+    "No, I'm good",
+    "Нет, мне хорошо"
+  ],
+  "options_help_feedback": [
+    "Feedback Form",
+    "Formulario de Comentarios",
+    "フィードバックフォーム",
+    "Feedback Form",
+    "Форма обратной связи"
   ],
   "options_update_header": [
     "An Update is Available!",

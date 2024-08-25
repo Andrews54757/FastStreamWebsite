@@ -95,7 +95,7 @@ async function loadOptions(newOptions) {
   setSelectMenuValue(visChangeAction, Options.visChangeAction);
   setSelectMenuValue(miniPos, Options.miniPos);
   setSelectMenuValue(qualityMenu, Options.defaultQuality);
-  setSelectMenuValue(ytclient, Options.defaultYoutubeClient);
+  setSelectMenuValue(ytclient, Options.defaultYoutubeClient2);
   if (Options.visChangeAction === VisChangeActions.MINI_PLAYER) {
     showWhenMiniSelected.style.display = '';
   } else {
@@ -186,8 +186,8 @@ createSelectMenu(qualityMenu, Object.values(DefaultQualities), Options.defaultQu
   Options.defaultQuality = e.target.value;
   optionChanged();
 });
-createSelectMenu(ytclient, Object.values(YoutubeClients), Options.defaultYoutubeClient, null, (e) => {
-  Options.defaultYoutubeClient = e.target.value;
+createSelectMenu(ytclient, Object.values(YoutubeClients), Options.defaultYoutubeClient2, null, (e) => {
+  Options.defaultYoutubeClient2 = e.target.value;
   optionChanged();
 });
 document.querySelectorAll('.option').forEach((option) => {
@@ -246,6 +246,7 @@ function createKeybindElement(keybind) {
   keybindInput.classList.add('keybind-input');
   keybindInput.tabIndex = 0;
   keybindInput.title = keybindName;
+  keybindInput.role = 'button';
   keybindInput.textContent = Options.keybinds[keybind];
   keybindInput.addEventListener('keydown', (e) => {
     if (e.key === 'Tab') {
@@ -455,10 +456,48 @@ if (EnvUtils.isExtension()) {
     });
     ratebox.style.display = 'none';
   });
-  chrome.storage.local.get('rateus', (result) => {
-    if (!result || !result.rateus) {
-      ratebox.style.display = 'block';
+  const feedbackbox = document.getElementById('feedbackbox');
+  const feedbackyes = document.getElementById('feedback-yes');
+  const feedbackno = document.getElementById('feedback-no');
+  feedbackyes.addEventListener('click', (e) => {
+    chrome.storage.local.set({
+      feedback: 'yes',
+    });
+    feedbackbox.style.display = 'none';
+    chrome.tabs.create({
+      url: 'https://docs.google.com/forms/d/e/1FAIpQLSfA3T8lmhKO_ih028cP0m67vhH-FaGNkeHE0EsQoyBWztpctA/viewform?usp=sf_link',
+    });
+  });
+  feedbackno.addEventListener('click', (e) => {
+    chrome.storage.local.set({
+      feedback: 'no',
+    });
+    feedbackbox.style.display = 'none';
+  });
+  chrome.storage.local.get('firstuse', (result) => {
+    if (!result || !result.firstuse) {
+      chrome.storage.local.set({
+        firstuse: Date.now(),
+      });
+    } else {
+      const now = Date.now();
+      const diff = now - result.firstuse;
+      if (diff > 1000 * 60 * 60 * 24 * 3) { // 3 days, ask for feedback
+        chrome.storage.local.get('feedback', (result) => {
+          if (!result || !result.feedback) {
+            feedbackbox.style.display = 'block';
+          } else {
+            if (diff > 1000 * 60 * 60 * 24 * 7) { // 7 days, ask for review
+              chrome.storage.local.get('rateus', (result) => {
+                if (!result || !result.rateus) {
+                  ratebox.style.display = 'block';
+                }
+              });
+            }
+          }
+        });
+      }
     }
   });
 }
-// Utils.printWelcome(EnvUtils.getVersion());
+document.getElementById('ytc').style.display = ''; // SPLICER:CENSORYT:REMOVE_LINE

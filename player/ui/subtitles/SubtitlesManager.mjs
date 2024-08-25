@@ -121,12 +121,14 @@ export class SubtitlesManager extends EventEmitter {
   }
   closeUI() {
     DOMElements.subtitlesMenu.style.display = 'none';
+    WebUtils.setLabels(DOMElements.subtitles, Localize.getMessage('player_subtitlesmenu_open_label'));
   }
   openUI() {
     this.emit('open', {
       target: DOMElements.subtitles,
     });
     DOMElements.subtitlesMenu.style.display = '';
+    WebUtils.setLabels(DOMElements.subtitles, Localize.getMessage('player_subtitlesmenu_close_label'));
   }
   setupUI() {
     DOMElements.subtitles.addEventListener('click', this.onCaptionsButtonInteract.bind(this));

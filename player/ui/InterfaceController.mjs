@@ -89,8 +89,8 @@ export class InterfaceController {
     this.playbackRateChanger.closeSilenceSkipperUI();
   }
   closeAllMenus(e) {
-    if (e && e.target && !DOMElements.disabledTools.contains(e.target)) {
-      DOMElements.disabledTools.classList.remove('visible');
+    if (e && e.target && !DOMElements.extraTools.contains(e.target)) {
+      DOMElements.extraTools.classList.remove('visible');
     }
     this.playbackRateChanger.closeUI();
     this.videoQualityChanger.closeUI();
@@ -409,11 +409,11 @@ export class InterfaceController {
     });
     WebUtils.setupTabIndex(DOMElements.skipBackwardButton);
     DOMElements.moreButton.addEventListener('click', (e) => {
-      if (!DOMElements.disabledTools.classList.contains('visible')) {
+      if (!DOMElements.extraTools.classList.contains('visible')) {
         this.closeAllMenus();
-        DOMElements.disabledTools.classList.add('visible');
+        DOMElements.extraTools.classList.add('visible');
       } else {
-        DOMElements.disabledTools.classList.remove('visible');
+        DOMElements.extraTools.classList.remove('visible');
       }
       e.stopPropagation();
     });
@@ -474,6 +474,24 @@ export class InterfaceController {
       ],
       alpha: true,
       focusInput: false,
+    });
+    const mouseUpHandler = (e) => {
+      document.removeEventListener('mousemove', mouseMoveHandler);
+      document.removeEventListener('mouseup', mouseUpHandler);
+    };
+    const mouseMoveHandler = (e) => {
+      const currentY = Math.min(Math.max(e.clientY - WebUtils.getOffsetTop(DOMElements.progressContainer), -100), 100);
+      const isExpanded = DOMElements.playerContainer.classList.contains('expanded');
+      const offset = isExpanded ? 0 : 80;
+      if (currentY > 50) {
+        this.closeTimeline();
+      } else if (currentY <= -5 - offset) {
+        this.openTimeline();
+      }
+    };
+    DOMElements.controlsLeft.addEventListener('mousedown', (e) => {
+      document.addEventListener('mousemove', mouseMoveHandler);
+      document.addEventListener('mouseup', mouseUpHandler);
     });
   }
   async handleVisibilityChange(isVisible) {
@@ -808,9 +826,11 @@ export class InterfaceController {
     if (this.state.playing) {
       playButton.classList.add('playing');
       playButtonBig.classList.replace('fluid_initial_play_button', 'fluid_initial_pause_button');
+      WebUtils.setLabels(playButton, Localize.getMessage('player_pause_label'));
     } else {
       playButton.classList.remove('playing');
       playButtonBig.classList.replace('fluid_initial_pause_button', 'fluid_initial_play_button');
+      WebUtils.setLabels(playButton, Localize.getMessage('player_play_label'));
     }
   }
   isUserSeeking() {

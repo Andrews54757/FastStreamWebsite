@@ -215,9 +215,11 @@ export class SourcesBrowser {
   openUI() {
     InterfaceUtils.closeWindows();
     DOMElements.linkuiContainer.style.display = '';
+    WebUtils.setLabels(DOMElements.linkButton, Localize.getMessage('player_sourcesbrowser_close_label'));
   }
   closeUI() {
     DOMElements.linkuiContainer.style.display = 'none';
+    WebUtils.setLabels(DOMElements.linkButton, Localize.getMessage('player_sourcesbrowser_open_label'));
   }
   setupUI() {
     DOMElements.linkButton.addEventListener('click', (e) => {

@@ -11,6 +11,8 @@ export function createDropdown(defaultChoice, title, items, call, editableCallba
   text.appendChild(document.createTextNode(' ˅'));
   container.dataset.val = defaultChoice;
   container.tabIndex = 0;
+  container.role = 'listbox';
+  container.ariaLabel = title + ': ' + items[defaultChoice];
   container.appendChild(text);
   const itemListElement = create('div', `position: absolute; top: 100%; left: 0px; right: 0px;`, 'items');
   for (const name in items) {
@@ -18,6 +20,7 @@ export function createDropdown(defaultChoice, title, items, call, editableCallba
       const div = create('div');
       div.dataset.val = name;
       div.textContent = items[name];
+      div.role = 'option';
       if (defaultChoice === name) {
         div.style.backgroundColor = 'rgb(20,20,20)';
       }
@@ -62,6 +65,7 @@ function setupDropdown(itemListElement, text, container, call) {
   container.addEventListener('mouseenter', (e) => {
     container.focus();
   });
+  const main = text.children[0];
   function shiftSelection(indexAmount) {
     for (let j = 0; j < itemListElement.children.length; j++) {
       const element = itemListElement.children[j];
@@ -70,7 +74,7 @@ function setupDropdown(itemListElement, text, container, call) {
         const newIndex = (j + indexAmount + itemListElement.children.length) % itemListElement.children.length;
         const nextElement = itemListElement.children[newIndex];
         nextElement.style.backgroundColor = 'rgb(20,20,20)';
-        text.children[0].textContent = nextElement.textContent;
+        main.textContent = nextElement.textContent;
         container.dataset.val = nextElement.dataset.val;
         if (call) call(container.dataset.val, element.dataset.val);
         break;
@@ -100,7 +104,7 @@ function setupDropdown(itemListElement, text, container, call) {
     ((i) => {
       const el = itemListElement.children[i];
       el.addEventListener('click', (e) => {
-        text.children[0].textContent = el.textContent;
+        main.textContent = el.textContent;
         const prevValue = container.dataset.val;
         container.dataset.val = el.dataset.val;
         for (let j = 0; j < itemListElement.children.length; j++) {
@@ -111,6 +115,7 @@ function setupDropdown(itemListElement, text, container, call) {
           }
         }
         e.stopPropagation();
+        container.ariaLabel = text + ': ' + el.textContent;
         if (call) call(container.dataset.val, prevValue);
       });
     })(i);

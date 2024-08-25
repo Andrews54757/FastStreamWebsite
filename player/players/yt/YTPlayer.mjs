@@ -20,6 +20,7 @@ export default class YTPlayer extends DashPlayer {
     } else {
       this.defaultClient = ClientType.IOS;
     }
+    this.paramCache = new Map();
   }
   async setSource(source) {
     const identifier = URLUtils.get_yt_identifier(source.url);
@@ -229,7 +230,8 @@ export default class YTPlayer extends DashPlayer {
     const youtube = await Innertube.create({
       cache,
       fetch: (mode === ClientType.IOS) ? this.youtubeFetchIOS.bind(this) : this.youtubeFetch.bind(this),
-      clientType: mode,
+      client_type: mode,
+      runner_location: 'https://sandbox.faststream.online/',
     });
     const info = await youtube.getInfo(identifier, mode);
     info.client_type = mode;
