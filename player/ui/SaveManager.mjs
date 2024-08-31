@@ -19,6 +19,11 @@ export class SaveManager {
   setupUI() {
     DOMElements.playerContainer.addEventListener('drop', this.onFileDrop.bind(this), false);
     DOMElements.download.addEventListener('click', this.saveVideo.bind(this));
+    DOMElements.download.addEventListener('contextmenu', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      this.saveVideo(e, true);
+    });
     WebUtils.setupTabIndex(DOMElements.download);
     DOMElements.screenshot.addEventListener('click', this.saveScreenshot.bind(this));
     WebUtils.setupTabIndex(DOMElements.screenshot);
@@ -31,7 +36,7 @@ export class SaveManager {
       alert(Localize.getMessage('player_nosource_alert'));
       return;
     }
-    const suggestedName = (this.client.mediaName || 'video').replaceAll(' ', '_') + '@' + StringUtils.formatTime(this.client.currentTime);
+    const suggestedName = (this.client.mediaInfo?.name || 'video').replaceAll(' ', '_') + '@' + StringUtils.formatTime(this.client.currentTime);
     const name = EnvUtils.isIncognito() ? suggestedName : prompt(Localize.getMessage('player_filename_prompt'), suggestedName);
     if (!name) {
       return;
@@ -59,7 +64,7 @@ export class SaveManager {
       this.setStatusMessage('save-screenshot', Localize.getMessage('player_screenshot_fail'), 'error', 2000);
     }
   }
-  async saveVideo(e) {
+  async saveVideo(e, allowPartial = false) {
     if (!this.client.player) {
       alert(Localize.getMessage('player_nosource_alert'));
       return;
@@ -74,7 +79,7 @@ export class SaveManager {
       }
       return;
     }
-    const doPartial = e.altKey;
+    const doPartial = e.altKey || allowPartial;
     const doDump = e.shiftKey;
     const player = this.client.player;
     const {canSave, isComplete, canStream} = player.canSave();
@@ -94,7 +99,7 @@ export class SaveManager {
         return;
       }
     }
-    const suggestedName = (this.client.mediaName || 'video').replaceAll(' ', '_');
+    const suggestedName = (this.client.mediaInfo?.name || 'video').replaceAll(' ', '_');
     const name = EnvUtils.isIncognito() ? suggestedName : prompt(Localize.getMessage('player_filename_prompt'), suggestedName);
     if (!name) {
       return;

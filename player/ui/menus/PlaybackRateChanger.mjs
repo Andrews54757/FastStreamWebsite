@@ -216,8 +216,12 @@ export class PlaybackRateChanger extends EventEmitter {
     this.speedList.scrollTop = element.offsetTop - this.speedList.clientHeight / 2 + element.clientHeight / 2;
   }
   closeUI() {
+    if (DOMElements.playbackRateMenuContainer.style.display === 'none') {
+      return false;
+    }
     DOMElements.playbackRateMenuContainer.style.display = 'none';
     this.stayOpen = false;
+    return true;
   }
   isVisible() {
     return DOMElements.playbackRateMenuContainer.style.display !== 'none';
@@ -247,7 +251,7 @@ export class PlaybackRateChanger extends EventEmitter {
       }
     });
     DOMElements.playbackRate.addEventListener('click', (e) => {
-      if (e.shiftKey) {
+      if (e.shiftKey || e.altKey) {
         this.toggleSilenceSkipper();
         e.stopPropagation();
         return;
@@ -258,6 +262,11 @@ export class PlaybackRateChanger extends EventEmitter {
         this.openUI();
       }
       e.stopPropagation();
+    });
+    DOMElements.playbackRate.addEventListener('contextmenu', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      this.toggleSilenceSkipper();
     });
     DOMElements.playerContainer.addEventListener('click', (e) => {
       this.closeUI();

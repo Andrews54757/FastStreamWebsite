@@ -119,13 +119,13 @@ export class AudioAnalyzer extends EventEmitter {
   getOutputRate() {
     return this.outputRate;
   }
-  setupAnalyzerNodeForMainPlayer(videoElement, audioSource, audioContext) {
+  setupAnalyzerNodeForMainPlayer(videoElement, audioOutputNode, audioContext, getTime) {
     if (this.analyzerNodes.has('main')) {
       this.analyzerNodes.get('main').destroy();
     }
     const mainAnalyzerNode = new AudioAnalyzerNode();
     this.analyzerNodes.set('main', mainAnalyzerNode);
-    mainAnalyzerNode.attach(videoElement, audioSource, audioContext);
+    mainAnalyzerNode.attach(videoElement, audioOutputNode, audioContext, getTime);
     mainAnalyzerNode.on('vad', this.onVadFrameProcessed.bind(this));
     mainAnalyzerNode.on('volume', this.onVolumeFrameProcessed.bind(this));
     mainAnalyzerNode.configure({
@@ -198,6 +198,7 @@ export class AudioAnalyzer extends EventEmitter {
     });
     player.on(DefaultPlayerEvents.MANIFEST_PARSED, () => {
       player.currentLevel = this.client.currentLevel;
+      player.currentAudioLevel = this.client.currentAudioLevel;
       player.load();
     });
     const onLoadMeta = () => {

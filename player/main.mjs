@@ -13,17 +13,17 @@ if (EnvUtils.isExtension()) {
       (request, sender, sendResponse) => {
         if (request.type === 'seek') {
           if (window.fastStream) window.fastStream.currentTime = request.time;
-        } else if (request.type === 'keypress') {
-          if (window.fastStream) {
-            window.fastStream.keybindManager.handleKeyString(request.key);
-            window.fastStream.userInteracted();
-          }
         } else if (request.type === 'sendFrameId') {
           if (window.parent !== window) {
             window.parent.postMessage({
               type: 'frame',
               id: request.frameId,
             }, '*');
+          }
+        } else if (request.type === 'keypress') {
+          if (window.fastStream) {
+            window.fastStream.keybindManager.handleKeyString(request.key);
+            window.fastStream.userInteracted();
           }
         } else if (request.type === 'options' || request.type === 'options_init') {
           if (request.time !== optionSendTime) {
@@ -49,7 +49,14 @@ if (EnvUtils.isExtension()) {
   }, 10000);
 }
 async function recieveSources(request, sendResponse) {
-  console.log('Recieved sources', request.sources, request.subtitles);
+  console.log('Recieved sources', request.sources, request.subtitles, request.continuationOptions);
+  const continuationOptions = request.continuationOptions || {};
+  if (continuationOptions.autoPlay) {
+    request.forceAutoplay = true;
+  }
+  if (continuationOptions.disableLoadProgress) {
+    window.fastStream.options.disableLoadProgress = true;
+  }
   let subs = request.subtitles;
   const sources = request.sources;
   if (sources.length === 0) {
@@ -58,7 +65,7 @@ async function recieveSources(request, sendResponse) {
   }
   // Sources are ordered by time, so we can just choose the first one and it will be the oldest.
   // But we also want to minimize depth
-  let autoPlaySource = sources.reduce((result, curr) => {
+  let autoSetSource = sources.reduce((result, curr) => {
     // Choose lower depth
     if (result.depth > curr.depth) {
       return curr;
@@ -75,9 +82,9 @@ async function recieveSources(request, sendResponse) {
     return result;
   }, sources[0]);
   // Play the newest source at lowest depth if it is mp4
-  if (autoPlaySource.mode === PlayerModes.ACCELERATED_MP4) {
+  if (autoSetSource.mode === PlayerModes.ACCELERATED_MP4) {
     const mp4SourceCandidates = sources.filter((item) => {
-      return item !== autoPlaySource && item.mode === PlayerModes.ACCELERATED_MP4;
+      return item !== autoSetSource && item.mode === PlayerModes.ACCELERATED_MP4;
     });
     mp4SourceCandidates.sort((a, b) => {
       // Lower depth is better
@@ -88,24 +95,24 @@ async function recieveSources(request, sendResponse) {
       return b.time - a.time;
     });
     if (mp4SourceCandidates.length > 0) {
-      autoPlaySource = mp4SourceCandidates[0];
+      autoSetSource = mp4SourceCandidates[0];
     }
   }
   if (window.fastStream.source || !request.autoSetSource) {
-    autoPlaySource = null;
+    autoSetSource = null;
   }
-  if (autoPlaySource) {
+  if (autoSetSource) {
     window.fastStream.clearSubtitles();
   }
   if (
-    autoPlaySource &&autoPlaySource.mode === PlayerModes.ACCELERATED_YT &&
-    !URLUtils.is_url_yt_embed(autoPlaySource.url) &&
-    OPTIONS.autoplayYoutube
+    (autoSetSource && autoSetSource.mode === PlayerModes.ACCELERATED_YT &&
+    !URLUtils.is_url_yt_embed(autoSetSource.url) &&
+    OPTIONS.autoplayYoutube) || (autoSetSource && request.forceAutoplay)
   ) {
     window.fastStream.setAutoPlay(true); // Enable autoplay for yt only. Not embeds.
   }
   sources.forEach((s) => {
-    window.fastStream.addSource(new VideoSource(s.url, s.headers, s.mode), s === autoPlaySource);
+    window.fastStream.addSource(new VideoSource(s.url, s.headers, s.mode), s === autoSetSource);
   });
   if (subs) {
     subs = await loadSubtitles(subs);
@@ -123,6 +130,17 @@ async function recieveSources(request, sendResponse) {
     } catch (e) {
       console.error(e);
     }
+  }
+  const fullscreenState = continuationOptions.fullscreenState;
+  if (fullscreenState === 'fullscreen') {
+    window.fastStream.interfaceController.fullscreenToggle(true).catch((e) => {
+      console.error(e);
+      window.fastStream.interfaceController.setStatusMessage('error', 'Fullscreen permissions denied!', 'warning', 5000);
+    });
+  } else if (fullscreenState === 'pip') {
+    window.fastStream.interfaceController.pipToggle(true);
+  } else if (fullscreenState === 'windowed') {
+    window.fastStream.interfaceController.toggleWindowedFullscreen(true);
   }
   sendResponse('sources_recieved');
 }
@@ -204,12 +222,13 @@ async function setup() {
       frameId: parseInt(myParam) || 0,
     }).then((data) => {
       window.fastStream.loadAnalyzerData(data.analyzerData);
-      window.fastStream.setMediaName(data.mediaName);
+      window.fastStream.setMediaInfo(data.mediaInfo);
       window.fastStream.setNeedsUserInteraction(!data.isMainPlayer);
       console.log('Recieved data', data);
       chrome.runtime.sendMessage({
         type: 'ready',
       });
+      window.fastStream.setupPoll();
     });
   }
   const version = window.fastStream.version;

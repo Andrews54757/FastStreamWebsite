@@ -86,22 +86,6 @@ export default class YTPlayer extends DashPlayer {
     //   return playlist;
     // });
   }
-  previousVideo() {
-    if (EnvUtils.isExtension()) {
-      chrome.runtime.sendMessage({
-        type: 'request_previous_video',
-      }, ()=>{
-      });
-    }
-  }
-  nextVideo() {
-    if (EnvUtils.isExtension()) {
-      chrome.runtime.sendMessage({
-        type: 'request_next_video',
-      }, ()=>{
-      });
-    }
-  }
   async youtubeFetchIOS(input, init) {
     // url
     const url = typeof input === 'string' ?
@@ -230,7 +214,7 @@ export default class YTPlayer extends DashPlayer {
     const youtube = await Innertube.create({
       cache,
       fetch: (mode === ClientType.IOS) ? this.youtubeFetchIOS.bind(this) : this.youtubeFetch.bind(this),
-      client_type: mode,
+      client_type: mode === ClientType.IOS ? undefined : mode,
       runner_location: 'https://sandbox.faststream.online/',
     });
     const info = await youtube.getInfo(identifier, mode);
@@ -336,6 +320,9 @@ export default class YTPlayer extends DashPlayer {
     try {
       return await super.saveVideo(options);
     } catch (e) {
+      if (e.message === 'Cancelled') {
+        throw e;
+      }
       options.registerCancel(null); // Not cancellable
       console.warn(e);
       const stream = await this.videoInfo.download({

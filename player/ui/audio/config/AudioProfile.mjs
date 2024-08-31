@@ -15,11 +15,11 @@ export class AudioProfile {
   static fromObj(obj) {
     const profile = new AudioProfile(obj.id);
     profile.label = obj.label;
-    if (obj.channels) {
+    if (obj.channels && obj.channels.length === 6) {
       profile.channels = obj.channels.map((channel) => {
         return AudioChannelControl.fromObj(channel);
       });
-    } else if (obj.mixerChannels) {
+    } else if (obj.mixerChannels && obj.mixerChannels.length === 7) {
       profile.channels = obj.mixerChannels.map((channel) => {
         return AudioChannelControl.fromObj(channel);
       });
@@ -29,10 +29,13 @@ export class AudioProfile {
       const masterChannel = AudioChannelControl.fromObj(obj.master);
       profile.master = masterChannel;
     }
+    if (!profile.master) {
+      profile.master = AudioChannelControl.default('master');
+    }
     if (obj.equalizerNodes) {
       profile.master.equalizerNodes = obj.equalizerNodes.map((node) => {
         return AudioEQNode.fromObj(node);
-      });
+      }) || [];
     }
     if (obj.compressor) {
       profile.master.compressor = AudioCompressionControl.fromObj(obj.compressor);

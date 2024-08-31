@@ -104,6 +104,16 @@ export class ToolManager {
     } else {
       DOMElements.windowedFullscreen.classList.add('hidden');
     }
+    if (this.client.hasPreviousVideo()) {
+      DOMElements.previousVideo.classList.remove('hidden');
+    } else {
+      DOMElements.previousVideo.classList.add('hidden');
+    }
+    if (this.client.hasNextVideo()) {
+      DOMElements.nextVideo.classList.remove('hidden');
+    } else {
+      DOMElements.nextVideo.classList.add('hidden');
+    }
     if ((EnvUtils.isSafari() && this.client.player && this.client.player.getSource().mode !== PlayerModes.DIRECT) || !EnvUtils.isWebAudioSupported()) {
       DOMElements.audioConfigBtn.classList.add('hidden');
     } else {
@@ -114,6 +124,8 @@ export class ToolManager {
       playpause: DOMElements.playPauseButton,
       volume: DOMElements.volumeBlock,
       duration: DOMElements.duration,
+      next: DOMElements.nextVideo,
+      previous: DOMElements.previousVideo,
       pip: DOMElements.pip,
       screenshot: DOMElements.screenshot,
       download: DOMElements.download,

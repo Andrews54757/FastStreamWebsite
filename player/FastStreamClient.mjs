@@ -28,7 +28,10 @@ import {URLUtils} from './utils/URLUtils.mjs';
 import {YoutubeClients} from './enums/YoutubeClients.mjs';
 import {StringUtils} from './utils/StringUtils.mjs';
 import {StatusTypes} from './ui/StatusManager.mjs';
-const SET_VOLUME_USING_NODE = false; // !EnvUtils.isSafari() && EnvUtils.isWebAudioSupported();
+import {InterfaceUtils} from './utils/InterfaceUtils.mjs';
+import {VirtualAudioNode} from './ui/audio/VirtualAudioNode.mjs';
+import {SyncedAudioPlayer} from './players/SyncedAudioPlayer.mjs';
+const SET_VOLUME_USING_NODE = !EnvUtils.isSafari() && EnvUtils.isWebAudioSupported();
 export class FastStreamClient extends EventEmitter {
   constructor() {
     super();
@@ -45,6 +48,7 @@ export class FastStreamClient extends EventEmitter {
       downloadAll: false,
       freeUnusedChannels: true,
       storeProgress: false,
+      disableLoadProgress: false,
       previewEnabled: true,
       autoplayNext: false,
       singleClickAction: ClickActions.HIDE_CONTROLS,
@@ -66,6 +70,7 @@ export class FastStreamClient extends EventEmitter {
       seekStepSize: 0.2,
       defaultQuality: 'Auto',
       toolSettings: Utils.mergeOptions(DefaultToolSettings, {}),
+      videoDelay: 0,
     };
     this.state = {
       playing: false,
@@ -77,6 +82,10 @@ export class FastStreamClient extends EventEmitter {
       hasUserInteracted: false,
       bufferBehind: this.options.bufferBehind,
       bufferAhead: this.options.bufferAhead,
+      hasNextVideo: false,
+      hasPrevVideo: false,
+      fullscreen: false,
+      windowedFullscreen: false,
     };
     this._needsUserInteraction = false;
     this.progressMemory = null;
@@ -96,7 +105,15 @@ export class FastStreamClient extends EventEmitter {
     this.videoAnalyzer.on(AnalyzerEvents.MATCH, () => {
       this.interfaceController.updateSkipSegments();
     });
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        this.escapeAll();
+        e.preventDefault();
+        e.stopPropagation();
+      }
+    });
     this.player = null;
+    this.syncedAudioPlayer = null;
     this.previewPlayer = null;
     this.saveSeek = true;
     this.pastSeeks = [];
@@ -125,6 +142,32 @@ export class FastStreamClient extends EventEmitter {
       });
     } catch (e) {
       console.error(e);
+    }
+  }
+  pollPrevNext() {
+    return new Promise((resolve) => {
+      chrome.runtime.sendMessage({type: 'request_prevnext_video_poll'}, (response) => {
+        if (!response) {
+          resolve(null);
+          return;
+        }
+        if (this.state.hasNextVideo !== response.next || this.state.hasPrevVideo !== response.previous) {
+          this.state.hasPrevVideo = response.previous;
+          this.state.hasNextVideo = response.next;
+          this.interfaceController.updateToolVisibility();
+        }
+        resolve(response);
+      });
+    });
+  }
+  setupPoll() {
+    const count = 10;
+    const initialTimeout = 500;
+    const pollDurationLengthen = 1.2;
+    for (let i = 0; i < count; i++) {
+      setTimeout(() => {
+        this.pollPrevNext();
+      }, initialTimeout * Math.pow(pollDurationLengthen, i));
     }
   }
   shouldDownloadAll() {
@@ -182,8 +225,12 @@ export class FastStreamClient extends EventEmitter {
     this.options.visChangeAction = options.visChangeAction;
     this.options.miniSize = options.miniSize;
     this.options.miniPos = options.miniPos;
-    this.options.defaultYoutubeClient = options.defaultYoutubeClient2;
-    this.options.autoplayNext = options.autoplayNext;
+    this.options.defaultYoutubeClient = options.defaultYoutubeClient3;
+    if (sessionStorage && sessionStorage.getItem('autoplayNext') !== null) {
+      this.options.autoplayNext = sessionStorage.getItem('autoplayNext') == 'true';
+    } else {
+      this.options.autoplayNext = options.autoplayNext;
+    }
     this.options.videoBrightness = options.videoBrightness;
     this.options.videoContrast = options.videoContrast;
     this.options.videoSaturation = options.videoSaturation;
@@ -194,6 +241,7 @@ export class FastStreamClient extends EventEmitter {
     this.options.videoDaltonizerType = options.videoDaltonizerType;
     this.options.videoDaltonizerStrength = options.videoDaltonizerStrength;
     this.options.previewEnabled = options.previewEnabled;
+    this.options.videoDelay = options.videoDelay;
     this.loadProgressData();
     if (this.options.previewEnabled) {
       this.setupPreviewPlayer().catch((e) => {
@@ -224,6 +272,8 @@ export class FastStreamClient extends EventEmitter {
       this.interfaceController.updateToolVisibility();
     }
     this.updateHasDownloadSpace();
+    this.interfaceController.updateAutoNextIndicator();
+    this.syncedAudioPlayer?.setVideoDelay(this.options.videoDelay);
   }
   updateCSSFilters() {
     if (this.options.videoDaltonizerType !== DaltonizerTypes.NONE && this.options.videoDaltonizerStrength > 0) {
@@ -479,11 +529,19 @@ export class FastStreamClient extends EventEmitter {
       if (EnvUtils.isWebAudioSupported()) {
         this.audioContext = new AudioContext();
         this.audioSource = this.audioContext.createMediaElementSource(this.player.getVideo());
-        this.audioAnalyzer.setupAnalyzerNodeForMainPlayer(this.player.getVideo(), this.audioSource, this.audioContext);
+        this.audioOutputNode = new VirtualAudioNode('mainSource');
+        this.audioOutputNode.connectFrom(this.audioSource);
+        this.audioAnalyzer.setupAnalyzerNodeForMainPlayer(this.player.getVideo(), this.audioOutputNode, this.audioContext, ()=>{
+          return this.currentVideo.currentTime + this.options.videoDelay / 1000;
+        });
         this.audioConfigManager.setupNodes(this.audioContext);
-        this.audioConfigManager.getInputNode().connectFrom(this.audioSource);
+        this.audioConfigManager.getInputNode().connectFrom(this.audioOutputNode);
         this.audioConfigManager.getOutputNode().connect(this.audioContext.destination);
       }
+      this.syncedAudioPlayer = new SyncedAudioPlayer(this);
+      this.syncedAudioPlayer.setPlaybackRate(this.state.playbackRate);
+      await this.syncedAudioPlayer.setup(this.audioContext, this.audioSource, this.audioOutputNode);
+      this.syncedAudioPlayer.setVideoDelay(this.options.videoDelay);
       this.setVolume(this.state.volume);
       this.player.playbackRate = this.state.playbackRate;
       this.setSeekSave(false);
@@ -509,7 +567,7 @@ export class FastStreamClient extends EventEmitter {
           this.setSeekSave(false);
           this.currentTime = timeFromURL || 0;
           this.setSeekSave(true);
-        } else if (this.options.storeProgress && this.progressData) {
+        } else if (this.options.storeProgress && this.progressData && !this.options.disableLoadProgress) {
           const lastTime = this.progressData.lastTime;
           if (lastTime && lastTime < this.duration - 5) {
             this.setSeekSave(false);
@@ -637,6 +695,7 @@ export class FastStreamClient extends EventEmitter {
     this.videoAnalyzer.update();
     this.videoAnalyzer.saveAnalyzerData();
     this.updateHasDownloadSpace();
+    if (this.syncedAudioPlayer) this.syncedAudioPlayer.watcherLoop();
     this.emit('tick', this);
   }
   predownloadFragments() {
@@ -790,6 +849,14 @@ export class FastStreamClient extends EventEmitter {
       }
       this.previewPlayer = null;
     }
+    if (this.syncedAudioPlayer) {
+      try {
+        this.syncedAudioPlayer.destroy();
+      } catch (e) {
+        console.error(e);
+      }
+      this.syncedAudioPlayer = null;
+    }
     if (this.audioContext) {
       this.audioContext.close();
       this.audioContext = null;
@@ -809,9 +876,9 @@ export class FastStreamClient extends EventEmitter {
     this.previousAudioLevel = -1;
     await Promise.all(promises);
   }
-  setMediaName(name) {
-    this.mediaName = name;
-    this.interfaceController.subtitlesManager.mediaNameSet();
+  setMediaInfo(info) {
+    this.mediaInfo = info;
+    this.interfaceController.subtitlesManager.mediaInfoSet();
   }
   bindPlayer(player) {
     this.context = player.createContext();
@@ -957,6 +1024,9 @@ export class FastStreamClient extends EventEmitter {
     await this.player.play();
     // Everything below will only run if browser allows playing the video
     // (e.g. not blocked by autoplay policy)
+    if (this.syncedAudioPlayer) {
+      await this.syncedAudioPlayer.play();
+    }
     this.interfaceController.play();
     if (this.audioContext && this.audioContext.state === 'suspended') {
       await this.audioContext.resume();
@@ -965,6 +1035,9 @@ export class FastStreamClient extends EventEmitter {
   }
   async pause() {
     await this.player.pause();
+    if (this.syncedAudioPlayer) {
+      await this.syncedAudioPlayer.pause();
+    }
     this.interfaceController.pause();
   }
   undoSeek() {
@@ -1014,6 +1087,7 @@ export class FastStreamClient extends EventEmitter {
     if (this.player) {
       this.player.currentTime = value;
     }
+    if (this.syncedAudioPlayer) this.syncedAudioPlayer.setCurrentTime(value);
   }
   get duration() {
     return this.player?.duration || 0;
@@ -1072,21 +1146,84 @@ export class FastStreamClient extends EventEmitter {
       this.videoAnalyzer.setLevel(level, audioLevel);
       this.audioAnalyzer.setLevel(level, audioLevel);
       this.frameExtractor.setLevel(level, audioLevel);
+      if (this.syncedAudioPlayer) {
+        this.syncedAudioPlayer.setLevel(level, audioLevel);
+      }
       this.resetFailed();
       this.updateQualityLevels();
     }
   }
-  nextVideo() {
-    if (!this.player || !this.player.nextVideo) {
-      return null;
+  getFullscreenState() {
+    if (this.state.fullscreen) {
+      return 'fullscreen';
     }
-    return this.player.nextVideo();
+    if (document.pictureInPictureElement || window.documentPictureInPicture?.window) {
+      return 'pip';
+    }
+    if (this.state.windowedFullscreen) {
+      return 'windowed';
+    }
+    return 'normal';
+  }
+  escapeAll() {
+    if (this.interfaceController.closeAllMenus(false)) {
+      return;
+    }
+    if (InterfaceUtils.closeWindows()) {
+      return;
+    }
+    if (this.state.fullscreen) {
+      this.interfaceController.fullscreenToggle(false);
+      return;
+    }
+    if (document.pictureInPictureElement || window.documentPictureInPicture?.window) {
+      this.interfaceController.pipToggle(false);
+      return;
+    }
+    if (this.state.windowedFullscreen) {
+      this.interfaceController.toggleWindowedFullscreen(false);
+      return;
+    }
+    this.interfaceController.hideControlBar();
+  }
+  nextVideo() {
+    if (!this.hasNextVideo()) return;
+    if (EnvUtils.isExtension()) {
+      chrome.runtime.sendMessage({
+        type: 'request_next_video',
+        continuationOptions: {
+          fullscreenState: this.getFullscreenState(),
+          autoPlay: true,
+          disableLoadProgress: true,
+        },
+      }, ()=>{
+      });
+    }
   }
   previousVideo() {
-    if (!this.player || !this.player.previousVideo) {
-      return null;
+    if (!this.hasPreviousVideo()) return;
+    if (EnvUtils.isExtension()) {
+      chrome.runtime.sendMessage({
+        type: 'request_previous_video',
+        continuationOptions: {
+          fullscreenState: this.getFullscreenState(),
+          autoPlay: true,
+        },
+      }, ()=>{
+      });
     }
-    return this.player.previousVideo();
+  }
+  hasPreviousVideo() {
+    if (!this.player) return false;
+    if (window.top === window.self) return false;
+    if (!this.state.hasPrevVideo) return false;
+    return true;
+  }
+  hasNextVideo() {
+    if (!this.player) return false;
+    if (window.top === window.self) return false;
+    if (!this.state.hasNextVideo) return false;
+    return true;
   }
   get fragments() {
     return this.fragmentsStore[this.currentLevel];
@@ -1106,10 +1243,14 @@ export class FastStreamClient extends EventEmitter {
   setVolume(volume) {
     this.state.volume = volume;
     if (SET_VOLUME_USING_NODE || (volume > 1 && EnvUtils.isWebAudioSupported())) {
-      if (this.player) this.player.volume = 1;
+      if (this.player && (!this.syncedAudioPlayer || !this.syncedAudioPlayer.setVolume(1))) {
+        this.player.volume = 1;
+      }
       this.audioConfigManager.updateVolume(volume);
     } else {
-      if (this.player) this.player.volume = volume;
+      if (this.player && (!this.syncedAudioPlayer || !this.syncedAudioPlayer.setVolume(volume))) {
+        this.player.volume = volume;
+      }
       if (EnvUtils.isWebAudioSupported()) this.audioConfigManager.updateVolume(1);
     }
   }
@@ -1126,6 +1267,9 @@ export class FastStreamClient extends EventEmitter {
     this.state.playbackRate = value;
     if (this.player) {
       this.player.playbackRate = value;
+    }
+    if (this.syncedAudioPlayer) {
+      this.syncedAudioPlayer.setPlaybackRate(value);
     }
     this.interfaceController.updatePlaybackRate();
   }

@@ -95,7 +95,7 @@ async function loadOptions(newOptions) {
   setSelectMenuValue(visChangeAction, Options.visChangeAction);
   setSelectMenuValue(miniPos, Options.miniPos);
   setSelectMenuValue(qualityMenu, Options.defaultQuality);
-  setSelectMenuValue(ytclient, Options.defaultYoutubeClient2);
+  setSelectMenuValue(ytclient, Options.defaultYoutubeClient3);
   if (Options.visChangeAction === VisChangeActions.MINI_PLAYER) {
     showWhenMiniSelected.style.display = '';
   } else {
@@ -186,8 +186,8 @@ createSelectMenu(qualityMenu, Object.values(DefaultQualities), Options.defaultQu
   Options.defaultQuality = e.target.value;
   optionChanged();
 });
-createSelectMenu(ytclient, Object.values(YoutubeClients), Options.defaultYoutubeClient2, null, (e) => {
-  Options.defaultYoutubeClient2 = e.target.value;
+createSelectMenu(ytclient, Object.values(YoutubeClients), Options.defaultYoutubeClient3, null, (e) => {
+  Options.defaultYoutubeClient3 = e.target.value;
   optionChanged();
 });
 document.querySelectorAll('.option').forEach((option) => {
@@ -311,6 +311,7 @@ autoplayYoutube.addEventListener('change', () => {
 });
 autoplayNext.addEventListener('change', () => {
   Options.autoplayNext = autoplayNext.checked;
+  sessionStorage.removeItem('autoplayNext');
   optionChanged();
 });
 maxSpeed.addEventListener('change', () => {
@@ -487,6 +488,8 @@ if (EnvUtils.isExtension()) {
           if (!result || !result.feedback) {
             feedbackbox.style.display = 'block';
           } else {
+            // Don't ask for rating for manual installs
+            // SPLICER:NO_PROMO:REMOVE_START
             if (diff > 1000 * 60 * 60 * 24 * 7) { // 7 days, ask for review
               chrome.storage.local.get('rateus', (result) => {
                 if (!result || !result.rateus) {
@@ -494,10 +497,10 @@ if (EnvUtils.isExtension()) {
                 }
               });
             }
+            // SPLICER:NO_PROMO:REMOVE_END
           }
         });
       }
     }
   });
 }
-document.getElementById('ytc').style.display = ''; // SPLICER:CENSORYT:REMOVE_LINE

@@ -378,6 +378,13 @@ const TranslationMap = {
     "Langkau Lain",
     "Пропустить окончание"
   ],
+  "player_nextvideoin": [
+    "Next Video in $1s",
+    "Siguiente Video en $1s",
+    "次のビデオ $1s 後",
+    "Video seterusnya dalam $1s",
+    "Следующее видео через $1с"
+  ],
   "player_hidecontrols": [
     "Hide Controls",
     "Ocultar Controles",
@@ -433,6 +440,20 @@ const TranslationMap = {
     "ビデオを一時停止",
     "Jeda video",
     "Приостановить видео"
+  ],
+  "player_next_video_label": [
+    "Next video",
+    "Siguiente video",
+    "次のビデオ",
+    "Video seterusnya",
+    "Следующее видео"
+  ],
+  "player_previous_video_label": [
+    "Previous video",
+    "Video anterior",
+    "前のビデオ",
+    "Video sebelumnya",
+    "Предыдущее видео"
   ],
   "player_volume_label": [
     "Volume is $1%. Use arrow keys to adjust, enter to toggle mute.",
@@ -1862,6 +1883,13 @@ const TranslationMap = {
     "Applies CSS filters to the video. Doesn't work with picture-in-picture.",
     "Применять CSS-фильтры к видео. Не работает в режиме «Картинка в картинке»"
   ],
+  "options_video_delay": [
+    "Video Delay",
+    "Video Delay",
+    "Video Delay",
+    "Video Delay",
+    "Video Delay"
+  ],
   "options_video_brightness": [
     "Brightness",
     "Brillo",
@@ -2038,18 +2066,18 @@ const TranslationMap = {
     "Задержка перед автозаменой плеера (мс)"
   ],
   "options_general_autoplayyt": [
-    "Autoplay YouTube videos",
+    "Autoplay YouTube videos if possible",
     "Reproducir automáticamente videos de YouTube incrustados",
     "YouTube 動画の自動再生",
     "Autoplay YouTube videos",
     "Автовоспроизведение на YouTube"
   ],
   "options_general_autoplaynext": [
-    "Autoplay next video on YouTube",
-    "Reproducir automáticamente el siguiente video de YouTube",
-    "YouTube の次の動画を自動再生",
-    "Autoplay next video on YouTube",
-    "Автоматическое воспроизведение следующего видео на YouTube"
+    "Autoplay next video when current video ends",
+    "Reproducir automáticamente el siguiente video",
+    "次の動画の自動再生",
+    "Autoplay next video",
+    "Автовоспроизведение следующего видео"
   ],
   "options_general_quality": [
     "Default video quality",
@@ -2248,7 +2276,7 @@ const TranslationMap = {
     "Автовключение по ссылкам"
   ],
   "options_autourl_body": [
-    "Will automatically enable the extension upon visiting these URLs and disable upon leaving. One URL per line, pages starting with that URL will also match. For regex, prepend with a tilde (~). One regex per line.",
+    "Will automatically enable the extension upon visiting these URLs and disable upon leaving. One URL per line, pages starting with that URL will also match. For regex, prepend with a tilde (~). One regex per line. To exclude sites, prepend with an exclamation mark (!).",
     "Activará automáticamente la extensión al visitar estas URL y la desactivará al salir. Una URL por línea, también coincidirán las páginas que comiencen con esa URL. Para regex, prepone con una tilde (~). Una regex por línea.",
     "これらの URL にアクセスすると自動的に拡張機能が有効化され、離れる事で無効化されます。1 行に 1 つの URL があり、その URL で始まるページも一致します。正規表現の場合は、先頭にチルダ (~) を付けます。1 行に 1 つの正規表現となります。",
     "Will automatically enable the extension upon visiting these URLs and disable upon leaving. One URL per line, pages starting with that URL will also match. For regex, prepend with a tilde (~). One regex per line.",

@@ -16,8 +16,12 @@ export class VideoQualityChanger extends EventEmitter {
     }
   }
   closeUI() {
+    if (DOMElements.videoSourceList.style.display === 'none') {
+      return false;
+    }
     DOMElements.videoSourceList.style.display = 'none';
     this.stayOpen = false;
+    return true;
   }
   isVisible() {
     return DOMElements.videoSourceList.style.display !== 'none';
@@ -134,7 +138,7 @@ export class VideoQualityChanger extends EventEmitter {
       console.warn('No current level');
       return;
     }
-    const maxSize = Math.max(current.width, current.height);
+    const maxSize = Math.min(current.width, current.height);
     const qualityList = {
       'sd': maxSize < 720,
       'hd': maxSize >= 720 && maxSize < 1080,

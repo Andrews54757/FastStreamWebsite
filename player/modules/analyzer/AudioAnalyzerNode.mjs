@@ -18,14 +18,14 @@ export class AudioAnalyzerNode extends EventEmitter {
     const isSpeechProb = Math.round(probs.isSpeech * 255);
     const audioElement = this.audioElement;
     if (!audioElement || audioElement.readyState < 4 || audioElement.paused) return;
-    const time = audioElement.currentTime - audioElement.playbackRate * 0.02;
+    const time = this.getCurrentTime() - audioElement.playbackRate * 0.02;
     this.emit('vad', time, isSpeechProb);
   }
   recordVolume() {
     const audioElement = this.audioElement;
     if (!this.volumeAnalyserNode || !audioElement || audioElement.readyState < 4 || audioElement.paused) return;
     const volume = AudioUtils.getVolume(this.volumeAnalyserNode);
-    const time = audioElement.currentTime - audioElement.playbackRate * 0.02;
+    const time = this.getCurrentTime() - audioElement.playbackRate * 0.02;
     this.emit('volume', time, volume);
   }
   startRecordingVolume() {
@@ -89,10 +89,11 @@ export class AudioAnalyzerNode extends EventEmitter {
       this.audioSource = null;
     }
   }
-  attach(audioElement, audioSource, audioContext) {
+  attach(audioElement, audioSource, audioContext, getCurrentTime) {
     this.audioElement = audioElement;
     this.audioContext = audioContext;
     this.audioSource = audioSource;
+    this.getCurrentTime = getCurrentTime || (() => audioElement.currentTime);
   }
   configure({vad, volume}) {
     if (volume) {

@@ -62,7 +62,7 @@ export class InterfaceController {
     this.subtitlesManager.on('open', this.closeAllMenus.bind(this));
     this.loopControls.on('open', this.closeAllMenus.bind(this));
     this.progressBar = new ProgressBar(this.client);
-    this.progressBar.on('enteredSkipSegment', (segment)=>{
+    this.progressBar.on('show-skip', (segment)=>{
       this.showControlBar();
       this.queueControlsHide(5000);
     });
@@ -75,6 +75,13 @@ export class InterfaceController {
     this.statusManager = new StatusManager();
     this.optionsWindow = new OptionsWindow();
     this.setupDOM();
+  }
+  updateAutoNextIndicator() {
+    if (this.client.options.autoplayNext) {
+      DOMElements.autoNextIndicator.style.display = '';
+    } else {
+      DOMElements.autoNextIndicator.style.display = 'none';
+    }
   }
   updateToolVisibility() {
     this.toolManager.updateToolVisibility();
@@ -89,14 +96,19 @@ export class InterfaceController {
     this.playbackRateChanger.closeSilenceSkipperUI();
   }
   closeAllMenus(e) {
-    if (e && e.target && !DOMElements.extraTools.contains(e.target)) {
-      DOMElements.extraTools.classList.remove('visible');
+    let closedSomething = false;
+    if (e !== true && (!e || (e.target && !DOMElements.extraTools.contains(e.target)))) {
+      if (DOMElements.extraTools.classList.contains('visible')) {
+        DOMElements.extraTools.classList.remove('visible');
+        closedSomething = true;
+      }
     }
-    this.playbackRateChanger.closeUI();
-    this.videoQualityChanger.closeUI();
-    this.languageChanger.closeUI();
-    this.subtitlesManager.closeUI();
-    this.loopControls.closeUI();
+    closedSomething = closedSomething || this.playbackRateChanger.closeUI();
+    closedSomething = closedSomething || this.videoQualityChanger.closeUI();
+    closedSomething = closedSomething || this.languageChanger.closeUI();
+    closedSomething = closedSomething || this.subtitlesManager.closeUI();
+    closedSomething = closedSomething || this.loopControls.closeUI();
+    return closedSomething = closedSomething;
   }
   setStatusMessage(key, message, type, expiry) {
     this.statusManager.setStatusMessage(key, message, type, expiry);
@@ -226,9 +238,9 @@ export class InterfaceController {
     const interactHandler = (e) => {
       this.client.userInteracted();
     };
-    DOMElements.playerContainer.addEventListener('keydown', interactHandler, true);
-    DOMElements.playerContainer.addEventListener('mousedown', interactHandler, true);
-    DOMElements.playerContainer.addEventListener('touchstart', interactHandler, true);
+    document.addEventListener('keydown', interactHandler, true);
+    document.addEventListener('mousedown', interactHandler, true);
+    document.addEventListener('touchstart', interactHandler, true);
     DOMElements.playPauseButton.addEventListener('click', this.playPauseToggle.bind(this));
     WebUtils.setupTabIndex(DOMElements.playPauseButton);
     DOMElements.playPauseButtonBigCircle.addEventListener('click', (e) => {
@@ -246,6 +258,11 @@ export class InterfaceController {
       }
       this.fullscreenToggle();
       e.stopPropagation();
+    });
+    DOMElements.fullscreen.addEventListener('contextmenu', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      this.toggleWindowedFullscreen();
     });
     WebUtils.setupTabIndex(DOMElements.fullscreen);
     DOMElements.windowedFullscreen.addEventListener('click', (e)=>{
@@ -410,7 +427,7 @@ export class InterfaceController {
     WebUtils.setupTabIndex(DOMElements.skipBackwardButton);
     DOMElements.moreButton.addEventListener('click', (e) => {
       if (!DOMElements.extraTools.classList.contains('visible')) {
-        this.closeAllMenus();
+        this.closeAllMenus(true);
         DOMElements.extraTools.classList.add('visible');
       } else {
         DOMElements.extraTools.classList.remove('visible');
@@ -449,6 +466,25 @@ export class InterfaceController {
       this.setStatusMessage(StatusTypes.COPY, Localize.getMessage('source_copied'), 'info', 2000);
     });
     WebUtils.setupTabIndex(DOMElements.duration);
+    DOMElements.nextVideo.addEventListener('click', (e) => {
+      if (e.shiftKey || e.altKey) {
+        this.toggleAutoplayNext();
+        return;
+      }
+      this.client.nextVideo();
+      e.stopPropagation();
+    });
+    DOMElements.nextVideo.addEventListener('contextmenu', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      this.toggleAutoplayNext();
+    });
+    WebUtils.setupTabIndex(DOMElements.nextVideo);
+    DOMElements.previousVideo.addEventListener('click', (e) => {
+      this.client.previousVideo();
+      e.stopPropagation();
+    });
+    WebUtils.setupTabIndex(DOMElements.previousVideo);
     const o = new IntersectionObserver(([entry]) => {
       if (entry.intersectionRatio > 0.25 && !document.hidden) {
         this.handleVisibilityChange(true);
@@ -490,11 +526,22 @@ export class InterfaceController {
       }
     };
     DOMElements.controlsLeft.addEventListener('mousedown', (e) => {
+      if (e.button !== 0) {
+        return;
+      }
       document.addEventListener('mousemove', mouseMoveHandler);
       document.addEventListener('mouseup', mouseUpHandler);
     });
   }
+  toggleAutoplayNext() {
+    this.client.options.autoplayNext = !this.client.options.autoplayNext;
+    sessionStorage.setItem('autoplayNext', this.client.options.autoplayNext);
+    this.updateAutoNextIndicator();
+  }
   async handleVisibilityChange(isVisible) {
+    if (this.client.needsUserInteraction()) { // Don't do anything if the user needs to interact with the player
+      return;
+    }
     const action = this.client.options.visChangeAction;
     if (isVisible === this.lastPageVisibility || this.miniPlayerActive) {
       return;
@@ -583,7 +630,10 @@ export class InterfaceController {
       this.client.player?.pause();
     }
   }
-  async documentPipToggle() {
+  async documentPipToggle(force) {
+    if (force !== undefined && !!force == !!window.documentPictureInPicture.window) {
+      return;
+    }
     if (window.documentPictureInPicture.window) {
       window.documentPictureInPicture.window.close();
       return;
@@ -616,7 +666,10 @@ export class InterfaceController {
       document.body.appendChild(DOMElements.playerContainer);
     });
   }
-  pipToggle() {
+  pipToggle(force) {
+    if (force !== undefined && !!force == !!document.pictureInPictureElement) {
+      return;
+    }
     if (document.pictureInPictureElement) {
       return this.exitPip();
     } else {
@@ -754,32 +807,39 @@ export class InterfaceController {
     this.fineTimeControls.onVideoTimeUpdate();
     this.updateSkipSegments();
   }
-  toggleWindowedFullscreen() {
+  toggleWindowedFullscreen(force) {
     chrome.runtime.sendMessage({
       type: 'request_windowed_fullscreen',
+      force,
     }, (response) => {
+      this.state.windowedFullscreen = response === 'enter';
     });
   }
-  fullscreenToggle() {
-    try {
-      if (document.fullscreenEnabled) {
-        if (!document.fullscreenElement) {
-          DOMElements.playerContainer.requestFullscreen();
-        } else if (document.exitFullscreen) {
-          document.exitFullscreen();
-        }
-        this.updateFullScreenButton();
-      } else {
-        if (EnvUtils.isExtension()) {
+  async fullscreenToggle(force) {
+    if (document.fullscreenEnabled) {
+      const newValue = force === undefined ? document.fullscreenElement !== DOMElements.playerContainer : force;
+      if (newValue) {
+        await DOMElements.playerContainer.requestFullscreen();
+      } else if (document.exitFullscreen) {
+        document.exitFullscreen();
+      }
+      this.updateFullScreenButton();
+    } else {
+      if (EnvUtils.isExtension()) {
+        return new Promise((resolve, reject) => {
           chrome.runtime.sendMessage({
             type: 'request_fullscreen',
-          }, (response)=>{
+            force,
+          }, (response) => {
+            if (response === 'error') {
+              reject(new Error('Fullscreen not supported'));
+              return;
+            }
             this.setFullscreenStatus(response === 'enter');
+            resolve();
           });
-        }
+        });
       }
-    } catch (e) {
-      console.log('Fullscreen not supported', e);
     }
   }
   updateFullScreenButton() {
@@ -789,8 +849,10 @@ export class InterfaceController {
     const fullScreenButton = DOMElements.fullscreen;
     if (status) {
       fullScreenButton.classList.add('out');
+      this.state.fullscreen = true;
     } else {
       fullScreenButton.classList.remove('out');
+      this.state.fullscreen = false;
     }
   }
   playPauseToggle() {

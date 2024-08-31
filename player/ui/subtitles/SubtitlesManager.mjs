@@ -120,8 +120,12 @@ export class SubtitlesManager extends EventEmitter {
     e.stopPropagation();
   }
   closeUI() {
+    if (DOMElements.subtitlesMenu.style.display === 'none') {
+      return false;
+    }
     DOMElements.subtitlesMenu.style.display = 'none';
     WebUtils.setLabels(DOMElements.subtitles, Localize.getMessage('player_subtitlesmenu_open_label'));
+    return true;
   }
   openUI() {
     this.emit('open', {
@@ -556,7 +560,7 @@ export class SubtitlesManager extends EventEmitter {
     }
     this.checkTrackBounds();
   }
-  mediaNameSet() {
-    this.openSubtitlesSearch.setQueryInputValue(this.client.mediaName);
+  mediaInfoSet() {
+    this.openSubtitlesSearch.setMediaInfo(this.client.mediaInfo);
   }
 }

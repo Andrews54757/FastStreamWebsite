@@ -40,6 +40,16 @@
     <datalist id="snap-hundred">
         <option value="100">
     </datalist>
+    <datalist id="snap-zero">
+        <option value="0">
+    </datalist>
+
+    <div class="video-option" data-option="videoDelay" data-unit="ms" data-multiplier="1">
+        <div class="label" data-i18n="options_video_delay"></div>
+        <input class="number" type="text" data-i18n-label="options_video_delay"></input>
+        <input class="range" type="range" min="-1000" max="1000" value="0" step="1" list="snap-zero"
+            data-i18n-label="options_video_delay"></input>
+    </div>
 
     <div class="video-option" data-option="videoBrightness">
         <div class="label" data-i18n="options_video_brightness"></div>
@@ -121,11 +131,19 @@
         <input class="number" type="text" id="maxsize" data-i18n-label="options_general_maxsize"></input>
     </div>
 
+    
     <br>
 
     <div class="option grid1">
-        <input type="checkbox" id="previewenabled" data-i18n-label="options_general_previewenabled">
-        <div class="label" data-i18n="options_general_previewenabled"></div>
+        <input type="checkbox" id="autoplaynext" data-i18n-label="options_general_autoplaynext">
+        <div class="label" data-i18n="options_general_autoplaynext"></div>
+    </div>
+
+    <br>
+
+    <div class="option grid1">
+        <input type="checkbox" id="autoplayyt" data-i18n-label="options_general_autoplayyt">
+        <div class="label" data-i18n="options_general_autoplayyt"></div>
     </div>
 
     <br>
@@ -138,15 +156,8 @@
     <br>
 
     <div class="option grid1">
-        <input type="checkbox" id="autoplayyt" data-i18n-label="options_general_autoplayyt">
-        <div class="label" data-i18n="options_general_autoplayyt"></div>
-    </div>
-
-    <br>
-
-    <div class="option grid1">
-        <input type="checkbox" id="autoplaynext" data-i18n-label="options_general_autoplaynext">
-        <div class="label" data-i18n="options_general_autoplaynext"></div>
+        <input type="checkbox" id="previewenabled" data-i18n-label="options_general_previewenabled">
+        <div class="label" data-i18n="options_general_previewenabled"></div>
     </div>
 
     <br>

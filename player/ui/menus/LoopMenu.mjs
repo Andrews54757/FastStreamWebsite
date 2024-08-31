@@ -175,7 +175,11 @@ export class LoopMenu extends EventEmitter {
     DOMElements.loopMenu.style.display = '';
   }
   closeUI() {
+    if (DOMElements.loopMenu.style.display === 'none') {
+      return false;
+    }
     DOMElements.loopMenu.style.display = 'none';
+    return true;
   }
   recordGif() {
     if (!this.loopEnabled || this.gifLoopRunning) {

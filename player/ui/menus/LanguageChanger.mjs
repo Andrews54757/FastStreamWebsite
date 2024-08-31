@@ -16,8 +16,12 @@ export class LanguageChanger extends EventEmitter {
     }
   }
   closeUI() {
+    if (DOMElements.languageMenu.style.display === 'none') {
+      return false;
+    }
     DOMElements.languageMenu.style.display = 'none';
     this.stayOpen = false;
+    return true;
   }
   isVisible() {
     return DOMElements.languageMenu.style.display !== 'none';
