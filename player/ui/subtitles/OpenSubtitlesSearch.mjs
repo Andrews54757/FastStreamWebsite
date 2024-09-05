@@ -1,6 +1,7 @@
 import {SubtitleTrack} from '../../SubtitleTrack.mjs';
 import {Localize} from '../../modules/Localize.mjs';
 import {EventEmitter} from '../../modules/eventemitter.mjs';
+import {AlertPolyfill} from '../../utils/AlertPolyfill.mjs';
 import {InterfaceUtils} from '../../utils/InterfaceUtils.mjs';
 import {RequestUtils} from '../../utils/RequestUtils.mjs';
 import {WebUtils} from '../../utils/WebUtils.mjs';
@@ -335,6 +336,7 @@ export class OpenSubtitlesSearch extends EventEmitter {
           return;
         }
         item.downloading = true;
+        AlertPolyfill.toast('info', Localize.getMessage('player_subtitles_addtrack_downloading'));
         try {
           let link = item.cached_download_link;
           if (!link) {
@@ -360,8 +362,8 @@ export class OpenSubtitlesSearch extends EventEmitter {
             })).response;
             if (!data.link && data.remaining <= 0) {
               item.downloading = false;
-              alert(Localize.getMessage('player_opensubtitles_quota', [data.reset_time]));
-              if (confirm(Localize.getMessage('player_opensubtitles_askopen'))) {
+              await AlertPolyfill.alert(Localize.getMessage('player_opensubtitles_quota', [data.reset_time]), 'warning');
+              if (await AlertPolyfill.confirm(Localize.getMessage('player_opensubtitles_askopen'), 'question')) {
                 window.open(item.attributes.url);
               }
               return;
@@ -393,16 +395,21 @@ export class OpenSubtitlesSearch extends EventEmitter {
           console.log(e);
           if (DOMElements.subuiContainer.style.display === 'none') return;
           item.downloading = false;
-          alert(Localize.getMessage('player_opensubtitles_down_alert'));
-          if (confirm(Localize.getMessage('player_opensubtitles_askopen'))) {
+          await AlertPolyfill.alert(Localize.getMessage('player_opensubtitles_down_alert'), 'error');
+          if (await AlertPolyfill.confirm(Localize.getMessage('player_opensubtitles_askopen'), 'question')) {
             window.open(item.attributes.url);
           }
           return;
         }
         item.downloading = false;
-        const track = new SubtitleTrack(item.attributes.uploader.name + ' - ' + item.attributes.feature_details.movie_name, item.attributes.language);
-        track.loadText(body);
-        this.emit(OpenSubtitlesSearchEvents.TRACK_DOWNLOADED, track);
+        try {
+          const track = new SubtitleTrack(item.attributes.uploader.name + ' - ' + item.attributes.feature_details.movie_name, item.attributes.language);
+          track.loadText(body);
+          this.emit(OpenSubtitlesSearchEvents.TRACK_DOWNLOADED, track);
+          AlertPolyfill.toast('success', Localize.getMessage('player_subtitles_addtrack_success'));
+        } catch (e) {
+          AlertPolyfill.toast('error', Localize.getMessage('player_subtitles_addtrack_error'), e?.message);
+        }
       });
     });
   }

@@ -3,6 +3,7 @@ import {VideoSource} from '../VideoSource.mjs';
 import {PlayerModes} from '../enums/PlayerModes.mjs';
 import {Localize} from '../modules/Localize.mjs';
 import {streamSaver} from '../modules/StreamSaver.mjs';
+import {AlertPolyfill} from '../utils/AlertPolyfill.mjs';
 import {EnvUtils} from '../utils/EnvUtils.mjs';
 import {FastStreamArchiveUtils} from '../utils/FastStreamArchiveUtils.mjs';
 import {RequestUtils} from '../utils/RequestUtils.mjs';
@@ -33,11 +34,11 @@ export class SaveManager {
   }
   async saveScreenshot() {
     if (!this.client.player) {
-      alert(Localize.getMessage('player_nosource_alert'));
+      await AlertPolyfill.alert(Localize.getMessage('player_nosource_alert'), 'error');
       return;
     }
     const suggestedName = (this.client.mediaInfo?.name || 'video').replaceAll(' ', '_') + '@' + StringUtils.formatTime(this.client.currentTime);
-    const name = EnvUtils.isIncognito() ? suggestedName : prompt(Localize.getMessage('player_filename_prompt'), suggestedName);
+    const name = EnvUtils.isIncognito() ? suggestedName : await AlertPolyfill.prompt(Localize.getMessage('player_filename_prompt'), suggestedName);
     if (!name) {
       return;
     }
@@ -66,7 +67,7 @@ export class SaveManager {
   }
   async saveVideo(e, allowPartial = false) {
     if (!this.client.player) {
-      alert(Localize.getMessage('player_nosource_alert'));
+      await AlertPolyfill.alert(Localize.getMessage('player_nosource_alert'), 'error');
       return;
     }
     if (this.makingDownload) {
@@ -75,7 +76,7 @@ export class SaveManager {
         DOMElements.saveNotifBanner.style.color = 'gold';
         this.setStatusMessage('save-video', Localize.getMessage('player_savevideo_cancelling'), 'info');
       } else {
-        alert(Localize.getMessage('player_savevideo_inprogress_alert'));
+        await AlertPolyfill.alert(Localize.getMessage('player_savevideo_inprogress_alert'), 'error');
       }
       return;
     }
@@ -84,23 +85,23 @@ export class SaveManager {
     const player = this.client.player;
     const {canSave, isComplete, canStream} = player.canSave();
     if (!canSave && !doDump) {
-      alert(Localize.getMessage('player_savevideo_unsupported'));
+      await AlertPolyfill.alert(Localize.getMessage('player_savevideo_unsupported'), 'error');
       return;
     }
     if (doPartial && !isComplete) {
-      const res = confirm(Localize.getMessage('player_savevideo_partial_confirm'));
+      const res = await AlertPolyfill.confirm(Localize.getMessage('player_savevideo_partial_confirm'), 'warning');
       if (!res) {
         return;
       }
     }
     if (!doPartial && !isComplete && EnvUtils.isIncognito()) {
-      const res = confirm(Localize.getMessage('player_savevideo_incognito_confirm'));
+      const res = await AlertPolyfill.confirm(Localize.getMessage('player_savevideo_incognito_confirm'), 'warning');
       if (!res) {
         return;
       }
     }
     const suggestedName = (this.client.mediaInfo?.name || 'video').replaceAll(' ', '_');
-    const name = EnvUtils.isIncognito() ? suggestedName : prompt(Localize.getMessage('player_filename_prompt'), suggestedName);
+    const name = EnvUtils.isIncognito() ? suggestedName : await AlertPolyfill.prompt(Localize.getMessage('player_filename_prompt'), suggestedName);
     if (!name) {
       return;
     }
@@ -146,7 +147,7 @@ export class SaveManager {
           console.error(e);
           this.setStatusMessage('save-video', Localize.getMessage('player_savevideo_cancelled'), 'info', 2000);
         } else {
-          if (confirm(Localize.getMessage('player_savevideo_failed_ask_archive'))) {
+          if (await AlertPolyfill.confirm(Localize.getMessage('player_savevideo_failed_ask_archive'), 'error')) {
             this.dumpBuffer(name);
           }
         }
@@ -194,6 +195,7 @@ export class SaveManager {
     } catch (e) {
       console.error(e);
       this.setStatusMessage('save-video', 'Unreachable Error', 'error', 2000);
+      AlertPolyfill.errorSendToDeveloper(e);
     }
   }
   async onFileDrop(e) {

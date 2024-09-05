@@ -817,9 +817,9 @@ export class InterfaceController {
   }
   async fullscreenToggle(force) {
     if (document.fullscreenEnabled) {
-      const newValue = force === undefined ? document.fullscreenElement !== DOMElements.playerContainer : force;
+      const newValue = force === undefined ? document.fullscreenElement !== document.documentElement : force;
       if (newValue) {
-        await DOMElements.playerContainer.requestFullscreen();
+        await document.documentElement.requestFullscreen();
       } else if (document.exitFullscreen) {
         document.exitFullscreen();
       }

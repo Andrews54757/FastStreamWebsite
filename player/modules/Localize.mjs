@@ -770,6 +770,27 @@ const TranslationMap = {
     "Masuk URL",
     "Введите адрес"
   ],
+  "player_subtitles_addtrack_downloading": [
+    "Downloading subtitle track...",
+    "Descargando subtítulos...",
+    "字幕トラックをダウンロード中...",
+    "Memuat turun sarikata...",
+    "Загрузка субтитров…"
+  ],
+  "player_subtitles_addtrack_success": [
+    "Subtitle track loaded!",
+    "¡Pista de subtítulos cargada!",
+    "字幕トラックを読み込みました!",
+    "Trek sarikata dimuatkan!",
+    "Субтитры загружены!"
+  ],
+  "player_subtitles_addtrack_error": [
+    "Failed to load subtitle track!",
+    "¡Error al cargar la pista de subtítulos!",
+    "字幕トラックの読み込みに失敗しました!",
+    "Gagal memuatkan trek sarikata!",
+    "Не удалось загрузить субтитры!"
+  ],
   "player_subtitlesmenu_searchbtn": [
     "Search OpenSubtitles",
     "Buscar en OpenSubtitles",
@@ -2379,6 +2400,55 @@ const TranslationMap = {
     "言語",
     "Language",
     "Язык"
+  ],
+  "yes": [
+    "Yes",
+    "Sí",
+    "はい",
+    "Ya",
+    "Да"
+  ],
+  "no": [
+    "No",
+    "No",
+    "いいえ",
+    "Tidak",
+    "Нет"
+  ],
+  "ok": [
+    "OK",
+    "Aceptar",
+    "OK",
+    "OK",
+    "ОК"
+  ],
+  "cancel": [
+    "Cancel",
+    "Cancelar",
+    "キャンセル",
+    "Batal",
+    "Отмена"
+  ],
+  "error_popup": [
+    "Error: $1",
+    "Error: $1",
+    "エラー: $1",
+    "Ralat: $1",
+    "Ошибка: $1"
+  ],
+  "error_popup_body": [
+    "Please report this error to the developers at https://github.com/Andrews54757/FastStream/issues with the stack trace below:",
+    "Por favor, informe este error a los desarrolladores en https://github.com/Andrews54757/FastStream/issues con la traza de pila a continuación:",
+    "このエラーを開発者に報告してください: https://github.com/Andrews54757/FastStream/issues 以下にスタックトレースが表示されます:",
+    "Sila laporkan ralat ini kepada pembangun di https://github.com/Andrews54757/FastStream/issues dengan jejak tumpukan di bawah:",
+    "Пожалуйста, сообщите об этой ошибке разработчикам на https://github.com/Andrews54757/FastStream/issues с указанием стека вызовов ниже:"
+  ],
+  "error_popup_send": [
+    "Report Error",
+    "Reportar Error",
+    "エラーを報告",
+    "Laporkan Ralat",
+    "Сообщить об ошибке"
   ]
 };
 export class Localize {

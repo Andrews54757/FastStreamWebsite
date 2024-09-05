@@ -1,4 +1,5 @@
 import {Localize} from '../../modules/Localize.mjs';
+import {AlertPolyfill} from '../../utils/AlertPolyfill.mjs';
 import {InterfaceUtils} from '../../utils/InterfaceUtils.mjs';
 import {Utils} from '../../utils/Utils.mjs';
 import {WebUtils} from '../../utils/WebUtils.mjs';
@@ -36,24 +37,28 @@ export class AudioConfigManager extends AbstractAudioModule {
     this.loadProfilesFromStorage();
   }
   async loadProfilesFromStorage() {
-    const audioProfilesStr = await Utils.getConfig('audioProfiles') || '[]';
-    const currentAudioProfileStr = await Utils.getConfig('currentAudioProfile') || '-1';
-    const audioProfiles = JSON.parse(audioProfilesStr);
-    const currentAudioProfileID = parseInt(currentAudioProfileStr);
-    if (audioProfiles.length === 0) {
-      this.newProfile();
-      this.setCurrentProfile(this.profiles[0]);
-    } else {
-      this.profiles = audioProfiles.map((profile) => {
-        return AudioProfile.fromObj(profile);
-      });
-      const currentProfile = this.profiles.find((profile) => profile.id === currentAudioProfileID);
-      if (currentProfile) {
-        this.setCurrentProfile(currentProfile);
-      } else {
+    try {
+      const audioProfilesStr = await Utils.getConfig('audioProfiles') || '[]';
+      const currentAudioProfileStr = await Utils.getConfig('currentAudioProfile') || '-1';
+      const audioProfiles = JSON.parse(audioProfilesStr);
+      const currentAudioProfileID = parseInt(currentAudioProfileStr);
+      if (audioProfiles.length === 0) {
+        this.newProfile();
         this.setCurrentProfile(this.profiles[0]);
+      } else {
+        this.profiles = audioProfiles.map((profile) => {
+          return AudioProfile.fromObj(profile);
+        });
+        const currentProfile = this.profiles.find((profile) => profile.id === currentAudioProfileID);
+        if (currentProfile) {
+          this.setCurrentProfile(currentProfile);
+        } else {
+          this.setCurrentProfile(this.profiles[0]);
+        }
+        this.updateProfileDropdown();
       }
-      this.updateProfileDropdown();
+    } catch (e) {
+      AlertPolyfill.errorSendToDeveloper(e);
     }
   }
   async saveProfilesToStorage() {
@@ -142,7 +147,7 @@ export class AudioConfigManager extends AbstractAudioModule {
                   const obj = JSON.parse(e.target.result);
                   this.loadProfileFile(obj);
                 } catch (e) {
-                  alert(Localize.getMessage('player_audioconfig_import_invalid'));
+                  AlertPolyfill.alert(Localize.getMessage('player_audioconfig_import_invalid'), 'error');
                 }
               };
               reader.readAsText(file);
@@ -355,17 +360,21 @@ export class AudioConfigManager extends AbstractAudioModule {
   }
   setupNodes(audioContext) {
     super.setupNodes(audioContext);
-    this.audioUpscaler.setupNodes(this.audioContext);
-    this.audioChannelMixer.setupNodes(this.audioContext);
-    this.audioCrosstalk.setupNodes(this.audioContext);
-    this.finalGain.setupNodes(this.audioContext);
-    this.getInputNode().connect(this.audioUpscaler.getInputNode());
-    this.audioUpscaler.getOutputNode().connect(this.audioChannelMixer.getInputNode());
-    this.audioChannelMixer.getOutputNode().connect(this.audioCrosstalk.getInputNode());
-    this.audioCrosstalk.getOutputNode().connect(this.finalGain.getInputNode());
-    this.finalGain.getOutputNode().connect(this.getOutputNode());
-    // IDK why but webaudio is bugged
-    this.audioUpscaler.enable();
+    try {
+      this.audioUpscaler.setupNodes(this.audioContext);
+      this.audioChannelMixer.setupNodes(this.audioContext);
+      this.audioCrosstalk.setupNodes(this.audioContext);
+      this.finalGain.setupNodes(this.audioContext);
+      this.getInputNode().connect(this.audioUpscaler.getInputNode());
+      this.audioUpscaler.getOutputNode().connect(this.audioChannelMixer.getInputNode());
+      this.audioChannelMixer.getOutputNode().connect(this.audioCrosstalk.getInputNode());
+      this.audioCrosstalk.getOutputNode().connect(this.finalGain.getInputNode());
+      this.finalGain.getOutputNode().connect(this.getOutputNode());
+      // IDK why but webaudio is bugged
+      this.audioUpscaler.enable();
+    } catch (e) {
+      AlertPolyfill.errorSendToDeveloper(e);
+    }
   }
   updateVolume(value) {
     this.finalGain.setGain(value);

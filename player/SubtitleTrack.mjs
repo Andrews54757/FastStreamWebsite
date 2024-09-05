@@ -40,7 +40,7 @@ export class SubtitleTrack {
       });
     };
     parser.onparsingerror = (error) => {
-      throw error;
+      console.error(error);
     };
     parser.parse(text);
     parser.flush();

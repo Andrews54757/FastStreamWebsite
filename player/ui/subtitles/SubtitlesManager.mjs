@@ -2,6 +2,7 @@ import {EventEmitter} from '../../modules/eventemitter.mjs';
 import {Localize} from '../../modules/Localize.mjs';
 import {WebVTT} from '../../modules/vtt.mjs';
 import {SubtitleTrack} from '../../SubtitleTrack.mjs';
+import {AlertPolyfill} from '../../utils/AlertPolyfill.mjs';
 import {RequestUtils} from '../../utils/RequestUtils.mjs';
 import {SubtitleUtils} from '../../utils/SubtitleUtils.mjs';
 import {Utils} from '../../utils/Utils.mjs';
@@ -195,14 +196,22 @@ export class SubtitlesManager extends EventEmitter {
     urlbutton.classList.add('subtitle-menu-option');
     urlbutton.textContent = Localize.getMessage('player_subtitlesmenu_urlbtn');
     WebUtils.setupTabIndex(urlbutton);
-    urlbutton.addEventListener('click', (e) => {
-      const url = prompt(Localize.getMessage('player_subtitlesmenu_urlprompt'));
+    urlbutton.addEventListener('click', async (e) => {
+      const url = await AlertPolyfill.prompt(Localize.getMessage('player_subtitlesmenu_urlprompt'), '', undefined, 'url');
       if (url) {
+        AlertPolyfill.toast('info', Localize.getMessage('player_subtitles_addtrack_downloading'));
         RequestUtils.requestSimple(url, (err, req, body) => {
-          if (body) {
-            const track = new SubtitleTrack('URL Track', null);
-            track.loadText(body);
-            this.addTrack(track);
+          if (!err && body) {
+            try {
+              const track = new SubtitleTrack('URL Track', null);
+              track.loadText(body);
+              this.addTrack(track);
+              AlertPolyfill.toast('success', Localize.getMessage('player_subtitles_addtrack_success'));
+            } catch (e) {
+              AlertPolyfill.toast('error', Localize.getMessage('player_subtitles_addtrack_error'), e?.message);
+            }
+          } else {
+            AlertPolyfill.toast('error', Localize.getMessage('player_subtitles_addtrack_error'), err?.message);
           }
         });
       }
@@ -282,10 +291,10 @@ export class SubtitlesManager extends EventEmitter {
     const svgIconDownload = WebUtils.createSVGIcon('assets/fluidplayer/static/icons.svg#download');
     downloadTrack.appendChild(svgIconDownload);
     trackElement.appendChild(downloadTrack);
-    downloadTrack.addEventListener('click', (e) => {
+    downloadTrack.addEventListener('click', async (e) => {
       e.stopPropagation();
       const suggestedName = trackElement.textContent.replaceAll(' ', '_');
-      const dlname = chrome?.extension?.inIncognitoContext ? suggestedName : prompt(Localize.getMessage('player_filename_prompt'), suggestedName);
+      const dlname = chrome?.extension?.inIncognitoContext ? suggestedName : await AlertPolyfill.prompt(Localize.getMessage('player_filename_prompt'), suggestedName);
       if (!dlname) {
         return;
       }
