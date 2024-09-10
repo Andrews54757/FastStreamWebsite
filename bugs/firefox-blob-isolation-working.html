@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Firefox Blob Isolation Test</title>
+        <style>
+            iframe {
+                position: fixed;
+                width: 100%;
+                height: 100%;
+                border: none;
+            }
+        </style>
+    </head>
+    <body>
+        <iframe id="frame" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"></iframe>
+        <script>
+            const frame = document.getElementById('frame');
+            frame.src = 'https://sandbox.faststream.online/';
+
+            frame.onload = () => {
+                const script = `
+                    const video = document.createElement('video');
+                    video.src = 'https://faststream.online/assets/video/accessibility.mp4';
+                    video.controls = true;
+                    document.body.appendChild(video);
+                `;
+
+                const message = {
+                    type: "sandboxEvaluate",
+                    argNames: [],
+                    argValues: [],
+                    body: script
+                }
+
+                frame.contentWindow.postMessage(message, '*');
+            };
+
+
+        </script>
+    </body>
+</html>
