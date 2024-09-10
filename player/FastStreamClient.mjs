@@ -86,6 +86,7 @@ export class FastStreamClient extends EventEmitter {
       hasNextVideo: false,
       hasPrevVideo: false,
       fullscreen: false,
+      miniplayer: false,
       windowedFullscreen: false,
     };
     this._needsUserInteraction = false;
@@ -147,7 +148,7 @@ export class FastStreamClient extends EventEmitter {
   }
   pollPrevNext() {
     return new Promise((resolve) => {
-      chrome.runtime.sendMessage({type: 'request_prevnext_video_poll'}, (response) => {
+      chrome.runtime.sendMessage({type: 'REQUEST_PLAYLIST_POLL'}, (response) => {
         if (!response) {
           resolve(null);
           return;
@@ -226,7 +227,7 @@ export class FastStreamClient extends EventEmitter {
     this.options.visChangeAction = options.visChangeAction;
     this.options.miniSize = options.miniSize;
     this.options.miniPos = options.miniPos;
-    this.options.defaultYoutubeClient = options.defaultYoutubeClient3;
+    this.options.defaultYoutubeClient = options.defaultYoutubeClient4;
     if (sessionStorage && sessionStorage.getItem('autoplayNext') !== null) {
       this.options.autoplayNext = sessionStorage.getItem('autoplayNext') == 'true';
     } else {
@@ -265,7 +266,7 @@ export class FastStreamClient extends EventEmitter {
     } else {
       this.videoAnalyzer.disable();
     }
-    if (this.interfaceController.miniPlayerActive) {
+    if (this.state.miniplayer) {
       this.interfaceController.requestMiniplayer(true);
     }
     if (options.toolSettings) {
@@ -1181,7 +1182,8 @@ export class FastStreamClient extends EventEmitter {
     if (!this.hasNextVideo()) return;
     if (EnvUtils.isExtension()) {
       chrome.runtime.sendMessage({
-        type: 'request_next_video',
+        type: 'REQUEST_PLAYLIST_NAVIGATION',
+        direction: 'next',
         continuationOptions: {
           fullscreenState: this.getFullscreenState(),
           autoPlay: true,
@@ -1195,7 +1197,8 @@ export class FastStreamClient extends EventEmitter {
     if (!this.hasPreviousVideo()) return;
     if (EnvUtils.isExtension()) {
       chrome.runtime.sendMessage({
-        type: 'request_previous_video',
+        type: 'REQUEST_PLAYLIST_NAVIGATION',
+        direction: 'previous',
         continuationOptions: {
           fullscreenState: this.getFullscreenState(),
           autoPlay: true,

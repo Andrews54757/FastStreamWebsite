@@ -136,7 +136,7 @@ export default class YTPlayer extends DashPlayer {
     });
     if (EnvUtils.isExtension()) {
       await chrome.runtime.sendMessage({
-        type: 'header_commands',
+        type: 'SET_HEADERS',
         url: url.toString(),
         commands: customHeaderCommands,
       });
@@ -195,7 +195,7 @@ export default class YTPlayer extends DashPlayer {
     });
     if (EnvUtils.isExtension()) {
       await chrome.runtime.sendMessage({
-        type: 'header_commands',
+        type: 'SET_HEADERS',
         url: url.toString(),
         commands: customHeaderCommands,
       });
@@ -230,7 +230,7 @@ export default class YTPlayer extends DashPlayer {
   fetchSponsorBlock(identifier) {
     if (EnvUtils.isExtension()) {
       chrome.runtime.sendMessage({
-        type: 'sponsor_block',
+        type: 'REQUEST_SPONSORBLOCK_SCRAPE',
         action: 'getSkipSegments',
         videoId: identifier,
       }, (segments)=>{
@@ -248,11 +248,11 @@ export default class YTPlayer extends DashPlayer {
               autoSkip: !!segment.autoSkip,
               onSkip: () => {
                 if (segment.UUID) {
-                  chrome.runtime.sendMessage({
-                    type: 'sponsor_block',
-                    action: 'segmentSkipped',
-                    UUID: segment.UUID,
-                  });
+                  // chrome.runtime.sendMessage({
+                  //   type: 'sponsor_block',
+                  //   action: 'segmentSkipped',
+                  //   UUID: segment.UUID,
+                  // });
                 }
               },
             };

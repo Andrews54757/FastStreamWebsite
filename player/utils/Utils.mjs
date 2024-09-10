@@ -146,7 +146,7 @@ export class Utils {
         }
         return a.diff - b.diff;
       });
-      return list[0].key;
+      return list[0]?.key;
     }
   }
   static printWelcome(version) {
@@ -182,5 +182,28 @@ export class Utils {
         resolve();
       }, timeout);
     });
+  }
+  static async downloadURL(url, filename) {
+    // Firefox has a bug where it doesn't download filed from sandboxed iframes
+    // Caused by bloburl partitioning issues. See gecko's dom/file/uri/BlobURLProtocolHandler.cpp#L775C1-L786C6
+    if (EnvUtils.isExtension() && !EnvUtils.isChrome()) {
+      return new Promise((resolve, reject) => {
+        chrome.runtime.sendMessage({
+          type: 'DOWNLOAD',
+          url,
+          filename,
+        }, (response) => {
+          resolve(response);
+        });
+      });
+    } else {
+      const aElement = document.createElement('a');
+      aElement.href = url;
+      aElement.download = filename;
+      aElement.target = '_blank';
+      document.body.appendChild(aElement);
+      aElement.click();
+      aElement.remove();
+    }
   }
 }

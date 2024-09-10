@@ -22,6 +22,7 @@ import {StatusManager, StatusTypes} from './StatusManager.mjs';
 import {SubtitlesManager} from './subtitles/SubtitlesManager.mjs';
 import {ToolManager} from './ToolManager.mjs';
 import {VolumeControls} from './VolumeControls.mjs';
+let MiniplayerCooldown = Date.now() + 500;
 export class InterfaceController {
   constructor(client) {
     this.client = client;
@@ -543,7 +544,10 @@ export class InterfaceController {
       return;
     }
     const action = this.client.options.visChangeAction;
-    if (isVisible === this.lastPageVisibility || this.miniPlayerActive) {
+    if (isVisible === this.lastPageVisibility) {
+      return;
+    }
+    if (!isVisible && this.state.fullscreen || this.state.pip) {
       return;
     }
     switch (action) {
@@ -567,14 +571,15 @@ export class InterfaceController {
         }
         break;
       case VisChangeActions.MINI_PLAYER:
-        this.requestMiniplayer(!isVisible);
+        if (!this.state.miniplayer && !isVisible && !this.state.windowedFullscreen && Date.now() > MiniplayerCooldown) {
+          this.requestMiniplayer(!isVisible);
+        }
         break;
     }
     this.lastPageVisibility = isVisible;
   }
   requestMiniplayer(force) {
     if (EnvUtils.isExtension()) {
-      this.miniPlayerActive = true;
       const styles = {};
       switch (this.client.options.miniPos) {
         case MiniplayerPositions.TOP_LEFT:
@@ -594,26 +599,28 @@ export class InterfaceController {
           styles.right = '0px';
           break;
       }
+      this.state.miniplayer = !this.state.miniplayer;
+      if (force !== undefined) {
+        this.state.miniplayer = force;
+      }
       chrome.runtime.sendMessage({
-        type: 'request_miniplayer',
+        type: 'REQUEST_MINIPLAYER',
         size: this.client.options.miniSize,
-        force,
+        force: this.state.miniplayer,
         styles,
         autoExit: true,
       }, (response) => {
-        if (response !== 'enter') {
-          this.miniPlayerActive = false;
-        }
+        MiniplayerCooldown = Date.now() + 200;
+        this.state.miniplayer = response === 'enter';
+        DOMElements.playerContainer.classList.toggle('miniplayer', this.state.miniplayer);
       });
     }
   }
   setMiniplayerStatus(isMini) {
     if (isMini) {
-      this.miniPlayerActive = true;
-      DOMElements.playerContainer.classList.add('miniplayer');
+      this.requestMiniplayer(true);
     } else {
-      this.miniPlayerActive = false;
-      DOMElements.playerContainer.classList.remove('miniplayer');
+      this.requestMiniplayer(false);
     }
   }
   toggleHide() {
@@ -809,7 +816,7 @@ export class InterfaceController {
   }
   toggleWindowedFullscreen(force) {
     chrome.runtime.sendMessage({
-      type: 'request_windowed_fullscreen',
+      type: 'REQUEST_WINDOWED_FULLSCREEN',
       force,
     }, (response) => {
       this.state.windowedFullscreen = response === 'enter';
@@ -820,7 +827,7 @@ export class InterfaceController {
       const newValue = force === undefined ? document.fullscreenElement !== document.documentElement : force;
       if (newValue) {
         await document.documentElement.requestFullscreen();
-      } else if (document.exitFullscreen) {
+      } else if (document.exitFullscreen && document.fullscreenElement) {
         document.exitFullscreen();
       }
       this.updateFullScreenButton();
@@ -828,7 +835,7 @@ export class InterfaceController {
       if (EnvUtils.isExtension()) {
         return new Promise((resolve, reject) => {
           chrome.runtime.sendMessage({
-            type: 'request_fullscreen',
+            type: 'REQUEST_FULLSCREEN',
             force,
           }, (response) => {
             if (response === 'error') {
@@ -852,7 +859,10 @@ export class InterfaceController {
       this.state.fullscreen = true;
     } else {
       fullScreenButton.classList.remove('out');
-      this.state.fullscreen = false;
+      if (this.state.fullscreen) {
+        this.state.fullscreen = false;
+        this.fullscreenToggle(false);
+      }
     }
   }
   playPauseToggle() {

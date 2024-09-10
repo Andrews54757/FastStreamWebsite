@@ -9,6 +9,7 @@ import {FastStreamArchiveUtils} from '../utils/FastStreamArchiveUtils.mjs';
 import {RequestUtils} from '../utils/RequestUtils.mjs';
 import {StringUtils} from '../utils/StringUtils.mjs';
 import {URLUtils} from '../utils/URLUtils.mjs';
+import {Utils} from '../utils/Utils.mjs';
 import {WebUtils} from '../utils/WebUtils.mjs';
 import {DOMElements} from './DOMElements.mjs';
 export class SaveManager {
@@ -52,13 +53,7 @@ export class SaveManager {
       ctx.imageSmoothingEnabled = false;
       ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
       const url = canvas.toDataURL('image/png'); // For some reason this is faster than async toBlob
-      const link = document.createElement('a');
-      link.setAttribute('href', url);
-      link.setAttribute('download', name + '.png');
-      link.setAttribute('target', '_blank');
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+      await Utils.downloadURL(url, name + '.png');
       this.setStatusMessage('save-screenshot', Localize.getMessage('player_screenshot_saved'), 'info', 1000);
     } catch (e) {
       console.error(e);
@@ -100,18 +95,28 @@ export class SaveManager {
         return;
       }
     }
+    // Incognito mode always opens file picker anyways
+    // Except firefox, which we use extension download API
+    const shouldAskForName = (EnvUtils.isExtension() && !EnvUtils.isChrome()) ? true : !EnvUtils.isIncognito();
     const suggestedName = (this.client.mediaInfo?.name || 'video').replaceAll(' ', '_');
-    const name = EnvUtils.isIncognito() ? suggestedName : await AlertPolyfill.prompt(Localize.getMessage('player_filename_prompt'), suggestedName);
-    if (!name) {
-      return;
-    }
     if (doDump) {
+      const name = shouldAskForName ? await AlertPolyfill.prompt(Localize.getMessage('player_filename_prompt'), suggestedName) : suggestedName;
+      if (!name) {
+        return;
+      }
       this.dumpBuffer(name);
       return;
     }
     let url;
     let filestream;
+    let name;
+    if (canStream || EnvUtils.isChrome() || true) {
+      name = shouldAskForName ? await AlertPolyfill.prompt(Localize.getMessage('player_filename_prompt'), suggestedName) : suggestedName;
+    }
     if (canStream) {
+      if (!name) {
+        return;
+      }
       filestream = streamSaver.createWriteStream(name + '.mp4');
     }
     if (this.reuseDownloadURL && this.downloadURL && isComplete) {
@@ -148,7 +153,12 @@ export class SaveManager {
           this.setStatusMessage('save-video', Localize.getMessage('player_savevideo_cancelled'), 'info', 2000);
         } else {
           if (await AlertPolyfill.confirm(Localize.getMessage('player_savevideo_failed_ask_archive'), 'error')) {
-            this.dumpBuffer(name);
+            if (!name) {
+              name = shouldAskForName ? await AlertPolyfill.prompt(Localize.getMessage('player_filename_prompt'), suggestedName) : suggestedName;
+            }
+            if (name) {
+              this.dumpBuffer(name);
+            }
           }
         }
         return;
@@ -156,13 +166,25 @@ export class SaveManager {
       DOMElements.saveNotifBanner.style.display = 'none';
       this.downloadCancel = null;
       this.makingDownload = false;
+      this.setStatusMessage('save-video', Localize.getMessage('player_savevideo_complete'), 'info', 2000);
+      if (!canStream) {
+        url = URL.createObjectURL(result.blob);
+      }
       if (this.downloadURL) {
         URL.revokeObjectURL(this.downloadURL);
         this.downloadURL = null;
       }
-      this.setStatusMessage('save-video', Localize.getMessage('player_savevideo_complete'), 'info', 2000);
-      if (!canStream) {
-        url = URL.createObjectURL(result.blob);
+      this.downloadURL = url;
+    }
+    if (!canStream) {
+      if (!name) {
+        name = shouldAskForName ? await AlertPolyfill.prompt(Localize.getMessage('player_filename_prompt'), suggestedName) : suggestedName;
+      }
+      if (!name) {
+        URL.revokeObjectURL(this.downloadURL);
+        this.downloadURL = null;
+        this.reuseDownloadURL = false;
+        return;
       }
       setTimeout(() => {
         if (this.downloadURL !== url) return;
@@ -172,16 +194,7 @@ export class SaveManager {
           this.reuseDownloadURL = false;
         }
       }, 10000);
-    }
-    if (!canStream) {
-      this.downloadURL = url;
-      const link = document.createElement('a');
-      link.setAttribute('href', url);
-      link.setAttribute('download', name + '.mp4');
-      link.setAttribute('target', '_blank');
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+      await Utils.downloadURL(url, name + '.mp4');
     }
   }
   async dumpBuffer(name) {
