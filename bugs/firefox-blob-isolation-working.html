@@ -22,6 +22,9 @@
                     const video = document.createElement('video');
                     video.src = 'https://faststream.online/assets/video/accessibility.mp4';
                     video.controls = true;
+                    video.style.position = 'fixed';
+                    video.style.width = '100%';
+                    video.style.height = '100%';
                     document.body.appendChild(video);
                 `;
 
