@@ -106,7 +106,7 @@ export class KeybindManager extends EventEmitter {
       }
     });
     this.on('AddDownloader', (e) => {
-      if (this.client.downloadManager.downloaders.length < 6) {
+      if (!this.client.options.maximumDownloaders || this.client.downloadManager.downloaders.length < this.client.options.maximumDownloaders) {
         this.client.downloadManager.addDownloader();
         this.client.interfaceController.updateFragmentsLoaded();
       }
@@ -141,7 +141,7 @@ export class KeybindManager extends EventEmitter {
       updateVideoTransform();
     });
     this.on('RotateVideo', (e) => {
-      rotateIndex = (rotateIndex + 1) % 4;
+      rotateIndex = (rotateIndex + 3) % 4;
       updateVideoTransform();
     });
     this.on('WindowedFullscreen', (e) => {
@@ -155,6 +155,12 @@ export class KeybindManager extends EventEmitter {
     });
     this.on('SaveVideo', (e) => {
       this.client.interfaceController.saveManager.saveVideo(e);
+    });
+    this.on('Screenshot', (e) => {
+      this.client.interfaceController.saveManager.saveScreenshot(e);
+    });
+    this.on('ToggleVisualFilters', (e) => {
+      this.client.interfaceController.toggleVisualFilters();
     });
     this.on('keybind', (keybind, e) => {
       // console.log("Keybind", keybind);

@@ -22,7 +22,9 @@ export class MP4FragmentRequester {
       onSuccess: async (entry, xhr) => {
         let data;
         try {
-          data = await entry.getDataFromBlob();
+          if (!callbacks.skipProcess) {
+            data = await entry.getDataFromBlob();
+          }
           fragment.dataSize = entry.dataSize;
         } catch (e) {
           console.error(e);
@@ -35,7 +37,7 @@ export class MP4FragmentRequester {
           fragment.status = DownloadStatus.DOWNLOAD_COMPLETE;
           this.player.emit(DefaultPlayerEvents.FRAGMENT_UPDATE, fragment);
         }
-        data.fileStart = entry.rangeStart;
+        if (data) data.fileStart = entry.rangeStart;
         callbacks.onSuccess(entry, data);
       },
       onProgress: (stats, context2, data, xhr) => {

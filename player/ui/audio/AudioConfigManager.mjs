@@ -186,6 +186,9 @@ export class AudioConfigManager extends AbstractAudioModule {
     this.stopRenderLoop();
     WebUtils.setLabels(DOMElements.audioConfigBtn, Localize.getMessage('player_audioconfig_open_label'));
   }
+  isOpen() {
+    return DOMElements.audioConfigContainer.style.display !== 'none';
+  }
   saveCurrentProfile() {
     const profile = this.getDropdownProfile();
     if (!profile) {
@@ -210,21 +213,11 @@ export class AudioConfigManager extends AbstractAudioModule {
     DOMElements.audioConfigContainer.addEventListener('click', (e) => {
       e.stopPropagation();
     });
-    DOMElements.audioConfigContainer.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape') {
-        this.closeUI();
-        e.preventDefault();
-        e.stopPropagation();
-      }
-    });
     DOMElements.audioConfigContainer.addEventListener('keyup', (e) => {
       e.stopPropagation();
     });
-    DOMElements.playerContainer.addEventListener('click', (e) => {
-      this.closeUI();
-    });
     DOMElements.audioConfigBtn.addEventListener('click', (e) => {
-      if (DOMElements.audioConfigContainer.style.display === 'none') {
+      if (!this.isOpen()) {
         this.openUI();
       } else {
         this.closeUI();

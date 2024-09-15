@@ -221,9 +221,12 @@ export class SourcesBrowser {
     DOMElements.linkuiContainer.style.display = 'none';
     WebUtils.setLabels(DOMElements.linkButton, Localize.getMessage('player_sourcesbrowser_open_label'));
   }
+  isOpen() {
+    return DOMElements.linkuiContainer.style.display !== 'none';
+  }
   setupUI() {
     DOMElements.linkButton.addEventListener('click', (e) => {
-      if (DOMElements.linkuiContainer.style.display === 'none') {
+      if (!this.isOpen()) {
         this.openUI();
       } else {
         this.closeUI();
@@ -234,18 +237,8 @@ export class SourcesBrowser {
     DOMElements.linkuiContainer.addEventListener('click', (e) => {
       e.stopPropagation();
     });
-    DOMElements.linkuiContainer.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape') {
-        this.closeUI();
-        e.preventDefault();
-        e.stopPropagation();
-      }
-    });
     DOMElements.linkuiContainer.addEventListener('keyup', (e) => {
       e.stopPropagation();
-    });
-    DOMElements.playerContainer.addEventListener('click', (e) => {
-      this.closeUI();
     });
     const closeBtn = DOMElements.linkuiContainer.getElementsByClassName('close_button')[0];
     closeBtn.addEventListener('click', (e) => {

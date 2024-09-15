@@ -22,7 +22,9 @@ export class DashFragmentRequester {
       onSuccess: async (entry, xhr) => {
         let data;
         try {
-          data = await entry.getDataFromBlob();
+          if (!callbacks.skipProcess) {
+            data = await entry.getDataFromBlob();
+          }
           fragment.dataSize = entry.dataSize;
         } catch (e) {
           console.error(e);

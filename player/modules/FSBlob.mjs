@@ -1,17 +1,28 @@
 import {IndexedDBManager} from '../network/IndexedDBManager.mjs';
 import {EnvUtils} from '../utils/EnvUtils.mjs';
 const BrowserCanAutoOffloadBlobs = EnvUtils.isChrome();
-const UseXHRTrick = false && !BrowserCanAutoOffloadBlobs && EnvUtils.isFirefox();
-const UseIndexedDB = !UseXHRTrick && !BrowserCanAutoOffloadBlobs && IndexedDBManager.isSupported();
+const UseCache = !BrowserCanAutoOffloadBlobs && window.caches;
+const UseIndexedDB = !BrowserCanAutoOffloadBlobs && !UseCache && IndexedDBManager.isSupported();
 export class FSBlob {
   constructor() {
     this.blobStore = new Map();
     this.blobStorePromises = new Map();
-    if (UseIndexedDB) {
+    if (UseCache) {
+      this.cache = true;
+      this.setupPromise = this.setupOrphanedCache();
+    } else if (UseIndexedDB) {
       this.indexedDBManager = new IndexedDBManager();
       this.setupPromise = this.indexedDBManager.setup();
     }
     this.blobIndex = 0;
+  }
+  async setupOrphanedCache() {
+    const cacheName = 'blob-cache-' + Date.now() + '-' + Math.random();
+    const cache = await window.caches.open(cacheName);
+    // Orphan it!
+    await window.caches.delete(cacheName);
+    // Store the cache reference for later use
+    this.cache = cache;
   }
   async saveBlobInIndexedDBAsync(identifier, blob) {
     try {
@@ -20,48 +31,40 @@ export class FSBlob {
       // IndexedDB is not supported
       console.warn('IndexedDB is not supported, falling back to memory storage');
       this.indexedDBManager = null;
+      this.setupPromise = false;
       this.blobStorePromises.clear();
       return false;
     }
+    // Store file
     await this.indexedDBManager.setFile(identifier, blob);
-    this.blobStore.delete(identifier);
+    // Get file
+    const file = await this.indexedDBManager.getFile(identifier);
+    if (EnvUtils.isFirefox()) {
+      // Delete file to orphan it
+      await this.indexedDBManager.deleteFile(identifier);
+    }
+    this.blobStore.set(identifier, file);
     return true;
   }
-  async saveBlobUsingFetchTrick(identifier, blob) {
-    // Does not work
-    // Create url for blob
-    // const url = URL.createObjectURL(blob);
-    // const xhr = new XMLHttpRequest();
-    // xhr.open('GET', url);
-    // xhr.responseType = 'blob';
-    // return new Promise((resolve, reject) => {
-    //   const cleanup = () => {
-    //     URL.revokeObjectURL(url);
-    //     resolve();
-    //   };
-    //   xhr.onload = () => {
-    //     if (xhr.status === 200) {
-    //       this.blobStore.set(identifier, xhr.response);
-    //     } else {
-    //       console.error('Failed to save blob using XHR trick');
-    //     }
-    //     cleanup();
-    //   };
-    //   xhr.onerror = () => {
-    //     console.error('XHR error while saving blob');
-    //     cleanup();
-    //   };
-    //   xhr.send();
-    // });
-    // const response = await fetch(url);
-    // if (response.ok) {
-    //   const blobResponse = await response.blob();
-    //   URL.revokeObjectURL(url);
-    //   this.blobStore.set(identifier, blobResponse);
-    // } else {
-    //   URL.revokeObjectURL(url);
-    //   throw new Error('Failed to save blob using fetch trick');
-    // }
+  async saveBlobUsingCache(identifier, blob) {
+    try {
+      await this.setupPromise;
+    } catch (e) {
+      console.warn('Cache API is not supported, falling back to memory storage');
+      this.cache = null;
+      this.setupPromise = false;
+      this.blobStorePromises.clear();
+      return false;
+    }
+    const response = new Response(blob);
+    const identifierURL = this.getIdentifierURL(identifier);
+    await this.cache.put(identifierURL, response);
+    const match = await this.cache.match(identifierURL);
+    const blobResponse = await match?.blob();
+    this.blobStore.set(identifier, blobResponse);
+  }
+  getIdentifierURL(identifier) {
+    return 'https://faststream.online/blob-cache?identifier=' + encodeURIComponent(identifier);
   }
   nextIdentifier() {
     return `blob${this.blobIndex++}`;
@@ -72,10 +75,10 @@ export class FSBlob {
     }
     this.blobStore.set(identifier, blob);
     let promise;
-    if (this.indexedDBManager) {
+    if (this.cache) {
+      promise = this.saveBlobUsingCache(identifier, blob);
+    } else if (this.indexedDBManager) {
       promise = this.saveBlobInIndexedDBAsync(identifier, blob);
-    } else if (UseXHRTrick) {
-      promise = this.saveBlobUsingFetchTrick(identifier, blob);
     }
     this.blobStorePromises.set(identifier, promise);
     await promise;
@@ -97,29 +100,26 @@ export class FSBlob {
     }
     this.blobStore.delete(identifier);
     this.blobStorePromises.delete(identifier);
-    if (this.indexedDBManager) {
+    if (this.cache) {
+      const identifierURL = this.getIdentifierURL(identifier);
+      await this.cache.delete(identifierURL);
+    } else if (this.indexedDBManager) {
       await this.indexedDBManager.deleteFile(identifier);
     }
     return true;
   }
-  async getBlob(identifier) {
-    if (this.blobStore.has(identifier)) {
-      return this.blobStore.get(identifier);
-    }
-    if (this.blobStorePromises.has(identifier)) {
-      await this.blobStorePromises.get(identifier);
-      if (this.indexedDBManager) {
-        return await this.indexedDBManager.getFile(identifier);
-      } else if (UseXHRTrick) {
-        return this.blobStore.get(identifier);
-      }
-    }
-    return null;
+  getBlob(identifier) {
+    return this.blobStore.get(identifier);
   }
   async clear() {
     this.blobStore.clear();
     this.blobStorePromises.clear();
-    if (this.indexedDBManager) {
+    if (this.cache) {
+      // Setup a new cache entirely
+      this.cache = true;
+      this.setupPromise = this.setupOrphanedCache();
+      await this.setupPromise;
+    } else if (this.indexedDBManager) {
       await this.indexedDBManager.clearStorage();
     }
   }

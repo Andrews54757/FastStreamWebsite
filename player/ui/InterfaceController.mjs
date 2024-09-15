@@ -6,6 +6,7 @@ import {ClickActions} from '../options/defaults/ClickActions.mjs';
 import {MiniplayerPositions} from '../options/defaults/MiniplayerPositions.mjs';
 import {VisChangeActions} from '../options/defaults/VisChangeActions.mjs';
 import {EnvUtils} from '../utils/EnvUtils.mjs';
+import {InterfaceUtils} from '../utils/InterfaceUtils.mjs';
 import {StringUtils} from '../utils/StringUtils.mjs';
 import {URLUtils} from '../utils/URLUtils.mjs';
 import {Utils} from '../utils/Utils.mjs';
@@ -105,12 +106,12 @@ export class InterfaceController {
         closedSomething = true;
       }
     }
-    closedSomething = closedSomething || this.playbackRateChanger.closeUI();
-    closedSomething = closedSomething || this.videoQualityChanger.closeUI();
-    closedSomething = closedSomething || this.languageChanger.closeUI();
-    closedSomething = closedSomething || this.subtitlesManager.closeUI();
-    closedSomething = closedSomething || this.loopControls.closeUI();
-    return closedSomething = closedSomething;
+    closedSomething = this.playbackRateChanger.closeUI() || closedSomething;
+    closedSomething = this.videoQualityChanger.closeUI() || closedSomething;
+    closedSomething = this.languageChanger.closeUI() || closedSomething;
+    closedSomething = this.subtitlesManager.closeUI() || closedSomething;
+    closedSomething = this.loopControls.closeUI() || closedSomething;
+    return closedSomething;
   }
   setStatusMessage(key, message, type, expiry) {
     this.statusManager.setStatusMessage(key, message, type, expiry);
@@ -325,6 +326,12 @@ export class InterfaceController {
       clearTimeout(holdTimeout);
       if (lastSpeed !== null) {
         stopSpeedUp();
+        return;
+      }
+      if (this.closeAllMenus(false)) {
+        return;
+      }
+      if (InterfaceUtils.closeWindows()) {
         return;
       }
       if (this.isBigPlayButtonVisible()) {
@@ -543,6 +550,11 @@ export class InterfaceController {
     this.client.options.autoplayNext = !this.client.options.autoplayNext;
     sessionStorage.setItem('autoplayNext', this.client.options.autoplayNext);
     this.updateAutoNextIndicator();
+  }
+  toggleVisualFilters() {
+    this.client.options.disableVisualFilters = !this.client.options.disableVisualFilters;
+    sessionStorage.setItem('disableVisualFilters', this.client.options.disableVisualFilters);
+    this.client.updateCSSFilters();
   }
   async handleVisibilityChange(isVisible) {
     if (this.client.needsUserInteraction()) { // Don't do anything if the user needs to interact with the player

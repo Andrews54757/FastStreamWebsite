@@ -27,8 +27,11 @@ export class OpenSubtitlesSearch extends EventEmitter {
   closeUI() {
     DOMElements.subuiContainer.style.display = 'none';
   }
+  isOpen() {
+    return DOMElements.subuiContainer.style.display !== 'none';
+  }
   toggleUI() {
-    if (DOMElements.subuiContainer.style.display === 'none') {
+    if (!this.isOpen()) {
       this.openUI();
     } else {
       this.closeUI();
@@ -41,18 +44,8 @@ export class OpenSubtitlesSearch extends EventEmitter {
     DOMElements.subuiContainer.addEventListener('dblclick', (e) => {
       e.stopPropagation();
     });
-    DOMElements.subuiContainer.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape') {
-        this.closeUI();
-        e.preventDefault();
-        e.stopPropagation();
-      }
-    });
     DOMElements.subuiContainer.addEventListener('keyup', (e) => {
       e.stopPropagation();
-    });
-    DOMElements.playerContainer.addEventListener('click', (e) => {
-      this.closeUI();
     });
     const closeBtn = DOMElements.subuiContainer.getElementsByClassName('close_button')[0];
     closeBtn.addEventListener('click', (e) => {

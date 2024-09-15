@@ -113,7 +113,7 @@ export class SubtitlesManager extends EventEmitter {
       e.stopPropagation();
       return;
     }
-    if (DOMElements.subtitlesMenu.style.display === 'none') {
+    if (!this.isOpen()) {
       this.openUI();
     } else {
       this.closeUI();
@@ -135,20 +135,16 @@ export class SubtitlesManager extends EventEmitter {
     DOMElements.subtitlesMenu.style.display = '';
     WebUtils.setLabels(DOMElements.subtitles, Localize.getMessage('player_subtitlesmenu_close_label'));
   }
+  isOpen() {
+    return DOMElements.subtitlesMenu.style.display !== 'none';
+  }
   setupUI() {
     DOMElements.subtitles.addEventListener('click', this.onCaptionsButtonInteract.bind(this));
     DOMElements.subtitles.tabIndex = 0;
     DOMElements.subtitles.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape') {
-        this.closeUI();
-        e.stopPropagation();
-        e.preventDefault();
-      } else if (e.key === 'Enter') {
+      if (e.key === 'Enter') {
         this.onCaptionsButtonInteract(e);
       }
-    });
-    DOMElements.playerContainer.addEventListener('click', (e) => {
-      this.closeUI();
     });
     DOMElements.subtitlesOptionsTestButton.addEventListener('click', (e) => {
       this.isTestSubtitleActive = !this.isTestSubtitleActive;
@@ -344,20 +340,19 @@ export class SubtitlesManager extends EventEmitter {
       trackElement.blur();
     });
     trackElement.addEventListener('keydown', (e) => {
-      const keybind = this.client.keybindManager.eventToKeybind(e);
-      if (keybind === 'SubtrackDelete') {
+      if (e.code === 'Delete' || e.code === 'Backspace') {
         e.stopPropagation();
         removeTrack.click();
-      } else if (keybind === 'SubtrackShiftRight') {
+      } else if (e.code === 'BracketRight') {
         e.stopPropagation();
         shiftRTrack.click();
-      } else if (keybind === 'SubtrackShiftLeft') {
+      } else if (e.code === 'BracketLeft') {
         e.stopPropagation();
         shiftLTrack.click();
-      } else if (keybind === 'SubtrackDownload') {
+      } else if (e.code === 'KeyD') {
         e.stopPropagation();
         downloadTrack.click();
-      } else if (keybind === 'SubtrackToggleResync') {
+      } else if (e.code === 'KeyR') {
         e.stopPropagation();
         resyncTool.click();
       }

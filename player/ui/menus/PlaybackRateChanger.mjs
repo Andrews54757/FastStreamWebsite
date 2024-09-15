@@ -216,14 +216,14 @@ export class PlaybackRateChanger extends EventEmitter {
     this.speedList.scrollTop = element.offsetTop - this.speedList.clientHeight / 2 + element.clientHeight / 2;
   }
   closeUI() {
-    if (DOMElements.playbackRateMenuContainer.style.display === 'none') {
+    if (!this.isOpen()) {
       return false;
     }
     DOMElements.playbackRateMenuContainer.style.display = 'none';
     this.stayOpen = false;
     return true;
   }
-  isVisible() {
+  isOpen() {
     return DOMElements.playbackRateMenuContainer.style.display !== 'none';
   }
   setupUI() {
@@ -240,7 +240,7 @@ export class PlaybackRateChanger extends EventEmitter {
       isMouseDown = false;
     }, true);
     DOMElements.playbackRate.addEventListener('focus', (e) => {
-      if (!this.isVisible() && !isMouseDown) {
+      if (!this.isOpen() && !isMouseDown) {
         this.openUI(true);
       }
     });
@@ -256,7 +256,7 @@ export class PlaybackRateChanger extends EventEmitter {
         e.stopPropagation();
         return;
       }
-      if (this.isVisible()) {
+      if (this.isOpen()) {
         this.closeUI();
       } else {
         this.openUI();
@@ -267,9 +267,6 @@ export class PlaybackRateChanger extends EventEmitter {
       e.preventDefault();
       e.stopPropagation();
       this.toggleSilenceSkipper();
-    });
-    DOMElements.playerContainer.addEventListener('click', (e) => {
-      this.closeUI();
     });
     WebUtils.setupTabIndex(DOMElements.playbackRate);
     for (let i = 1; i <= this.maxPlaybackRate * 10; i += 1) {

@@ -73,6 +73,8 @@ export class FastStreamClient extends EventEmitter {
       defaultQuality: 'Auto',
       toolSettings: Utils.mergeOptions(DefaultToolSettings, {}),
       videoDelay: 0,
+      disableVisualFilters: false,
+      maximumDownloaders: 6,
     };
     this.state = {
       playing: false,
@@ -229,10 +231,14 @@ export class FastStreamClient extends EventEmitter {
     this.options.miniSize = options.miniSize;
     this.options.miniPos = options.miniPos;
     this.options.defaultYoutubeClient = options.defaultYoutubeClient4;
+    this.options.maximumDownloaders = options.maximumDownloaders;
     if (sessionStorage && sessionStorage.getItem('autoplayNext') !== null) {
       this.options.autoplayNext = sessionStorage.getItem('autoplayNext') == 'true';
     } else {
       this.options.autoplayNext = options.autoplayNext;
+    }
+    if (sessionStorage) {
+      this.options.disableVisualFilters = sessionStorage.getItem('disableVisualFilters') == 'true';
     }
     this.options.videoBrightness = options.videoBrightness;
     this.options.videoContrast = options.videoContrast;
