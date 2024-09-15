@@ -341,7 +341,7 @@ export class MP4 {
     view.setUint32(4, len);
     let index = 8;
     for (let i = 0; i < len; i++) {
-      view.setBigUint64(index, track.chunks[i].offset || 0);
+      view.setBigUint64(index, BigInt(track.chunks[i].offset || 0));
       index += 8;
     }
     return MP4.box(MP4.types.co64, new Uint8Array(table));
@@ -394,8 +394,8 @@ export class MP4 {
     return MP4.box(MP4.types.ctts, new Uint8Array(table));
   }
   static stbl(track) {
+    const co = track.use64Offsets ? MP4.co64(track) : MP4.stco(track);
     if (track.type === 'video') {
-      const co = track.use64Offsets ? MP4.co64(track) : MP4.stco(track);
       return MP4.box(MP4.types.stbl,
           MP4.stsd(track),
           MP4.stts(track),
@@ -411,7 +411,7 @@ export class MP4 {
           MP4.stts(track),
           MP4.stsc(track),
           MP4.stsz(track),
-          MP4.stco(track));
+          co);
     }
   };
   static sdtp(track) {

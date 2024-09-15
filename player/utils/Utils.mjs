@@ -1,3 +1,4 @@
+import {MessageTypes} from '../enums/MessageTypes.mjs';
 import {DefaultOptions} from '../options/defaults/DefaultOptions.mjs';
 import {DefaultSubtitlesSettings} from '../options/defaults/DefaultSubtitlesSettings.mjs';
 import {EnvUtils} from './EnvUtils.mjs';
@@ -183,13 +184,13 @@ export class Utils {
       }, timeout);
     });
   }
-  static async downloadURL(url, filename) {
+  static async downloadURL(url, filename, forceDirect = false) {
     // Firefox has a bug where it doesn't download filed from sandboxed iframes
     // Caused by bloburl partitioning issues. See gecko's dom/file/uri/BlobURLProtocolHandler.cpp#L775C1-L786C6
-    if (EnvUtils.isExtension() && !EnvUtils.isChrome()) {
+    if (EnvUtils.isExtension() && !EnvUtils.isChrome() && !forceDirect) {
       return new Promise((resolve, reject) => {
         chrome.runtime.sendMessage({
-          type: 'DOWNLOAD',
+          type: MessageTypes.DOWNLOAD,
           url,
           filename,
         }, (response) => {
@@ -205,5 +206,27 @@ export class Utils {
       aElement.click();
       aElement.remove();
     }
+  }
+  static findPropertyRecursive(obj, key, list = [], stack = []) {
+    if (typeof obj !== 'object' || obj === null) {
+      return;
+    }
+    if (Array.isArray(obj)) {
+      obj.forEach((v, i)=>{
+        stack.push(i);
+        Utils.findPropertyRecursive(v, key, list, stack);
+        stack.pop();
+      });
+    } else {
+      if (Object.hasOwn(obj, key)) {
+        list.push({value: obj[key], stack: stack.slice(), obj});
+      }
+      Object.keys(obj).forEach((k)=>{
+        stack.push(k);
+        Utils.findPropertyRecursive(obj[k], key, list, stack);
+        stack.pop();
+      });
+    }
+    return list;
   }
 }

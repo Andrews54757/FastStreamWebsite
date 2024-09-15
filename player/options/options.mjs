@@ -13,6 +13,7 @@ import {DaltonizerTypes} from './defaults/DaltonizerTypes.mjs';
 import {DefaultToolSettings} from './defaults/ToolSettings.mjs';
 import {DefaultQualities} from './defaults/DefaultQualities.mjs';
 import {YoutubeClients} from '../enums/YoutubeClients.mjs';
+import {MessageTypes} from '../enums/MessageTypes.mjs';
 let Options = {};
 const analyzeVideos = document.getElementById('analyzevideos');
 const playStreamURLs = document.getElementById('playstreamurls');
@@ -95,7 +96,7 @@ async function loadOptions(newOptions) {
   setSelectMenuValue(visChangeAction, Options.visChangeAction);
   setSelectMenuValue(miniPos, Options.miniPos);
   setSelectMenuValue(qualityMenu, Options.defaultQuality);
-  setSelectMenuValue(ytclient, Options.defaultYoutubeClient3);
+  setSelectMenuValue(ytclient, Options.defaultYoutubeClient4);
   if (Options.visChangeAction === VisChangeActions.MINI_PLAYER) {
     showWhenMiniSelected.style.display = '';
   } else {
@@ -125,6 +126,9 @@ async function loadOptions(newOptions) {
     numberInput.value = val + unit;
   });
   autoEnableURLSInput.value = Options.autoEnableURLs.join('\n');
+  if (Options.dev) {
+    document.getElementById('ytc').style.display = '';
+  }
 }
 function createSelectMenu(container, options, selected, localPrefix, callback) {
   container.replaceChildren();
@@ -186,8 +190,8 @@ createSelectMenu(qualityMenu, Object.values(DefaultQualities), Options.defaultQu
   Options.defaultQuality = e.target.value;
   optionChanged();
 });
-createSelectMenu(ytclient, Object.values(YoutubeClients), Options.defaultYoutubeClient3, null, (e) => {
-  Options.defaultYoutubeClient3 = e.target.value;
+createSelectMenu(ytclient, Object.values(YoutubeClients), Options.defaultYoutubeClient4, null, (e) => {
+  Options.defaultYoutubeClient4 = e.target.value;
   optionChanged();
 });
 document.querySelectorAll('.option').forEach((option) => {
@@ -404,7 +408,7 @@ function optionChanged() {
     }, ()=>{
       optionSendTime = Date.now();
       chrome.runtime.sendMessage({
-        type: 'LOAD_OPTIONS',
+        type: MessageTypes.LOAD_OPTIONS,
         time: optionSendTime,
       });
     });
@@ -421,7 +425,7 @@ versionDiv.textContent = `FastStream v${EnvUtils.getVersion()}`;
 if (EnvUtils.isExtension()) {
   // Load options on options event
   chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-    if (request.type === 'options' || request.type === 'options_init') {
+    if (request.type === MessageTypes.UPDATE_OPTIONS) {
       if (request.time !== optionSendTime) {
         optionSendTime = request.time;
         loadOptions();

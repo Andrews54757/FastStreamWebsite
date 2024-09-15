@@ -6,6 +6,7 @@ import {DefaultKeybinds} from './DefaultKeybinds.mjs';
 import {MiniplayerPositions} from './MiniplayerPositions.mjs';
 import {VisChangeActions} from './VisChangeActions.mjs';
 export const DefaultOptions = {
+  dev: false,
   replaceDelay: 500,
   playMP4URLs: false,
   playStreamURLs: false,

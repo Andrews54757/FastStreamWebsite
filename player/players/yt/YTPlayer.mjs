@@ -1,10 +1,12 @@
 import {DefaultPlayerEvents} from '../../enums/DefaultPlayerEvents.mjs';
+import {MessageTypes} from '../../enums/MessageTypes.mjs';
 import {PlayerModes} from '../../enums/PlayerModes.mjs';
 import {ClientType, Innertube, UniversalCache, Log} from '../../modules/yt.mjs';
 import {IndexedDBManager} from '../../network/IndexedDBManager.mjs';
 import {SubtitleTrack} from '../../SubtitleTrack.mjs';
 import {EnvUtils} from '../../utils/EnvUtils.mjs';
 import {URLUtils} from '../../utils/URLUtils.mjs';
+import {Utils} from '../../utils/Utils.mjs';
 import {VideoSource} from '../../VideoSource.mjs';
 import DashPlayer from '../dash/DashPlayer.mjs';
 Log.setLevel(
@@ -136,7 +138,7 @@ export default class YTPlayer extends DashPlayer {
     });
     if (EnvUtils.isExtension()) {
       await chrome.runtime.sendMessage({
-        type: 'SET_HEADERS',
+        type: MessageTypes.SET_HEADERS,
         url: url.toString(),
         commands: customHeaderCommands,
       });
@@ -195,7 +197,7 @@ export default class YTPlayer extends DashPlayer {
     });
     if (EnvUtils.isExtension()) {
       await chrome.runtime.sendMessage({
-        type: 'SET_HEADERS',
+        type: MessageTypes.SET_HEADERS,
         url: url.toString(),
         commands: customHeaderCommands,
       });
@@ -227,10 +229,34 @@ export default class YTPlayer extends DashPlayer {
     }
     return this.ytclient.getPlaylist(identifier);
   }
+  markAsWatched() {
+    if (!this.client.options.storeProgress) {
+      return;
+    }
+    if (this.markedAsWatched) {
+      return;
+    }
+    if (EnvUtils.isExtension()) {
+      this.markedAsWatched = true;
+      chrome.runtime.sendMessage({
+        type: MessageTypes.REQUEST_YT_DATA,
+      }, (datas)=>{
+        const visitorData = Utils.findPropertyRecursive(datas, 'visitorData')[0]?.value;
+        const endpointURL = Utils.findPropertyRecursive(datas, 'videostatsPlaybackUrl')[0]?.value?.baseUrl;
+        if (visitorData && endpointURL) {
+          this.videoInfo.addToWatchHistory({
+            visitor_data: visitorData,
+            url: endpointURL,
+          });
+          console.log('Marked yt video as watched');
+        }
+      });
+    }
+  }
   fetchSponsorBlock(identifier) {
     if (EnvUtils.isExtension()) {
       chrome.runtime.sendMessage({
-        type: 'REQUEST_SPONSORBLOCK_SCRAPE',
+        type: MessageTypes.REQUEST_SPONSORBLOCK,
         action: 'getSkipSegments',
         videoId: identifier,
       }, (segments)=>{
@@ -248,11 +274,11 @@ export default class YTPlayer extends DashPlayer {
               autoSkip: !!segment.autoSkip,
               onSkip: () => {
                 if (segment.UUID) {
-                  // chrome.runtime.sendMessage({
-                  //   type: 'sponsor_block',
-                  //   action: 'segmentSkipped',
-                  //   UUID: segment.UUID,
-                  // });
+                  chrome.runtime.sendMessage({
+                    type: MessageTypes.REQUEST_SPONSORBLOCK,
+                    action: 'segmentSkipped',
+                    UUID: segment.UUID,
+                  });
                 }
               },
             };
@@ -287,6 +313,10 @@ export default class YTPlayer extends DashPlayer {
         }
       }
     }
+  }
+  async play() {
+    await super.play();
+    this.markAsWatched();
   }
   destroy() {
     if (this.source) {

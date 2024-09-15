@@ -32,6 +32,7 @@ import {InterfaceUtils} from './utils/InterfaceUtils.mjs';
 import {VirtualAudioNode} from './ui/audio/VirtualAudioNode.mjs';
 import {SyncedAudioPlayer} from './players/SyncedAudioPlayer.mjs';
 import {AlertPolyfill} from './utils/AlertPolyfill.mjs';
+import {MessageTypes} from './enums/MessageTypes.mjs';
 const SET_VOLUME_USING_NODE = !EnvUtils.isSafari() && EnvUtils.isWebAudioSupported();
 export class FastStreamClient extends EventEmitter {
   constructor() {
@@ -148,7 +149,7 @@ export class FastStreamClient extends EventEmitter {
   }
   pollPrevNext() {
     return new Promise((resolve) => {
-      chrome.runtime.sendMessage({type: 'REQUEST_PLAYLIST_POLL'}, (response) => {
+      chrome.runtime.sendMessage({type: MessageTypes.REQUEST_PLAYLIST_POLL}, (response) => {
         if (!response) {
           resolve(null);
           return;
@@ -173,7 +174,7 @@ export class FastStreamClient extends EventEmitter {
     }
   }
   shouldDownloadAll() {
-    return this.options.downloadAll && this.hasDownloadSpace;
+    return (this.options.downloadAll && this.hasDownloadSpace) || this.source?.loadedFromArchive;
   }
   userInteracted() {
     if (!this.state.hasUserInteracted) {
@@ -383,6 +384,9 @@ export class FastStreamClient extends EventEmitter {
     const currentLevel = this.currentLevel;
     const level = levels.get(currentLevel);
     if (!level) return;
+    if (this.source?.loadedFromArchive) {
+      return;
+    }
     if (EnvUtils.isIncognito()) {
       if (this.hasDownloadSpace) {
         this.state.bufferBehind = this.options.bufferBehind;
@@ -728,7 +732,7 @@ export class FastStreamClient extends EventEmitter {
       }
     }
     if (!hasDownloaded && (
-      this.videoAnalyzer.isRunning() || this.interfaceController.makingDownload
+      this.videoAnalyzer.isRunning() || this.interfaceController.saveManager.makingDownload
     )) {
       hasDownloaded = this.predownloadReservedFragments();
     }
@@ -1182,7 +1186,7 @@ export class FastStreamClient extends EventEmitter {
     if (!this.hasNextVideo()) return;
     if (EnvUtils.isExtension()) {
       chrome.runtime.sendMessage({
-        type: 'REQUEST_PLAYLIST_NAVIGATION',
+        type: MessageTypes.REQUEST_PLAYLIST_NAVIGATION,
         direction: 'next',
         continuationOptions: {
           fullscreenState: this.getFullscreenState(),
@@ -1197,7 +1201,7 @@ export class FastStreamClient extends EventEmitter {
     if (!this.hasPreviousVideo()) return;
     if (EnvUtils.isExtension()) {
       chrome.runtime.sendMessage({
-        type: 'REQUEST_PLAYLIST_NAVIGATION',
+        type: MessageTypes.REQUEST_PLAYLIST_NAVIGATION,
         direction: 'previous',
         continuationOptions: {
           fullscreenState: this.getFullscreenState(),

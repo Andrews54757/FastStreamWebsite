@@ -1,4 +1,4 @@
-import {DefaultKeybinds} from '../options/defaults/DefaultKeybinds.mjs';
+import {DefaultKeybinds, KeybindsWithModifiers} from '../options/defaults/DefaultKeybinds.mjs';
 import {EventEmitter} from '../modules/eventemitter.mjs';
 import {WebUtils} from '../utils/WebUtils.mjs';
 export class KeybindManager extends EventEmitter {
@@ -153,6 +153,9 @@ export class KeybindManager extends EventEmitter {
     this.on('PreviousVideo', (e) =>{
       this.client.previousVideo();
     });
+    this.on('SaveVideo', (e) => {
+      this.client.interfaceController.saveManager.saveVideo(e);
+    });
     this.on('keybind', (keybind, e) => {
       // console.log("Keybind", keybind);
     });
@@ -172,10 +175,18 @@ export class KeybindManager extends EventEmitter {
     return this.keyStringToKeybinds(keyString, e);
   }
   keyStringToKeybinds(keyString) {
+    const modifiers = keyString.split('+');
+    const baseKey = modifiers.pop();
     const results = [];
     for (const [key, value] of this.keybindMap.entries()) {
       if (value === keyString) {
         results.push(key);
+      } else if (KeybindsWithModifiers.includes(key)) {
+        const testModifiers = value.split('+');
+        const testBase = testModifiers.pop();
+        if (testBase === baseKey && testModifiers.every((mod) => modifiers.includes(mod))) {
+          results.push(key);
+        }
       }
     }
     return results;
@@ -183,7 +194,7 @@ export class KeybindManager extends EventEmitter {
   handleKeyString(keyString, e) {
     const keybinds = this.keyStringToKeybinds(keyString);
     if (keybinds.length !== 0) {
-      this.emit('keybind', keybinds);
+      this.emit('keybind', keybinds, e);
       keybinds.forEach((keybind) => {
         this.emit(keybind, e);
       });
@@ -193,7 +204,7 @@ export class KeybindManager extends EventEmitter {
   }
   onKeyDown(e) {
     const keyString = WebUtils.getKeyString(e);
-    if (this.handleKeyString(keyString)) {
+    if (this.handleKeyString(keyString, e)) {
       e.preventDefault();
     }
   }

@@ -13,6 +13,9 @@ export class EnvUtils {
   static isChrome() {
     return navigator.userAgent.indexOf('Chrome') !== -1;
   }
+  static isFirefox() {
+    return navigator.userAgent.indexOf('Firefox') !== -1;
+  }
   static isSafari() {
     return /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
   }
@@ -22,7 +25,7 @@ export class EnvUtils {
   static getVersion() {
     // eslint-disable-next-line prefer-const
     let version = '1.0.0.web';
-version = '1.3.27';
+version = '1.3.27.1';
     return this.isExtension() ? chrome.runtime.getManifest().version : version;
   }
   static isIncognito() {

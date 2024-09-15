@@ -48,6 +48,7 @@ export class VideoSource {
     }
     this.headers = this.filterHeaders(this.headers);
     this.defaultLevelInfo = null;
+    this.loadedFromArchive = false;
   }
   /**
    * Should only be called when the source is trusted.
@@ -123,6 +124,7 @@ export class VideoSource {
     const newsource = new VideoSource(this.url, {}, this.mode);
     newsource.identifier = this.identifier;
     newsource.defaultLevelInfo = this.defaultLevelInfo;
+    newsource.loadedFromArchive = this.loadedFromArchive;
     newsource.headers = {...this.headers};
     return newsource;
   }
