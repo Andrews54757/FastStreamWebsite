@@ -5,6 +5,7 @@ import {Muxer, StreamTarget} from './mp4-muxer.mjs';
 import {MP4Demuxer, WebMDemuxer} from './demuxers.mjs';
 import {Localize} from '../Localize.mjs';
 import {AlertPolyfill} from '../../utils/AlertPolyfill.mjs';
+const KEYFRAME_INTERVAL = 10 * 1000 * 1000; // 10 seconds
 /**
  * Recode Merger
  *
@@ -121,6 +122,8 @@ export class Reencoder extends EventEmitter {
         width: decoderConfig.codedWidth,
         height: decoderConfig.codedHeight,
       };
+      console.log('Video decoder config: ', decoderConfig);
+      console.log('Video encoder config: ', encoderConfig);
       videoOutput = {
         codec: 'avc',
         width: decoderConfig.codedWidth,
@@ -134,6 +137,7 @@ export class Reencoder extends EventEmitter {
       if (!support2) {
         throw new Error('unsupported output video codec');
       }
+      this.lastVideoKeyframe = 0;
       this.videoEncoder = new VideoEncoder({
         output: (chunk, meta) => {
           this.muxer.addVideoChunk(chunk, meta);
@@ -147,7 +151,13 @@ export class Reencoder extends EventEmitter {
       this.videoEncoder.configure(encoderConfig);
       this.videoDecoder = new VideoDecoder({
         output: (frame) => {
-          this.videoEncoder.encode(frame);
+          const timestamp = frame.timestamp; // frame.timestamp is in microseconds
+          if (timestamp - this.lastVideoKeyframe > KEYFRAME_INTERVAL) {
+            this.lastVideoKeyframe = timestamp;
+            this.videoEncoder.encode(frame, {keyFrame: true});
+          } else {
+            this.videoEncoder.encode(frame);
+          }
           frame.close();
           requeue();
         },
@@ -174,6 +184,8 @@ export class Reencoder extends EventEmitter {
         sampleRate: 44100,
         numberOfChannels: decoderConfig.numberOfChannels,
       };
+      console.log('Audio decoder config: ', decoderConfig);
+      console.log('Audio encoder config: ', encoderConfig);
       audioOutput = {
         codec: 'aac',
         sampleRate: decoderConfig.sampleRate,
@@ -187,6 +199,7 @@ export class Reencoder extends EventEmitter {
       if (!support2) {
         throw new Error('unsupported output video codec');
       }
+      this.lastAudioKeyframe = 0;
       this.audioEncoder = new AudioEncoder({
         output: (chunk, meta) => {
           this.muxer.addAudioChunk(chunk, meta);
@@ -220,7 +233,14 @@ export class Reencoder extends EventEmitter {
         const data = event.data;
         if (data.type === 'resampled') {
           this.resamplerWorkerTasks--;
-          this.audioEncoder.encode(data.data);
+          const frame = data.data;
+          const timestamp = frame.timestamp; // frame.timestamp is in microseconds
+          if (timestamp - this.lastAudioKeyframe > KEYFRAME_INTERVAL) {
+            this.lastAudioKeyframe = timestamp;
+            this.audioEncoder.encode(frame, {keyFrame: true});
+          } else {
+            this.audioEncoder.encode(frame);
+          }
           requeue();
           if (this.resamplerWorkerTasks === 0 && this.resamplerWorkerPromiseResolve) {
             this.resamplerWorkerPromiseResolve();
@@ -365,7 +385,7 @@ export class Reencoder extends EventEmitter {
     }
     const answer = await AlertPolyfill.confirm(Localize.getMessage('player_savevideo_reencode'), 'warning');
     if (!answer) {
-      throw new Error('User cancelled conversion');
+      throw new Error('Cancelled');
     }
     await this.setup(videoMimeType, videoDuration, videoInitSegment, audioMimeType, audioDuration, audioInitSegment);
     let lastProgress = 0;

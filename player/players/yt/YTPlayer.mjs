@@ -32,16 +32,33 @@ export default class YTPlayer extends DashPlayer {
       return;
     }
     try {
-      const [youtube, info] = await this.getVideoInfo(identifier);
-      this.videoInfo = info;
-      this.ytclient = youtube;
-      if (this.videoInfo.playability_status?.status === 'LOGIN_REQUIRED') {
-        console.warn('Login Required, trying to fetch with TV mode');
-        this.videoInfo = await this.getVideoInfo(identifier, true);
+      let manifest;
+      try {
+        const [youtube, info] = await this.getVideoInfo(identifier, this.defaultClient);
+        this.videoInfo = info;
+        this.ytclient = youtube;
+        if (this.videoInfo.playability_status?.status === 'LOGIN_REQUIRED') {
+          console.warn('Login Required, trying to fetch with TV mode');
+          const [youtube2, info2] = await this.getVideoInfo(identifier, ClientType.TV_EMBEDDED);
+          this.videoInfo = info2;
+          this.ytclient = youtube2;
+        }
+        manifest = await this.videoInfo.toDash((url) => {
+          return url;
+        });
+      } catch (e) {
+        if (this.defaultClient === ClientType.WEB) {
+          console.warn('Failed to fetch manifest, trying with iOS client', e);
+          const [youtube3, info3] = await this.getVideoInfo(identifier, ClientType.IOS);
+          this.videoInfo = info3;
+          this.ytclient = youtube3;
+          manifest = await this.videoInfo.toDash((url) => {
+            return url;
+          });
+        } else {
+          throw e;
+        }
       }
-      const manifest = await this.videoInfo.toDash((url) => {
-        return url;
-      });
       this.oldSource = source;
       const blob = new Blob([manifest], {
         type: 'application/dash+xml',
@@ -210,9 +227,8 @@ export default class YTPlayer extends DashPlayer {
       headers: newHeaders,
     });
   }
-  async getVideoInfo(identifier, tvMode = false) {
+  async getVideoInfo(identifier, mode) {
     const cache = (await IndexedDBManager.isSupportedAndAvailable() && !EnvUtils.isIncognito()) ? new UniversalCache() : undefined;
-    const mode = tvMode ? ClientType.TV_EMBEDDED : this.defaultClient;
     const youtube = await Innertube.create({
       cache,
       fetch: (mode === ClientType.IOS) ? this.youtubeFetchIOS.bind(this) : this.youtubeFetch.bind(this),
@@ -241,8 +257,16 @@ export default class YTPlayer extends DashPlayer {
       chrome.runtime.sendMessage({
         type: MessageTypes.REQUEST_YT_DATA,
       }, (datas)=>{
+        if (!datas) {
+          return;
+        }
+        const initialResponse = Utils.findPropertyRecursive(datas, 'ytInitialPlayerResponse')[0]?.value;
+        if (!initialResponse || initialResponse.videoDetails.videoId !== this.videoInfo.basic_info.id) {
+          console.log('Video ID does not match, will not mark as watched');
+          return;
+        }
         const visitorData = Utils.findPropertyRecursive(datas, 'visitorData')[0]?.value;
-        const endpointURL = Utils.findPropertyRecursive(datas, 'videostatsPlaybackUrl')[0]?.value?.baseUrl;
+        const endpointURL = Utils.findPropertyRecursive(initialResponse, 'videostatsPlaybackUrl')[0]?.value?.baseUrl;
         if (visitorData && endpointURL) {
           this.videoInfo.addToWatchHistory({
             visitor_data: visitorData,
@@ -345,27 +369,4 @@ export default class YTPlayer extends DashPlayer {
     return super.canSave();
     // SPLICER:CENSORYT:REMOVE_END
   }
-  // SPLICER:CENSORYT:REMOVE_START
-  async saveVideo(options) {
-    try {
-      return await super.saveVideo(options);
-    } catch (e) {
-      if (e.message === 'Cancelled') {
-        throw e;
-      }
-      options.registerCancel(null); // Not cancellable
-      console.warn(e);
-      const stream = await this.videoInfo.download({
-        type: 'video+audio',
-        quality: 'best',
-        format: 'mp4',
-      });
-      const blob = await (new Response(stream)).blob();
-      return {
-        extension: 'mp4',
-        blob: blob,
-      };
-    }
-  }
-  // SPLICER:CENSORYT:REMOVE_END
 }

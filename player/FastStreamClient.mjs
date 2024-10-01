@@ -22,7 +22,6 @@ import {Utils} from './utils/Utils.mjs';
 import {DefaultToolSettings} from './options/defaults/ToolSettings.mjs';
 import {AudioAnalyzer} from './modules/analyzer/AudioAnalyzer.mjs';
 import {PreviewFrameExtractor} from './modules/analyzer/PreviewFrameExtractor.mjs';
-import {ReferenceTypes} from './enums/ReferenceTypes.mjs';
 import {PlayerModes} from './enums/PlayerModes.mjs';
 import {URLUtils} from './utils/URLUtils.mjs';
 import {YoutubeClients} from './enums/YoutubeClients.mjs';
@@ -230,7 +229,7 @@ export class FastStreamClient extends EventEmitter {
     this.options.visChangeAction = options.visChangeAction;
     this.options.miniSize = options.miniSize;
     this.options.miniPos = options.miniPos;
-    this.options.defaultYoutubeClient = options.defaultYoutubeClient4;
+    this.options.defaultYoutubeClient = options.defaultYoutubeClient5;
     this.options.maximumDownloaders = options.maximumDownloaders;
     if (sessionStorage && sessionStorage.getItem('autoplayNext') !== null) {
       this.options.autoplayNext = sessionStorage.getItem('autoplayNext') == 'true';
@@ -431,20 +430,18 @@ export class FastStreamClient extends EventEmitter {
           this.state.bufferAhead = this.options.bufferAhead;
           bufferAhead = 0;
         }
+        if (bufferAhead > 0 && Math.abs(this.state.bufferAhead - bufferAhead) > 30) {
+          this.state.bufferAhead = Math.max(bufferAhead, this.options.bufferAhead);
+        }
         const newHasDownloadSpace = (bitrate * this.duration) * (this.hasDownloadSpace ? 1 : 1.1) < storageAvailable;
         if (!newHasDownloadSpace && this.hasDownloadSpace) {
-          fragments.forEach((fragment) => {
-            if (fragment && fragment.status === DownloadStatus.DOWNLOAD_COMPLETE) {
-              fragment.addReference(ReferenceTypes.GRANDFATHERED); // Don't free already downloaded fragments
-            }
-          });
-          if (bufferAhead > 0) {
-            this.state.bufferAhead = Math.max(bufferAhead, this.options.bufferAhead);
-          }
+          // fragments.forEach((fragment) => {
+          //   if (fragment && fragment.status === DownloadStatus.DOWNLOAD_COMPLETE) {
+          //     fragment.addReference(ReferenceTypes.GRANDFATHERED); // Don't free already downloaded fragments
+          //   }
+          // });
           const timestr = StringUtils.formatDuration(this.state.bufferBehind + this.state.bufferAhead);
           this.interfaceController.setStatusMessage(StatusTypes.INFO, Localize.getMessage('player_buffer_storage_warning', [timestr]), 'warning', 5000);
-        } else if (bufferAhead > 0) {
-          this.state.bufferAhead = Math.max(Math.min(bufferAhead, this.state.bufferAhead), this.options.bufferAhead);
         }
         this.hasDownloadSpace = newHasDownloadSpace;
       } else {

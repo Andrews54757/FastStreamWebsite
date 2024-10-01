@@ -87,23 +87,19 @@ export class AudioChannelMixer extends AbstractAudioModule {
     canvas.width = width;
     canvas.height = height;
     ctx.clearRect(0, 0, width, height);
-    const minDB = -40;
-    const maxDB = 20;
-    const dbRange = maxDB - minDB;
-    const lastVolume = analyzer._lastVolume || 0;
-    const volume = Math.max((Utils.clamp(AudioUtils.getVolume(analyzer), minDB, maxDB) - minDB) / dbRange, lastVolume * 0.95);
+    const lastVolume = analyzer._lastVolume !== undefined ? analyzer._lastVolume : -Infinity;
+    const newvolume = AudioUtils.getVolume(analyzer);
+    const volume = Math.max(newvolume, lastVolume - 0.5);
     analyzer._lastVolume = volume;
-    const yScale = height;
     const rectHeight = height / 50;
-    const volHeight = volume * yScale;
-    const rectCount = Math.ceil(volHeight / rectHeight);
+    const rectCount = Math.round((1 - AudioUtils.mixerDBToPositionRatio(volume)) * 50);
     const now = Date.now();
     if (!els.peak || rectCount > els.peak) {
       els.peak = rectCount;
       els.peakTime = now;
     }
     for (let i = 0; i < rectCount; i++) {
-      const y = height - i * rectHeight;
+      const y = height - (i + 1) * rectHeight;
       ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
       ctx.fillRect(0, y, width, rectHeight);
       const color = `rgb(${Utils.clamp(i * 7, 0, 255)}, ${Utils.clamp(255 - i * 7, 0, 255)}, 0)`;
@@ -151,9 +147,10 @@ export class AudioChannelMixer extends AbstractAudioModule {
     els.container.appendChild(els.volume);
     els.volumeAxis = WebUtils.create('div', null, 'mixer_channel_volume_axis');
     els.volume.appendChild(els.volumeAxis);
-    // Volume axis goes from +10 to -60 then -inf
-    for (let i = 0; i < 6; i++) {
-      const db = 10 - i * 10;
+    // Volume axis goes from +10 to -30 then -inf
+    const dbs = [10, 5, 0, -5, -10, -20, -30];
+    for (let i = 0; i < dbs.length; i++) {
+      const db = dbs[i];
       const el = WebUtils.create('div', null, 'mixer_channel_volume_tick');
       el.style.top = `${AudioUtils.mixerDBToPositionRatio(db) * 100}%`;
       els.volumeAxis.appendChild(el);
@@ -180,9 +177,9 @@ export class AudioChannelMixer extends AbstractAudioModule {
     const els = this.createMixerElements();
     els.channelTitle.textContent = channel.isMaster() ? 'Master' : CHANNEL_NAMES[channel.id];
     if (channel.isMaster()) {
-      WebUtils.setLabels(els.volumeHandle, Localize.getMessage('audiomixer_volume_master_handle_label', [els.channelTitle.textContent, Math.round(AudioUtils.gainToDB(channel.gain))]));
+      WebUtils.setLabels(els.volumeHandle, Localize.getMessage('audiomixer_volume_master_handle_label', [els.channelTitle.textContent, Math.round(AudioUtils.gainToDB(channel.gain)), Math.round(channel.gain * 100)]));
     } else {
-      WebUtils.setLabels(els.volumeHandle, Localize.getMessage('audiomixer_volume_handle_label', [els.channelTitle.textContent, Math.round(AudioUtils.gainToDB(channel.gain))]));
+      WebUtils.setLabels(els.volumeHandle, Localize.getMessage('audiomixer_volume_handle_label', [els.channelTitle.textContent, Math.round(AudioUtils.gainToDB(channel.gain)), Math.round(channel.gain * 100)]));
     }
     els.volumeHandle.style.top = `${AudioUtils.mixerDBToPositionRatio(AudioUtils.gainToDB(channel.gain)) * 100}%`;
     if (channel.isMaster()) { // master
@@ -210,9 +207,9 @@ export class AudioChannelMixer extends AbstractAudioModule {
       channel.gain = AudioUtils.dbToGain(db);
       this.updateNodes();
       if (channel.isMaster()) {
-        WebUtils.setLabels(els.volumeHandle, Localize.getMessage('audiomixer_volume_master_handle_label', [els.channelTitle.textContent, Math.round(AudioUtils.gainToDB(channel.gain))]));
+        WebUtils.setLabels(els.volumeHandle, Localize.getMessage('audiomixer_volume_master_handle_label', [els.channelTitle.textContent, Math.round(AudioUtils.gainToDB(channel.gain)), Math.round(channel.gain * 100)]));
       } else {
-        WebUtils.setLabels(els.volumeHandle, Localize.getMessage('audiomixer_volume_handle_label', [els.channelTitle.textContent, Math.round(AudioUtils.gainToDB(channel.gain))]));
+        WebUtils.setLabels(els.volumeHandle, Localize.getMessage('audiomixer_volume_handle_label', [els.channelTitle.textContent, Math.round(AudioUtils.gainToDB(channel.gain)), Math.round(channel.gain * 100)]));
       }
     };
     const mouseUp = (e) => {

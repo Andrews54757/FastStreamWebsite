@@ -1536,6 +1536,14 @@ const TranslationMap = {
     "Mod",
     "Режим"
   ],
+  "player_source_mode_auto_error": [
+    "Please select a player mode!",
+    "¡Por favor, selecciona un modo de reproductor!",
+    "Seleziona una modalità di riproduzione!",
+    "プレーヤーモードを選択してください!",
+    "Sila pilih mod pemain!",
+    "Выберите режим проигрывателя!"
+  ],
   "player_source_url_placeholder": [
     "Source URL",
     "URL de origen",
@@ -1793,20 +1801,20 @@ const TranslationMap = {
     "Микшер аудиоканала"
   ],
   "audiomixer_volume_master_handle_label": [
-    "$1 gain is $2 dB. Use arrows to adjust. Press M to toggle mono",
-    "Ganancia de $1 es $2 dB. Usa las flechas para ajustar. Presiona M para alternar mono",
-    "Il guadagno di $1 è $2 dB. Usa le frecce per regolarlo. Premi M per attivare/disattivare il mono",
-    "$1 のゲインは $2 dB です。矢印キーで調整します。M キーでモノラルを切り替えます",
-    "$1 gain is $2 dB. Gunakan anak panah untuk menyesuaikan. Tekan M untuk mengalihkan mono",
-    "$1 усиление $2 dB. Используйте стрелки для регулировки. Нажмите M, чтобы переключить моно"
+    "$1 gain is $2 dB ($3%). Use arrows to adjust. Press M to toggle mono",
+    "Ganancia de $1 es $2 dB ($3%). Usa las flechas para ajustar. Presiona M para alternar mono",
+    "Il guadagno di $1 è $2 dB ($3%). Usa le frecce per regolarlo. Premi M per attivare/disattivare il mono",
+    "$1 のゲインは $2 dB ($3%) です。矢印キーで調整します。M キーでモノラルを切り替えます",
+    "$1 gain is $2 dB ($3%). Gunakan anak panah untuk menyesuaikan. Tekan M untuk mengalihkan mono",
+    "$1 усиление $2 dB ($3%). Используйте стрелки для регулировки. Нажмите M, чтобы переключить моно"
   ],
   "audiomixer_volume_handle_label": [
-    "$1 gain is $2 dB. Use arrows to adjust. Press M to toggle mute",
-    "Ganancia de $1 es $2 dB. Usa las flechas para ajustar. Presiona M para alternar silencio",
-    "Il guadagno di $1 è $2 dB. Usa le frecce per regolarlo. Premi M per disattivare/disattivare il muto",
-    "$1 のゲインは $2 dB です。矢印キーで調整します。M キーでミュートを切り替えます",
-    "$1 gain is $2 dB. Gunakan anak panah untuk menyesuaikan. Tekan M untuk mengalihkan bisu",
-    "$1 усиление $2 dB. Используйте стрелки для регулировки. Нажмите M, чтобы переключить отключение звука"
+    "$1 gain is $2 dB ($3%). Use arrows to adjust. Press M to toggle mute",
+    "Ganancia de $1 es $2 dB ($3%). Usa las flechas para ajustar. Presiona M para alternar silencio",
+    "Il guadagno di $1 è $2 dB ($3%). Usa le frecce per regolarlo. Premi M per disattivare/disattivare il muto",
+    "$1 のゲインは $2 dB ($3%) です。矢印キーで調整します。M キーでミュートを切り替えます",
+    "$1 gain is $2 dB ($3%). Gunakan anak panah untuk menyesuaikan. Tekan M untuk mengalihkan bisu",
+    "$1 усиление $2 dB ($3%). Используйте стрелки для регулировки. Нажмите M, чтобы переключить отключение звука"
   ],
   "audiomixer_solo_label": [
     "Solo",
@@ -1864,7 +1872,7 @@ const TranslationMap = {
     "Crosstalk Correction Disabled",
     "Коррекция перекрёстных помех отключена"
   ],
-  "audiocrosstalk_decaygain": [
+  "audiocrosstalk_decay": [
     "Decay",
     "Decaimiento",
     "Decadimento",
@@ -2016,7 +2024,7 @@ const TranslationMap = {
     "Gain: $1dB",
     "Усиление: $1dB"
   ],
-  "audioeq_qscroll": [
+  "audioeq_qscroll_instructions": [
     "Scroll to change Q",
     "Desplázate para cambiar Q",
     "Scorri per cambiare Q",
@@ -2032,7 +2040,7 @@ const TranslationMap = {
     "FastStream Options",
     "Параметры FastStream"
   ],
-  "options_promo_header": [
+  "options_reviewbanner_header": [
     "Enjoy FastStream? Leave a review!",
     "¿Te gusta FastStream? ¡Deja una reseña!",
     "Ti piace FastStream? Lascia una recensione!",
@@ -2040,7 +2048,7 @@ const TranslationMap = {
     "Enjoy FastStream? Leave a review!",
     "Понравился FastStream? Оставьте отзыв!"
   ],
-  "options_promo_body": [
+  "options_reviewbanner_body": [
     "FastStream is a hobby project maintained by volunteers. We appreciate your feedback as it helps us to know where to improve. Please feel free tell us:",
     "FastStream es un proyecto de hobby mantenido por voluntarios. Agradecemos tus comentarios ya que nos ayudan a saber dónde mejorar. Por favor, no dudes en comentarnos:",
     "FastStream è un progetto amatoriale gestito da volontari. Apprezziamo il tuo feedback perché ci aiuta a capire dove migliorare. Non esitare a dircelo:",
@@ -2048,7 +2056,7 @@ const TranslationMap = {
     "FastStream is a hobby project maintained by volunteers. We appreciate your feedback as it helps us to know where to improve. Please feel free tell us:",
     "FastStream - это хобби-проект, поддерживаемый добровольцами. Мы ценим ваши отзывы, так как они помогают понять, что можно улучшить. Не стесняйтесь, расскажите нам:"
   ],
-  "options_promo_l1": [
+  "options_reviewbanner_l1": [
     "How you use it",
     "Cómo lo usas",
     "Come lo usi",
@@ -2056,7 +2064,7 @@ const TranslationMap = {
     "How you use it",
     "Как вы используете расширение"
   ],
-  "options_promo_l2": [
+  "options_reviewbanner_l2": [
     "Any bugs you encounter",
     "Cualquier error que encuentres",
     "Eventuali bug che riscontri",
@@ -2064,7 +2072,7 @@ const TranslationMap = {
     "Any bugs you encounter",
     "О проблемах, с которыми вы столкнулись"
   ],
-  "options_promo_l3": [
+  "options_reviewbanner_l3": [
     "Feature requests",
     "Solicitudes de características",
     "Richieste di funzionalità",
@@ -2072,7 +2080,7 @@ const TranslationMap = {
     "Feature requests",
     "Запросить функцию"
   ],
-  "options_promo_end": [
+  "options_reviewbanner_end": [
     "We also take accessibility very seriously. If you need accommodations that are lacking in the current version, please make a request and we will work on it ASAP.",
     "También tomamos la accesibilidad muy en serio. Si necesitas adaptaciones que faltan en la versión actual, haz una solicitud y trabajaremos en ello lo antes posible.",
     "Prendiamo molto seriamente anche l'accessibilità. Se hai bisogno di sistemazioni che mancano nella versione attuale, invia una richiesta e ci lavoreremo il prima possibile.",
@@ -2080,7 +2088,7 @@ const TranslationMap = {
     "We also take accessibility very seriously. If you need accommodations that are lacking in the current version, please make a request and we will work on it ASAP.",
     "Также мы серьёзно относимся к удобству использования. Если вам нужны дополнительные возможности, которых нет в текущей версии, отправьте запрос, и мы поработаем над ними."
   ],
-  "options_promo_rate": [
+  "options_reviewbanner_rate": [
     "OK I'll review FastStream",
     "OK, revisaré FastStream",
     "OK, lasciero una recensione a FastStream",
@@ -2088,7 +2096,7 @@ const TranslationMap = {
     "OK I'll review FastStream",
     "Хорошо, оценю FastStream"
   ],
-  "options_promo_norate": [
+  "options_reviewbanner_norate": [
     "I don't want to review :(",
     "No quiero reseñar :(",
     "Non voglio lasciare una recensione :(",

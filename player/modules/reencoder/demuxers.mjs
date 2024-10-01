@@ -53,13 +53,23 @@ export class WebMDemuxer extends AbstractDemuxer {
     if (!videoTrack) {
       return null;
     }
-    return {
+    const config = {
       codec: this.demuxer.videoCodec,
       codedWidth: videoTrack.width,
       codedHeight: videoTrack.height,
       displayAspectWidth: videoTrack.displayWidth,
       displayAspectHeight: videoTrack.displayHeight,
     };
+    const colour = videoTrack.colour;
+    if (colour) {
+      config.colorSpace = {
+        primaries: colour.webReadyPrimaries || null,
+        transfer: colour.webReadyTransferCharacteristics || null,
+        matrix: colour.webReadyMatrixCoefficients || null,
+        fullRange: colour.range ? (colour.range === 'full') : null,
+      };
+    }
+    return config;
   }
   getAudioDecoderConfig() {
     const audioTrack = this.demuxer.audioTrack;
@@ -275,6 +285,7 @@ export class MP4Demuxer extends AbstractDemuxer {
       });
       chunks.push(lastChunk);
     }
+    return chunks;
   }
   clearChunks() {
     // clear all but the last packet

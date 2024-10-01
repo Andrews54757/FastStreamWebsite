@@ -43,7 +43,7 @@ export class AudioCrosstalk extends AbstractAudioModule {
   getCrosstalkConfigObj() {
     return {
       microdelay: this.crosstalkConfig.microdelay,
-      decaygain: AudioUtils.dbToGain(this.crosstalkConfig.decaygain / 1000),
+      decay: AudioUtils.dbToGain(this.crosstalkConfig.decay),
       colorgain: AudioUtils.dbToGain(this.crosstalkConfig.colorgain),
       highbypass: this.crosstalkConfig.highbypass,
       lowbypass: this.crosstalkConfig.lowbypass,
@@ -109,13 +109,13 @@ export class AudioCrosstalk extends AbstractAudioModule {
     const dl = l2 - l1;
     return {
       microdelay: Utils.clamp(Math.round(dl / speedOfSound * 1e6), 30, 200),
-      decaygain: Utils.clamp(Math.round(AudioUtils.gainToDB(l1 / l2) * 1000), -1000, -1),
+      decay: Utils.clamp(AudioUtils.gainToDB(l1 / l2).toFixed(3), -5, -0.01),
     };
   }
   updateSuggestions() {
-    const {microdelay, decaygain} = this.calculateCrosstalkDelayAndDecay(this.crosstalkConfig.speakerdistance, this.crosstalkConfig.headdistance);
+    const {microdelay, decay} = this.calculateCrosstalkDelayAndDecay(this.crosstalkConfig.speakerdistance, this.crosstalkConfig.headdistance);
     this.crosstalkKnobs.microdelay.setSuggestedValue(microdelay);
-    this.crosstalkKnobs.decaygain.setSuggestedValue(decaygain);
+    this.crosstalkKnobs.decay.setSuggestedValue(decay);
   }
   setupCrosstalkControls() {
     this.ui.crosstalkControls.replaceChildren();
@@ -165,12 +165,12 @@ export class AudioCrosstalk extends AbstractAudioModule {
     headDistanceInput.addEventListener('keydown', (e) => {
       e.stopPropagation();
     });
-    this.crosstalkKnobs.decaygain = createKnob(Localize.getMessage('audiocrosstalk_decaygain'), -1000, -1, (val) => {
-      if (this.crosstalkConfig && val !== this.crosstalkConfig.decaygain) {
-        this.crosstalkConfig.decaygain = val;
+    this.crosstalkKnobs.decay = createKnob(Localize.getMessage('audiocrosstalk_decay'), -5, -0.01, (val) => {
+      if (this.crosstalkConfig && val !== this.crosstalkConfig.decay) {
+        this.crosstalkConfig.decay = val;
         this.updateCrosstalk();
       }
-    }, 'mdB');
+    }, 'dB');
     this.crosstalkKnobs.colorgain = createKnob(Localize.getMessage('audiocrosstalk_colorgain'), 0, 20, (val) => {
       if (this.crosstalkConfig && val !== this.crosstalkConfig.colorgain) {
         this.crosstalkConfig.colorgain = val;
@@ -197,14 +197,14 @@ export class AudioCrosstalk extends AbstractAudioModule {
     }, 'Hz');
     this.ui.crosstalkControls.appendChild(calculatorContainer);
     this.ui.crosstalkControls.appendChild(this.crosstalkKnobs.microdelay.container);
-    this.ui.crosstalkControls.appendChild(this.crosstalkKnobs.decaygain.container);
+    this.ui.crosstalkControls.appendChild(this.crosstalkKnobs.decay.container);
     this.ui.crosstalkControls.appendChild(this.crosstalkKnobs.colorgain.container);
     this.ui.crosstalkControls.appendChild(this.crosstalkKnobs.lowbypass.container);
     this.ui.crosstalkControls.appendChild(this.crosstalkKnobs.highbypass.container);
     if (this.crosstalkConfig) {
       speakerDistanceInput.value = this.crosstalkConfig.speakerdistance + ' cm';
       headDistanceInput.value = this.crosstalkConfig.headdistance + ' cm';
-      this.crosstalkKnobs.decaygain.knob.val(this.crosstalkConfig.decaygain);
+      this.crosstalkKnobs.decay.knob.val(this.crosstalkConfig.decay);
       this.crosstalkKnobs.colorgain.knob.val(this.crosstalkConfig.colorgain);
       this.crosstalkKnobs.microdelay.knob.val(this.crosstalkConfig.microdelay);
       this.crosstalkKnobs.lowbypass.knob.val(this.crosstalkConfig.lowbypass);

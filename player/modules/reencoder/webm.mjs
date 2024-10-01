@@ -25,6 +25,374 @@ class Track {
     }
   }
 }
+class MasteringData {
+  constructor(masteringDataHeader, dataInterface) {
+    this.dataInterface = dataInterface;
+    this.offset = masteringDataHeader.offset;
+    this.size = masteringDataHeader.size;
+    this.end = masteringDataHeader.end;
+  }
+  load() {
+    while (this.dataInterface.offset < this.end) {
+      if (!this.currentElement) {
+        this.currentElement = this.dataInterface.peekElement();
+        if (this.currentElement === null) return null;
+      }
+      switch (this.currentElement.id) {
+        case 0x55D1: { // PrimaryRChromaticityX, f
+          const primaryRChromaticityX = this.dataInterface.readFloat(this.currentElement.size);
+          if (primaryRChromaticityX !== null) {
+            this.primaryRChromaticityX = primaryRChromaticityX;
+          } else {
+            return null;
+          }
+          break;
+        }
+        case 0x55D2: { // PrimaryRChromaticityY, f
+          const primaryRChromaticityY = this.dataInterface.readFloat(this.currentElement.size);
+          if (primaryRChromaticityY !== null) {
+            this.primaryRChromaticityY = primaryRChromaticityY;
+          } else {
+            return null;
+          }
+          break;
+        }
+        case 0x55D3: { // PrimaryGChromaticityX, f
+          const primaryGChromaticityX = this.dataInterface.readFloat(this.currentElement.size);
+          if (primaryGChromaticityX !== null) {
+            this.primaryGChromaticityX = primaryGChromaticityX;
+          } else {
+            return null;
+          }
+          break;
+        }
+        case 0x55D4: { // PrimaryGChromaticityY, f
+          const primaryGChromaticityY = this.dataInterface.readFloat(this.currentElement.size);
+          if (primaryGChromaticityY !== null) {
+            this.primaryGChromaticityY = primaryGChromaticityY;
+          } else {
+            return null;
+          }
+          break;
+        }
+        case 0x55D5: { // PrimaryBChromaticityX, f
+          const primaryBChromaticityX = this.dataInterface.readFloat(this.currentElement.size);
+          if (primaryBChromaticityX !== null) {
+            this.primaryBChromaticityX = primaryBChromaticityX;
+          } else {
+            return null;
+          }
+          break;
+        }
+        case 0x55D6: { // PrimaryBChromaticityY, f
+          const primaryBChromaticityY = this.dataInterface.readFloat(this.currentElement.size);
+          if (primaryBChromaticityY !== null) {
+            this.primaryBChromaticityY = primaryBChromaticityY;
+          } else {
+            return null;
+          }
+          break;
+        }
+        case 0x55D7: { // WhitePointChromaticityX, f
+          const whitePointChromaticityX = this.dataInterface.readFloat(this.currentElement.size);
+          if (whitePointChromaticityX !== null) {
+            this.whitePointChromaticityX = whitePointChromaticityX;
+          } else {
+            return null;
+          }
+          break;
+        }
+        case 0x55D8: { // WhitePointChromaticityY, f
+          const whitePointChromaticityY = this.dataInterface.readFloat(this.currentElement.size);
+          if (whitePointChromaticityY !== null) {
+            this.whitePointChromaticityY = whitePointChromaticityY;
+          } else {
+            return null;
+          }
+          break;
+        }
+        case 0x55D9: { // LuminanceMax, f
+          const luminanceMax = this.dataInterface.readFloat(this.currentElement.size);
+          if (luminanceMax !== null) {
+            this.luminanceMax = luminanceMax;
+          } else {
+            return null;
+          }
+          break;
+        }
+        case 0x55DA: { // LuminanceMin, f
+          const luminanceMin = this.dataInterface.readFloat(this.currentElement.size);
+          if (luminanceMin !== null) {
+            this.luminanceMin = luminanceMin;
+          } else {
+            return null;
+          }
+          break;
+        }
+        default:
+          console.warn(`MasteringData element not found, skipping: ${this.currentElement.id.toString(16)}`);
+          break;
+      }
+    }
+  }
+}
+class Colour {
+  constructor(colourHeader, dataInterface) {
+    this.dataInterface = dataInterface;
+    this.offset = colourHeader.offset;
+    this.size = colourHeader.size;
+    this.end = colourHeader.end;
+  }
+  load() {
+    while (this.dataInterface.offset < this.end) {
+      if (!this.currentElement) {
+        this.currentElement = this.dataInterface.peekElement();
+        if (this.currentElement === null) return null;
+      }
+      switch (this.currentElement.id) {
+        case 0x55B1: { // MatrixCoefficients, u
+          const matrixCoefficients = this.dataInterface.readUnsignedInt(this.currentElement.size);
+          if (matrixCoefficients !== null) {
+            const map = [
+              'Identity', // Web ready as identity
+              'ITU-R BT.709', // Web ready as bt709
+              'unspecified',
+              'reserved',
+              'US FCC 73.682',
+              'ITU-R BT.470BG', // Web ready as bt470bg
+              'SMPTE 170M', // Web ready as smpte170m
+              'SMPTE 240M',
+              'YCoCg',
+              'BT2020 Non-constant Luminance', // Web ready as bt2020-ncl
+              'BT2020 Constant Luminance',
+              'SMPTE ST 2085',
+              'Chroma-derived Non-constant Luminance',
+              'Chroma-derived Constant Luminance',
+              'ITU-R BT.2100-0'
+            ];
+            const webReady = {
+              'Identity': 'identity',
+              'ITU-R BT.709': 'bt709',
+              'ITU-R BT.470BG': 'bt470bg',
+              'SMPTE 170M': 'smpte170m',
+              'BT2020 Non-constant Luminance': 'bt2020-ncl',
+            }
+            this.matrixCoefficientsNumber = matrixCoefficients;
+            this.matrixCoefficients = map[matrixCoefficients];
+            if (!this.matrixCoefficients) {
+              console.warn('Matrix Coefficients not found', matrixCoefficients);
+            } else {
+              this.webReadyMatrixCoefficients = webReady[this.matrixCoefficients];
+              if (!this.webReadyMatrixCoefficients) {
+                console.warn('Web ready Matrix Coefficients not found', this.matrixCoefficients);
+              }
+            }
+          } else {
+            return null;
+          }
+          break;
+        }
+        case 0x55B2: { // BitsPerChannel, u
+          const bitsPerChannel = this.dataInterface.readUnsignedInt(this.currentElement.size);
+          if (bitsPerChannel !== null) {
+            this.bitsPerChannel = bitsPerChannel;
+          } else {
+            return null;
+          }
+          break;
+        }
+        case 0x55B3: { // ChromaSubsamplingHorz, u
+          const chromaSubsamplingHorz = this.dataInterface.readUnsignedInt(this.currentElement.size);
+          if (chromaSubsamplingHorz !== null) {
+            this.chromaSubsamplingHorz = chromaSubsamplingHorz;
+          } else {
+            return null;
+          }
+          break;
+        }
+        case 0x55B4: { // ChromaSubsamplingVert, u
+          const chromaSubsamplingVert = this.dataInterface.readUnsignedInt(this.currentElement.size);
+          if (chromaSubsamplingVert !== null) {
+            this.chromaSubsamplingVert = chromaSubsamplingVert;
+          } else {
+            return null;
+          }
+          break;
+        }
+        case 0x55B5: { // CbSubsamplingHorz, u
+          const cbSubsamplingHorz = this.dataInterface.readUnsignedInt(this.currentElement.size);
+          if (cbSubsamplingHorz !== null) {
+            this.cbSubsamplingHorz = cbSubsamplingHorz;
+          } else {
+            return null;
+          }
+          break;
+        }
+        case 0x55B6: { // CbSubsamplingVert, u
+          const cbSubsamplingVert = this.dataInterface.readUnsignedInt(this.currentElement.size);
+          if (cbSubsamplingVert !== null) {
+            this.cbSubsamplingVert = cbSubsamplingVert;
+          } else {
+            return null;
+          }
+          break;
+        }
+        case 0x55B7: { // ChromaSitingHorz, u
+          const chromaSitingHorz = this.dataInterface.readUnsignedInt(this.currentElement.size);
+          if (chromaSitingHorz !== null) {
+            this.chromaSitingHorz = chromaSitingHorz;
+          } else {
+            return null;
+          }
+          break;
+        }
+        case 0x55B8: { // ChromaSitingVert, u
+          const chromaSitingVert = this.dataInterface.readUnsignedInt(this.currentElement.size);
+          if (chromaSitingVert !== null) {
+            this.chromaSitingVert = chromaSitingVert;
+          } else {
+            return null;
+          }
+          break;
+        }
+        case 0x55B9: { // Range, u
+          const range = this.dataInterface.readUnsignedInt(this.currentElement.size);
+          if (range !== null) {
+            const map = [
+              'unspecified', // 0
+              'broadcast', // 1
+              'full',
+              'defined'
+            ];
+            this.range = map[range];
+          } else {
+            return null;
+          }
+          break;
+        }
+        case 0x55BA: { // TransferCharacteristics, u
+          const transferCharacteristics = this.dataInterface.readUnsignedInt(this.currentElement.size);
+          if (transferCharacteristics !== null) {
+            const map = [
+              'reserved', // 0
+              'ITU-R BT.709', // 1: Web ready as bt709
+              'unspecified', // 2
+              'reserved2', // 3
+              'Gamma 2.2 curve - BT.470M', // 4
+              'Gamma 2.8 curve - BT.470BG', // 5
+              'SMPTE 170M', // 6: Web ready as smpte170m
+              'SMPTE 240M', // 7
+              'Linear', // 8: Web ready as linear
+              'Log', // 9
+              'Log Sqrt', // 10
+              'IEC 61966-2-4', // 11
+              'ITU-R BT.1361 Extended Colour Gamut', // 12
+              'IEC 61966-2-1', // 13: Web ready as iec61966-2-1
+              'ITU-R BT.2020 10 bit', // 14
+              'ITU-R BT.2020 12 bit', // 15
+              'ITU-R BT.2100 Perceptual Quantization', // 16: Web ready as pq
+              'SMPTE ST 428-1', // 17
+              'ARIB STD-B67 (HLG)' // 18: Web ready as hlg
+            ];
+            const webReady = {
+              'ITU-R BT.709': 'bt709',
+              'SMPTE 170M': 'smpte170m',
+              'Linear': 'linear',
+              'IEC 61966-2-1': 'iec61966-2-1',
+              'ITU-R BT.2100 Perceptual Quantization': 'pq',
+              'ARIB STD-B67 (HLG)': 'hlg'
+            }
+            this.transferCharacteristicsNumber = transferCharacteristics;
+            this.transferCharacteristics = map[transferCharacteristics];
+            if (!this.transferCharacteristics) {
+              console.warn('Transfer Characteristics not found', transferCharacteristics);
+            } else {
+              this.webReadyTransferCharacteristics = webReady[this.transferCharacteristics];
+              if (!this.webReadyTransferCharacteristics) {
+                console.warn('Web ready Transfer Characteristics not found', this.transferCharacteristics);
+              }
+            }
+          } else {
+            return null;
+          }
+          break;
+        }
+        case 0x55BB: { // Primaries, u
+          const primaries = this.dataInterface.readUnsignedInt(this.currentElement.size);
+          if (primaries !== null) {
+            const map = [
+              'reserved', // 0
+              'ITU-R BT.709', // 1: Web ready as bt709
+              'unspecified', // 2
+              'reserved2', // 3
+              'ITU-R BT.470M', // 4
+              'ITU-R BT.470BG - BT.601 625', // 5: Web ready as bt470bg
+              'ITU-R BT.601 525 - SMPTE 170M', // 6: Web ready as smpte170m
+              'SMPTE 240M', // 7
+              'FILM', // 8
+              "ITU-R BT.2020", // 9: Web ready as bt2020
+              'SMTPE ST 428-1', // 10
+              'SMPTE RP 432-2', // 11
+              'SMPTE EG 432-2' // 12: Web ready as smpte432
+            ];
+            this.primariesNumber = primaries;
+            if (primaries === 22) {
+              this.primaries = 'EBU Tech. 3213-E - JEDEC P22 phosphors';
+            } else {
+              this.primaries = map[primaries];
+            }
+            const webReady = {
+              'ITU-R BT.709': 'bt709',
+              'ITU-R BT.470BG - BT.601 625': 'bt470bg',
+              'ITU-R BT.601 525 - SMPTE 170M': 'smpte170m',
+              'ITU-R BT.2020': 'bt2020',
+              'SMPTE RP 432-2': 'smpte432'
+            }
+            if (!this.primaries) {
+              console.warn('Primaries not found', primaries);
+            } else {
+              this.webReadyPrimaries = webReady[this.primaries];
+              if (!this.webReadyPrimaries) {
+                console.warn('Web ready primaries not found', this.primaries);
+              }
+            }
+          } else {
+            return null;
+          }
+          break;
+        }
+        case 0x55BC: { // MaxCLL, u
+          const maxCLL = this.dataInterface.readUnsignedInt(this.currentElement.size);
+          if (maxCLL !== null) {
+            this.maxCLL = maxCLL;
+          } else {
+            return null;
+          }
+          break;
+        }
+        case 0x55BD: { // MaxFALL, u
+          const maxFALL = this.dataInterface.readUnsignedInt(this.currentElement.size);
+          if (maxFALL !== null) {
+            this.maxFALL = maxFALL;
+          } else {
+            return null;
+          }
+          break;
+        }
+        case 0x55D0: { // MasteringMetadata
+          const masteringMetadata = new MasteringData(this.currentElement, this.dataInterface);
+          masteringMetadata.load();
+          this.masteringMetadata = masteringMetadata;
+          break;
+        }
+        default:
+          console.warn(`Info element not found, skipping: ${this.currentElement.id.toString(16)}`);
+          break;
+      }
+      this.currentElement = null;
+    }
+  }
+}
 class VideoTrack extends Track {
   constructor(trackHeader, dataInterface) {
     super();
@@ -52,7 +420,7 @@ class VideoTrack extends Track {
         if (this.currentElement === null) return null;
       }
       switch (this.currentElement.id) {
-        // TODO add color
+        // TODO add colour
         case 0xB0: { // Pixel width
           const width = this.dataInterface.readUnsignedInt(this.currentElement.size);
           if (width !== null) {
@@ -125,8 +493,10 @@ class VideoTrack extends Track {
           }
           break;
         }
-        case 0x55B0: { // Color
-          const colours = this.dataInterface.readUnsignedInt(this.currentElement.size);
+        case 0x55B0: { // colour
+          const colour = new Colour(this.currentElement, this.dataInterface);
+          colour.load();
+          this.colour = colour;
           break;
         }
         default:
@@ -309,12 +679,12 @@ class Cluster {
         case 0xA3: // Simple Block
           if (!this.tempBlock.status) {
             this.tempBlock.init(
-                this.tempElementHeader.offset,
-                this.tempElementHeader.size,
-                this.tempElementHeader.end,
-                this.tempElementHeader.dataOffset,
-                this.dataInterface,
-                this,
+              this.tempElementHeader.offset,
+              this.tempElementHeader.size,
+              this.tempElementHeader.end,
+              this.tempElementHeader.dataOffset,
+              this.dataInterface,
+              this,
             );
           }
           this.tempBlock.load();
@@ -368,7 +738,7 @@ class Cluster {
             return null;
           }
           break;
-          // TODO, ADD VOID
+        // TODO, ADD VOID
         default:
           console.warn('cluster data element not found, skipping : ' + this.tempElementHeader.id.toString(16));
           // This means we probably are out of the cluster now, double check bounds when end not available
@@ -483,7 +853,7 @@ class Cues {
             return null;
           }
           break;
-          // TODO, ADD VOID
+        // TODO, ADD VOID
         default:
           console.warn('Cue Head element not found ' + this.currentElement.id.toString(16)); // probably bad
           break;
@@ -580,10 +950,10 @@ class DataInterface {
     this.seekTarget;
     this.dateParser = new DateParser();
     Object.defineProperty(this, 'offset', {
-      get: function() {
+      get: function () {
         return this.overallPointer;
       },
-      set: function(offset) {
+      set: function (offset) {
         this.overallPointer = offset;
       },
     });
@@ -605,7 +975,7 @@ class DataInterface {
          * Returns the bytes left in the current buffer
          */
     Object.defineProperty(this, 'remainingBytes', {
-      get: function() {
+      get: function () {
         if (!this.currentBuffer) {
           return 0;
         } else {
@@ -1303,7 +1673,7 @@ export class JsWebm {
     this.audioTrack = null;
     this.processing = false;
     Object.defineProperty(this, 'duration', {
-      get: function() {
+      get: function () {
         if (this.segmentInfo.duration < 0) {
           return -1;
         }
@@ -1311,7 +1681,7 @@ export class JsWebm {
       },
     });
     Object.defineProperty(this, 'keyframeTimestamp', {
-      get: function() {
+      get: function () {
         if (this.videoPackets.length > 0) {
           return this.videoPackets[0].keyframeTimestamp;
         } else {
@@ -1369,15 +1739,15 @@ export class JsWebm {
     switch (codecID) {
       case 'V_VP8':
         this.videoCodec = 'vp8';
+        this.initVp8Headers(tempTrack);
         break;
       case 'V_VP9':
-        this.videoCodec = 'vp9';
+        this.initVp9Headers(tempTrack);
         break;
       default:
         this.videoCodec = null;
         break;
     }
-    this.videoTrack = tempTrack;
     const fps = 0; // For now?
     this.videoFormat = {
       width: tempTrack.width,
@@ -1429,6 +1799,74 @@ export class JsWebm {
   initAacHeaders(trackEntry) {
     this.audioTrack = trackEntry;
   }
+  initVp8Headers(trackEntry) {
+    this.videoTrack = trackEntry;
+  }
+  initVp9Headers(trackEntry) {
+    this.videoTrack = trackEntry;
+    let profile = 0; // 0 for default
+    let level = 10; // 10 for default level 1
+    let bitDepth = 8; // 8 for default
+    let chromaSubsampling = 1; // 1 for default
+    let colourPrimaries = 1; // 1 for default
+    let transferCharacteristics = 1; // 1 for default
+    let matrixCoefficients = 1; // 1 for default
+    let videoFullRangeFlag = 0; // 0 for default
+    if (trackEntry.codecPrivate) {
+      const headerParser = new DataView(trackEntry.codecPrivate);
+      let currentByte = 0;
+      while (currentByte < headerParser.byteLength) {
+        const id = headerParser.getUint8(currentByte++);
+        const length = headerParser.getUint8(currentByte++);
+        if (length !== 1) {
+          console.warn('Invalid vp9 header len', length);
+          continue;
+        }
+        const value = headerParser.getUint8(currentByte++);
+        switch (id) {
+          case 0x01:
+            profile = value;
+            break;
+          case 0x02:
+            level = value;
+            break;
+          case 0x03:
+            bitDepth = value;
+            break;
+          case 0x04:
+            chromaSubsampling = value;
+            break;
+          default:
+            console.warn('Unknown vp9 header id', id);
+            break;
+        }
+      }
+    }
+    const colour = trackEntry.colour;
+    if (colour) {
+      if (colour.primaries) {
+        colourPrimaries = colour.primariesNumber;
+      }
+      if (colour.transferCharacteristics) {
+        transferCharacteristics = colour.transferCharacteristicsNumber;
+      }
+      if (colour.matrixCoefficients) {
+        matrixCoefficients = colour.matrixCoefficientsNumber;
+      }
+      if (colour.range) {
+        videoFullRangeFlag = colour.range === 'full' ? 1 : 0;
+      }
+    }
+    profile = profile.toString().padStart(2, '0');
+    level = level.toString().padStart(2, '0');
+    bitDepth = bitDepth.toString().padStart(2, '0');
+    chromaSubsampling = chromaSubsampling.toString().padStart(2, '0');
+    colourPrimaries = colourPrimaries.toString().padStart(2, '0');
+    transferCharacteristics = transferCharacteristics.toString().padStart(2, '0');
+    matrixCoefficients = matrixCoefficients.toString().padStart(2, '0');
+    videoFullRangeFlag = videoFullRangeFlag.toString().padStart(2, '0');
+    this.videoCodec = `vp09.${profile}.${level}.${bitDepth}.${chromaSubsampling}.${colourPrimaries}.${transferCharacteristics}.${matrixCoefficients}.${videoFullRangeFlag}`;
+  }
   /**
        * This function ques up more data to the internal buffer
        * @param {arraybuffer} data
@@ -1455,7 +1893,7 @@ export class JsWebm {
         break;
       default:
         console.warn('INVALID STATE');
-          // fill this out
+      // fill this out
     }
     return lastPointer < this.dataInterface.overallPointer;
   }
@@ -1532,12 +1970,12 @@ export class JsWebm {
           }
           if (!this.currentCluster) {
             this.currentCluster = new Cluster(
-                this.tempElementHeader.offset,
-                this.tempElementHeader.size,
-                this.tempElementHeader.end,
-                this.tempElementHeader.dataOffset,
-                this.dataInterface,
-                this,
+              this.tempElementHeader.offset,
+              this.tempElementHeader.size,
+              this.tempElementHeader.end,
+              this.tempElementHeader.dataOffset,
+              this.dataInterface,
+              this,
             );
           }
           status = this.currentCluster.load();
@@ -1881,7 +2319,7 @@ class SeekHead {
             return null;
           }
           break;
-          // TODO, ADD VOID
+        // TODO, ADD VOID
         default:
           console.warn('Seek head element not found, skipping : ' + this.currentElement.id.toString(16));
           break;
