@@ -1,6 +1,7 @@
 import {DefaultKeybinds, KeybindsWithModifiers} from '../options/defaults/DefaultKeybinds.mjs';
 import {EventEmitter} from '../modules/eventemitter.mjs';
 import {WebUtils} from '../utils/WebUtils.mjs';
+import {DOMElements} from './DOMElements.mjs';
 export class KeybindManager extends EventEmitter {
   constructor(client) {
     super();
@@ -14,7 +15,7 @@ export class KeybindManager extends EventEmitter {
         this.keybindMap.set(keybind, DefaultKeybinds[keybind]);
       }
     }
-    document.addEventListener('keydown', (e) => {
+    DOMElements.playerContainer.addEventListener('keydown', (e) => {
       this.onKeyDown(e);
     });
     this.on('HidePlayer', (e) => {
@@ -161,6 +162,13 @@ export class KeybindManager extends EventEmitter {
     });
     this.on('ToggleVisualFilters', (e) => {
       this.client.interfaceController.toggleVisualFilters();
+    });
+    this.on('PauseDownloaders', (e) => {
+      if (!this.client.downloadManager.paused) {
+        this.client.downloadManager.pause();
+      } else {
+        this.client.downloadManager.resume();
+      }
     });
     this.on('keybind', (keybind, e) => {
       // console.log("Keybind", keybind);

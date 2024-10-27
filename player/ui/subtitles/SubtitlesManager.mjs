@@ -179,7 +179,7 @@ export class SubtitlesManager extends EventEmitter {
       };
       reader.readAsText(file);
     });
-    document.body.appendChild(filechooser);
+    DOMElements.playerContainer.appendChild(filechooser);
     const filebutton = document.createElement('div');
     filebutton.classList.add('subtitle-menu-option');
     WebUtils.setupTabIndex(filebutton);
@@ -422,8 +422,8 @@ export class SubtitlesManager extends EventEmitter {
     wrapper.style.marginBottom = '5px';
     let yStart = 0;
     const mouseup = (e) => {
-      document.removeEventListener('mousemove', mousemove);
-      document.removeEventListener('mouseup', mouseup);
+      DOMElements.playerContainer.removeEventListener('mousemove', mousemove);
+      DOMElements.playerContainer.removeEventListener('mouseup', mouseup);
       e.stopPropagation();
     };
     const mousemove = (e) => {
@@ -451,8 +451,8 @@ export class SubtitlesManager extends EventEmitter {
     };
     wrapper.addEventListener('mousedown', (e) => {
       yStart = e.clientY;
-      document.addEventListener('mousemove', mousemove);
-      document.addEventListener('mouseup', mouseup);
+      DOMElements.playerContainer.addEventListener('mousemove', mousemove);
+      DOMElements.playerContainer.addEventListener('mouseup', mouseup);
       e.stopPropagation();
     });
     return {
@@ -512,6 +512,7 @@ export class SubtitlesManager extends EventEmitter {
     }
     // Update elements
     const currentTime = this.client.state.currentTime;
+    let subtitlesVisible = 0;
     for (let i = 0; i < tracks.length; i++) {
       const trackContainer = cachedElements[i];
       // trackContainer.replaceChildren();
@@ -547,6 +548,7 @@ export class SubtitlesManager extends EventEmitter {
       } else {
         trackContainer.style.opacity = '';
         WebUtils.replaceChildrenPerformant(trackContainer, toAdd);
+        subtitlesVisible++;
       }
     }
     if (this.isTestSubtitleActive) {
@@ -558,6 +560,12 @@ export class SubtitlesManager extends EventEmitter {
         this.testCue = cue;
       }
       WebUtils.replaceChildrenPerformant(trackContainer, [this.testCue]);
+      subtitlesVisible++;
+    }
+    if (subtitlesVisible) {
+      DOMElements.subtitlesContainer.style.display = '';
+    } else {
+      DOMElements.subtitlesContainer.style.display = 'none';
     }
     this.checkTrackBounds();
   }

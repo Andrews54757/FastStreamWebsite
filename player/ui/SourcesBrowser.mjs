@@ -114,11 +114,11 @@ export class SourcesBrowser {
       }
       const input = document.createElement('input');
       input.value = copyURL;
-      document.body.appendChild(input);
+      DOMElements.playerContainer.appendChild(input);
       input.focus();
       input.select();
       document.execCommand('copy');
-      document.body.removeChild(input);
+      DOMElements.playerContainer.removeChild(input);
       sourceCopyBtn.textContent = Localize.getMessage('player_source_copybtn_copied');
       setTimeout(() => {
         sourceCopyBtn.textContent = Localize.getMessage('player_source_copybtn');

@@ -414,7 +414,7 @@ const TranslationMap = {
     "Interagisci per abilitare l'accelerazione dei download",
     "ダウンロードの高速化を有効にするには、動画を再生してください",
     "Berinteraksi untuk mendayakan pecutan muat turun",
-    "Взаимодействуйте, чтобы включить ускорение загрузки"
+    "Воспроизведите видео для ускорения загрузки"
   ],
   "player_skipintro": [
     "Skip Intro",
@@ -526,7 +526,7 @@ const TranslationMap = {
     "Il volume è al $1%. Usa i tasti freccia per regolarlo, Invio per attivare/disattivare l'audio.",
     "音量は $1% です。矢印キーで調整、ミュートを切り替えるにはエンターキーを使用します。",
     "Kelantangan $1%. Gunakan anak panah untuk menyesuaikan, enter untuk menogol audio.",
-    "Громкость $1%. Используйте стрелки для регулировки, Enter для отключения звука."
+    "Громкость $1%. Клавиши со стрелками - регулировка, Enter - отключение звука."
   ],
   "player_mute_label": [
     "Mute audio",
@@ -1086,7 +1086,7 @@ const TranslationMap = {
     "Autorizzazioni per lo schermo intero negate!",
     "フルスクリーンの許可が拒否されました!",
     "Kebenaran skrin penuh ditolak!",
-    "Отказано в разрешении на полноэкранный режим!"
+    "Полноэкранный режим запрещён!"
   ],
   "player_windowed_fullscreen_label": [
     "Toggle windowed fullscreen",
@@ -1199,6 +1199,14 @@ const TranslationMap = {
     "GIFの保存が完了しました!",
     "Selesai menyimpan GIF!",
     "Сохранение GIF завершено!"
+  ],
+  "player_download_paused": [
+    "Download paused",
+    "Descarga pausada",
+    "Download in pausa",
+    "ダウンロードが一時停止されました",
+    "Muat turun ditangguhkan",
+    "Загрузка приостановлена"
   ],
   "player_fragment_failed_singular": [
     "$1 Fragment Failed! Click to retry.",
@@ -1334,7 +1342,7 @@ const TranslationMap = {
     "Il salvataggio richiederà una nuova codifica. Potrebbe richiedere molto tempo. Vuoi procedere?",
     "保存には再エンコードが必要です。これには時間がかかる場合があります。続行しますか?",
     "Menyimpan akan memerlukan penyulitan semula. Ini mungkin mengambil masa yang lama. Adakah anda mahu meneruskan?",
-    "Сохранение потребует повторного кодирования. Это может занять много времени. Вы хотите продолжить?"
+    "Для сохранения требуется перекодировка. Это может занять много времени. Продолжить?"
   ],
   "player_savevideo_cancelling": [
     "Cancelling save...",
@@ -1806,7 +1814,7 @@ const TranslationMap = {
     "Il guadagno di $1 è $2 dB ($3%). Usa le frecce per regolarlo. Premi M per attivare/disattivare il mono",
     "$1 のゲインは $2 dB ($3%) です。矢印キーで調整します。M キーでモノラルを切り替えます",
     "$1 gain is $2 dB ($3%). Gunakan anak panah untuk menyesuaikan. Tekan M untuk mengalihkan mono",
-    "$1 усиление $2 dB ($3%). Используйте стрелки для регулировки. Нажмите M, чтобы переключить моно"
+    "$1 усиление $2 dB ($3%). Используйте стрелки для регулировки. Нажмите M, для переключения в моно"
   ],
   "audiomixer_volume_handle_label": [
     "$1 gain is $2 dB ($3%). Use arrows to adjust. Press M to toggle mute",
@@ -1814,7 +1822,7 @@ const TranslationMap = {
     "Il guadagno di $1 è $2 dB ($3%). Usa le frecce per regolarlo. Premi M per disattivare/disattivare il muto",
     "$1 のゲインは $2 dB ($3%) です。矢印キーで調整します。M キーでミュートを切り替えます",
     "$1 gain is $2 dB ($3%). Gunakan anak panah untuk menyesuaikan. Tekan M untuk mengalihkan bisu",
-    "$1 усиление $2 dB ($3%). Используйте стрелки для регулировки. Нажмите M, чтобы переключить отключение звука"
+    "$1 усиление $2 dB ($3%). Используйте стрелки для регулировки. Нажмите M, чтобы отключить звук"
   ],
   "audiomixer_solo_label": [
     "Solo",
@@ -2110,7 +2118,7 @@ const TranslationMap = {
     "Hai del feedback?",
     "フィードバックをお願いします!",
     "Do you have feedback?",
-    "У вас есть отзыв?"
+    "Оставьте свой отзыв!"
   ],
   "options_feedback_reason": [
     "We'd love to hear from you! Please fill out a short form. It's the only way we can improve since we don't track you.",
@@ -2118,7 +2126,7 @@ const TranslationMap = {
     "Ci piacerebbe sentire la tua opinione! Compila un breve modulo. È l'unico modo in cui possiamo migliorare, dal momento che non ti tracciamo.",
     "あなたの意見を聞かせてください! 短いフォームを記入してください。私たちはあなたを追跡していないので、改善する唯一の方法です。",
     "We'd love to hear from you! Please fill out a short form. It's the only way we can improve since we don't track you.",
-    "Мы хотели бы услышать ваше мнение! Пожалуйста, заполните короткую форму. Это единственный способ улучшить нас, поскольку мы не отслеживаем вас."
+    "Будем рады услышать ваше мнение! Пожалуйста, заполните небольшую форму. Это единственный способ стать лучше, поскольку мы не следим за вами."
   ],
   "options_feedback_yes": [
     "Yes, I have feedback",
@@ -2126,7 +2134,7 @@ const TranslationMap = {
     "Sì, ho del feedback",
     "はい、フィードバックを送信します",
     "Yes, I have feedback",
-    "Да, у меня есть отзыв"
+    "Оставить отзыв"
   ],
   "options_feedback_no": [
     "No, I'm good",
@@ -2134,7 +2142,7 @@ const TranslationMap = {
     "No, sto a posto",
     "いいえ、結構です",
     "No, I'm good",
-    "Нет, мне хорошо"
+    "Нет, спасибо"
   ],
   "options_help_feedback": [
     "Feedback Form",
@@ -2198,7 +2206,7 @@ const TranslationMap = {
     "Ritardo Video",
     "Video Delay",
     "Video Delay",
-    "Video Delay"
+    "Задержка видео"
   ],
   "options_video_brightness": [
     "Brightness",
@@ -2582,7 +2590,7 @@ const TranslationMap = {
     "Client YT da usare. Prova a cambiare se hai problemi.",
     "使用する YouTube クライアント (YouTube の問題がある場合に変更してください)",
     "YT client to use. Try changing if you have issues.",
-    "Клиент YouTube для использования. Попробуйте изменить, если у вас возникли проблемы."
+    "Используемый YouTube-клиент. Попробуйте изменить при возникновении проблемы"
   ],
   "options_export_header": [
     "Import/Export Settings",
@@ -2806,7 +2814,7 @@ const TranslationMap = {
     "Segnala questo errore agli sviluppatori su https://github.com/Andrews54757/FastStream/issues con la seguente traccia dello stack:",
     "このエラーを開発者に報告してください: https://github.com/Andrews54757/FastStream/issues 以下にスタックトレースが表示されます:",
     "Sila laporkan ralat ini kepada pembangun di https://github.com/Andrews54757/FastStream/issues dengan jejak tumpukan di bawah:",
-    "Пожалуйста, сообщите об этой ошибке разработчикам на https://github.com/Andrews54757/FastStream/issues с указанием стека вызовов ниже:"
+    "Пожалуйста, сообщите об этой ошибке разработчикам по адресу https://github.com/Andrews54757/FastStream/issues с приведённой ниже трассировкой стека:"
   ],
   "error_popup_send": [
     "Report Error",

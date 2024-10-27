@@ -41,6 +41,7 @@ export class AlertPolyfill {
       didOpen: (toast) => {
         toast.onmouseenter = SweetAlert.stopTimer;
         toast.onmouseleave = SweetAlert.resumeTimer;
+        toast.onclick = SweetAlert.close;
       },
     });
   }

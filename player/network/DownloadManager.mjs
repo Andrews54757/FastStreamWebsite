@@ -9,6 +9,7 @@ export class DownloadManager {
     this.queue = [];
     this.storage = new Map();
     this.downloaders = [];
+    this.paused = false;
     this.speedTestBuffer = [];
     this.speedTestSeen = [];
     this.speedTestCount = 0;
@@ -60,6 +61,7 @@ export class DownloadManager {
     if (this.queue.length > 0) {
       return false;
     }
+    if (this.paused) return false;
     return !this.downloaders.every((downloader) => {
       return !downloader.canHandle(details);
     });
@@ -152,6 +154,21 @@ export class DownloadManager {
     const downloader = this.downloaders.pop();
     downloader.abort();
   }
+  pause() {
+    if (this.paused) return;
+    this.paused = true;
+    this.downloaders.forEach((downloader) => {
+      downloader.abort();
+    });
+  }
+  resume() {
+    if (!this.paused) return;
+    this.paused = false;
+    this.client.predownloadFragments();
+    for (let i = 0; i < this.downloaders.length; i++) {
+      this.queueNext();
+    }
+  }
   removeAllDownloaders() {
     this.testing = false;
     this.downloaders.forEach((downloader) => {
@@ -160,6 +177,7 @@ export class DownloadManager {
     this.downloaders.length = 0;
   }
   onDownloaderFinished(downloader, entry) {
+    if (this.paused) return;
     if (navigator.onLine && entry.status === DownloadStatus.DOWNLOAD_FAILED && !entry.aborted) {
       this.lastFailed = Date.now();
       if (this.downloaders.length > 1) {
@@ -216,6 +234,7 @@ export class DownloadManager {
     this.queueNext();
   }
   queueNext() {
+    if (this.paused) return;
     if (this.queue.length === 0) return;
     if (this.queue[0].status !== DownloadStatus.ENQUEUED) {
       this.queue.shift();

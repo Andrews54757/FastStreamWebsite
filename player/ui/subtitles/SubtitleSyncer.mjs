@@ -2,6 +2,7 @@ import {Localize} from '../../modules/Localize.mjs';
 import {EventEmitter} from '../../modules/eventemitter.mjs';
 import {WebVTT} from '../../modules/vtt.mjs';
 import {WebUtils} from '../../utils/WebUtils.mjs';
+import {DOMElements} from '../DOMElements.mjs';
 export class SubtitleSyncer extends EventEmitter {
   constructor(client) {
     super();
@@ -28,10 +29,10 @@ export class SubtitleSyncer extends EventEmitter {
       isGrabbingTrack = true;
       grabStartTrack = e.clientX;
     });
-    document.addEventListener('mouseup', () => {
+    DOMElements.playerContainer.addEventListener('mouseup', () => {
       isGrabbingTrack = false;
     });
-    document.addEventListener('mousemove', (e) => {
+    DOMElements.playerContainer.addEventListener('mousemove', (e) => {
       if (!this.client.player) return;
       const video = this.client.player.getVideo();
       if (isGrabbingTrack) {

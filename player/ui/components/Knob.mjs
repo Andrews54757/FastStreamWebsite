@@ -1,6 +1,7 @@
 import {WebUtils} from '../../utils/WebUtils.mjs';
 import {Knob} from '../../modules/knob.mjs';
 import {Utils} from '../../utils/Utils.mjs';
+import {DOMElements} from '../DOMElements.mjs';
 export function createKnob(name, minValue, maxValue, callback, units = '') {
   const knobContainer = WebUtils.create('div', null, 'knob_container');
   const knobName = WebUtils.create('div', null, 'knob_name');
@@ -103,8 +104,8 @@ export function createKnob(name, minValue, maxValue, callback, units = '') {
   };
   const mouseUp = (e) => {
     knob.doTouchEnd(e.timeStamp);
-    document.removeEventListener('mousemove', mouseMove);
-    document.removeEventListener('mouseup', mouseUp);
+    DOMElements.playerContainer.removeEventListener('mousemove', mouseMove);
+    DOMElements.playerContainer.removeEventListener('mouseup', mouseUp);
   };
   container.addEventListener('mousedown', (e) =>{
     const rect = container.getBoundingClientRect();
@@ -113,8 +114,8 @@ export function createKnob(name, minValue, maxValue, callback, units = '') {
       pageX: e.pageX,
       pageY: e.pageY,
     }], e.timeStamp);
-    document.addEventListener('mousemove', mouseMove);
-    document.addEventListener('mouseup', mouseUp);
+    DOMElements.playerContainer.addEventListener('mousemove', mouseMove);
+    DOMElements.playerContainer.addEventListener('mouseup', mouseUp);
   });
   // Handle scroll
   container.addEventListener('wheel', function(e) {

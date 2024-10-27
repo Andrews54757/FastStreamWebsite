@@ -88,19 +88,19 @@ export class VolumeControls extends EventEmitter {
       shiftVolume(currentX);
     };
     const onVolumeBarMouseUp = (event) => {
-      document.removeEventListener('mousemove', onVolumeBarMouseMove);
-      document.removeEventListener('touchmove', onVolumeBarMouseMove);
-      document.removeEventListener('mouseup', onVolumeBarMouseUp);
-      document.removeEventListener('touchend', onVolumeBarMouseUp);
+      DOMElements.playerContainer.removeEventListener('mousemove', onVolumeBarMouseMove);
+      DOMElements.playerContainer.removeEventListener('touchmove', onVolumeBarMouseMove);
+      DOMElements.playerContainer.removeEventListener('mouseup', onVolumeBarMouseUp);
+      DOMElements.playerContainer.removeEventListener('touchend', onVolumeBarMouseUp);
       const currentX = event.clientX - WebUtils.getOffsetLeft(DOMElements.volumeContainer) - 10;
       if (!isNaN(currentX)) {
         shiftVolume(currentX);
       }
     };
-    document.addEventListener('mouseup', onVolumeBarMouseUp);
-    document.addEventListener('touchend', onVolumeBarMouseUp);
-    document.addEventListener('mousemove', onVolumeBarMouseMove);
-    document.addEventListener('touchmove', onVolumeBarMouseMove);
+    DOMElements.playerContainer.addEventListener('mouseup', onVolumeBarMouseUp);
+    DOMElements.playerContainer.addEventListener('touchend', onVolumeBarMouseUp);
+    DOMElements.playerContainer.addEventListener('mousemove', onVolumeBarMouseMove);
+    DOMElements.playerContainer.addEventListener('touchmove', onVolumeBarMouseMove);
     event.stopPropagation();
   }
   updateVolumeBar(volume) {

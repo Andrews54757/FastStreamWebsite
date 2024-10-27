@@ -205,6 +205,10 @@ export class InterfaceController {
     this.updateDownloadStatus();
   }
   updateDownloadStatus() {
+    if (this.client.downloadManager.paused) {
+      this.setStatusMessage('download', Localize.getMessage('player_download_paused'), 'warning');
+      return;
+    }
     const {loaded, total, failed} = this.progressBar.getFragmentCounts();
     if (total === 0) {
       this.setStatusMessage('download', null);
@@ -241,9 +245,9 @@ export class InterfaceController {
     const interactHandler = (e) => {
       this.client.userInteracted();
     };
-    document.addEventListener('keydown', interactHandler, true);
-    document.addEventListener('mousedown', interactHandler, true);
-    document.addEventListener('touchstart', interactHandler, true);
+    DOMElements.playerContainer.addEventListener('keydown', interactHandler, true);
+    DOMElements.playerContainer.addEventListener('mousedown', interactHandler, true);
+    DOMElements.playerContainer.addEventListener('touchstart', interactHandler, true);
     DOMElements.playPauseButton.addEventListener('click', this.playPauseToggle.bind(this));
     WebUtils.setupTabIndex(DOMElements.playPauseButton);
     DOMElements.playPauseButtonBigCircle.addEventListener('click', (e) => {
@@ -389,7 +393,9 @@ export class InterfaceController {
     });
     WebUtils.setupTabIndex(DOMElements.resetFailed);
     DOMElements.skipButton.addEventListener('click', this.skipSegment.bind(this));
-    DOMElements.pip.addEventListener('click', this.pipToggle.bind(this));
+    DOMElements.pip.addEventListener('click', (e) => {
+      this.pipToggle();
+    });
     WebUtils.setupTabIndex(DOMElements.pip);
     DOMElements.playerContainer.addEventListener('dragenter', (e) => {
       e.stopPropagation();
@@ -467,11 +473,11 @@ export class InterfaceController {
       }
       const input = document.createElement('input');
       input.value = copyURL;
-      document.body.appendChild(input);
+      DOMElements.playerContainer.appendChild(input);
       input.focus();
       input.select();
       document.execCommand('copy');
-      document.body.removeChild(input);
+      DOMElements.playerContainer.removeChild(input);
       this.setStatusMessage(StatusTypes.COPY, Localize.getMessage('source_copied'), 'info', 2000);
     });
     WebUtils.setupTabIndex(DOMElements.duration);
@@ -506,6 +512,7 @@ export class InterfaceController {
     o.observe(document.body);
     // eslint-disable-next-line new-cap
     Coloris({
+      parent: '.mainplayer',
       theme: 'pill',
       themeMode: 'dark',
       formatToggle: true,
@@ -521,8 +528,8 @@ export class InterfaceController {
       focusInput: false,
     });
     const mouseUpHandler = (e) => {
-      document.removeEventListener('mousemove', mouseMoveHandler);
-      document.removeEventListener('mouseup', mouseUpHandler);
+      DOMElements.playerContainer.removeEventListener('mousemove', mouseMoveHandler);
+      DOMElements.playerContainer.removeEventListener('mouseup', mouseUpHandler);
     };
     const mouseMoveHandler = (e) => {
       const currentY = Math.min(Math.max(e.clientY - WebUtils.getOffsetTop(DOMElements.progressContainer), -100), 100);
@@ -542,8 +549,8 @@ export class InterfaceController {
       if (DOMElements.leftToolsContainer.contains(e.target)) {
         return;
       }
-      document.addEventListener('mousemove', mouseMoveHandler);
-      document.addEventListener('mouseup', mouseUpHandler);
+      DOMElements.playerContainer.addEventListener('mousemove', mouseMoveHandler);
+      DOMElements.playerContainer.addEventListener('mouseup', mouseUpHandler);
     });
   }
   toggleAutoplayNext() {
@@ -564,7 +571,7 @@ export class InterfaceController {
     if (isVisible === this.lastPageVisibility) {
       return;
     }
-    if (!isVisible && this.state.fullscreen || this.state.pip) {
+    if (!isVisible && (this.state.fullscreen || this.isInPip())) {
       return;
     }
     switch (action) {
@@ -654,19 +661,62 @@ export class InterfaceController {
       this.client.player?.pause();
     }
   }
-  async documentPipToggle(force) {
-    if (force !== undefined && !!force == !!window.documentPictureInPicture.window) {
+  pipToggle(force) {
+    if (force !== undefined && !!force == this.isInPip()) {
       return;
     }
-    if (window.documentPictureInPicture.window) {
+    if (this.isInPip()) {
+      return this.exitPip();
+    } else {
+      return this.enterPip();
+    }
+  }
+  isInPip() {
+    return !!document.pictureInPictureElement || !!window.documentPictureInPicture?.window || this.state.documentPip;
+  }
+  shouldDoDocumentPip() {
+    // Check if in pip
+    if (this.state.documentPip) {
+      return true;
+    }
+    if (!window.documentPictureInPicture) {
+      return false;
+    }
+    // Check if top level frame
+    if (window !== window.top) {
+      return false;
+    }
+    return true;
+  }
+  exitPip() {
+    if (window.documentPictureInPicture?.window) {
       window.documentPictureInPicture.window.close();
-      return;
+    } else if (this.state.documentPip) {
+      window.close();
     }
+    if (document.pictureInPictureElement) {
+      return document.exitPictureInPicture();
+    }
+    return Promise.resolve();
+  }
+  enterPip() {
+    if (this.shouldDoDocumentPip()) {
+      return this.enterDocumentPip();
+    }
+    if (!document.pictureInPictureElement && this.client.player) {
+      return this.client.player.getVideo().requestPictureInPicture();
+    }
+    return Promise.resolve();
+  }
+  async enterDocumentPip() {
     const pipWindow = await documentPictureInPicture.requestWindow({
       width: DOMElements.playerContainer.clientWidth,
       height: DOMElements.playerContainer.clientHeight,
     });
-    pipWindow.document.body.appendChild(DOMElements.playerContainer);
+    // Copy all except script tags from the current document to the new window
+    const children = [...document.body.children].filter((child) => child.tagName.toLowerCase() !== 'script');
+    pipWindow.document.body.append(...children);
+    this.state.documentPip = true;
     // Copy style sheets over from the initial document
     // so that the player looks the same.
     [...document.styleSheets].forEach((styleSheet) => {
@@ -687,30 +737,9 @@ export class InterfaceController {
       }
     });
     pipWindow.addEventListener('pagehide', (event) => {
-      document.body.appendChild(DOMElements.playerContainer);
+      this.state.documentPip = false;
+      document.body.append(...pipWindow.document.body.children);
     });
-  }
-  pipToggle(force) {
-    if (force !== undefined && !!force == !!document.pictureInPictureElement) {
-      return;
-    }
-    if (document.pictureInPictureElement) {
-      return this.exitPip();
-    } else {
-      return this.enterPip();
-    }
-  }
-  exitPip() {
-    if (document.pictureInPictureElement) {
-      return document.exitPictureInPicture();
-    }
-    return Promise.resolve();
-  }
-  enterPip() {
-    if (!document.pictureInPictureElement && this.client.player) {
-      return this.client.player.getVideo().requestPictureInPicture();
-    }
-    return Promise.resolve();
   }
   destroy() {
     this.saveManager.destroy();
@@ -841,9 +870,10 @@ export class InterfaceController {
   }
   async fullscreenToggle(force) {
     if (document.fullscreenEnabled) {
-      const newValue = force === undefined ? document.fullscreenElement !== document.documentElement : force;
+      const newValue = force === undefined ? !document.fullscreenElement : force;
       if (newValue) {
         await document.documentElement.requestFullscreen();
+        DOMElements.playerContainer.focus();
       } else if (document.exitFullscreen && document.fullscreenElement) {
         document.exitFullscreen();
       }
