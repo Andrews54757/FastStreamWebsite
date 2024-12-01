@@ -36,6 +36,7 @@ export class SourcesBrowser {
     sourceURL.ariaLabel = sourceURL.placeholder;
     sourceURL.addEventListener('input', (e) => {
       source.url = sourceURL.value;
+      source.identifier = source.url.split(/[?#]/)[0];
       this.updateSources();
     });
     sourceContainer.appendChild(sourceURL);
@@ -49,6 +50,7 @@ export class SourcesBrowser {
     modes[PlayerModes.ACCELERATED_DASH] = Localize.getMessage('player_source_acceldash');
     if (EnvUtils.isExtension()) {
       modes[PlayerModes.ACCELERATED_YT] = Localize.getMessage('player_source_accelyt');
+      modes[PlayerModes.ACCELERATED_VM] = Localize.getMessage('player_source_accelvm');
     }
     const sourceMode = createDropdown(source.mode, Localize.getMessage('player_source_mode'), modes, (val) => {
       source.mode = val;

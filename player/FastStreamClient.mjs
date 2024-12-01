@@ -68,10 +68,13 @@ export class FastStreamClient extends EventEmitter {
       videoHueRotate: 0,
       videoDaltonizerType: DaltonizerTypes.NONE,
       videoDaltonizerStrength: 1,
+      videoZoom: 1,
       seekStepSize: 0.2,
       defaultQuality: 'Auto',
       toolSettings: Utils.mergeOptions(DefaultToolSettings, {}),
       videoDelay: 0,
+      videoFlip: 0,
+      videoRotate: 0,
       disableVisualFilters: false,
       maximumDownloaders: 6,
     };
@@ -90,6 +93,7 @@ export class FastStreamClient extends EventEmitter {
       fullscreen: false,
       miniplayer: false,
       windowedFullscreen: false,
+      autoPlayTriggered: false,
     };
     this._needsUserInteraction = false;
     this.progressMemory = null;
@@ -248,6 +252,7 @@ export class FastStreamClient extends EventEmitter {
     this.options.videoHueRotate = options.videoHueRotate;
     this.options.videoDaltonizerType = options.videoDaltonizerType;
     this.options.videoDaltonizerStrength = options.videoDaltonizerStrength;
+    this.options.videoZoom = options.videoZoom;
     this.options.previewEnabled = options.previewEnabled;
     this.options.videoDelay = options.videoDelay;
     this.loadProgressData();
@@ -300,11 +305,14 @@ export class FastStreamClient extends EventEmitter {
       DOMElements.playerContainer.appendChild(svg);
     }
     const filterStr = CSSFilterUtils.getFilterString(this.options);
+    const transformStr = CSSFilterUtils.getTransformString(this.options);
     if (this.player) {
       this.player.getVideo().style.filter = filterStr;
+      this.player.getVideo().style.transform = transformStr;
     }
     if (this.previewPlayer) {
       this.previewPlayer.getVideo().style.filter = filterStr;
+      this.previewPlayer.getVideo().style.transform = transformStr;
     }
   }
   loadAnalyzerData(data) {
@@ -518,8 +526,7 @@ export class FastStreamClient extends EventEmitter {
       console.log('setSource', source);
       await this.resetPlayer();
       this.source = source;
-      const estimate = await navigator.storage.estimate();
-      this.storageAvailable = estimate.quota - estimate.usage;
+      this.storageAvailable = await EnvUtils.getAvailableStorage();
       const options = {};
       if (source.mode === PlayerModes.ACCELERATED_YT) {
         options.defaultClient = this.options.defaultYoutubeClient;
@@ -563,8 +570,11 @@ export class FastStreamClient extends EventEmitter {
       }
       this.updateCSSFilters();
       this.interfaceController.updateToolVisibility();
+      this.state.autoPlayTriggered = false;
       if (autoPlay) {
-        this.play();
+        this.play().then(() => {
+          this.state.autoPlayTriggered = true;
+        });
       }
       this.loadProgressData().then(async () => {
         this.disableProgressSave = true;
@@ -585,8 +595,10 @@ export class FastStreamClient extends EventEmitter {
           }
         }
         this.disableProgressSave = false;
-        if (autoPlay) {
-          this.play();
+        if (autoPlay && !this.state.autoPlayTriggered) {
+          this.play().then(() => {
+            this.state.autoPlayTriggered = true;
+          });
         }
       });
     } catch (e) {
@@ -905,11 +917,10 @@ export class FastStreamClient extends EventEmitter {
     });
     this.context.on(DefaultPlayerEvents.ABORT, (event) => {
     });
-    let autoPlayTriggered = false;
     this.context.on(DefaultPlayerEvents.CANPLAY, (event) => {
       this.player.playbackRate = this.state.playbackRate;
-      if (!autoPlayTriggered && this.options.autoPlay && this.state.playing === false) {
-        autoPlayTriggered = true;
+      if (!this.state.autoPlayTriggered && this.options.autoPlay && this.state.playing === false) {
+        this.state.autoPlayTriggered = true;
         this.play();
       }
     });

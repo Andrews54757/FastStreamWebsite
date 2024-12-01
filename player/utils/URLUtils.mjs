@@ -8,6 +8,7 @@ ModesMap.set('m3u8v1', PlayerModes.ACCELERATED_HLS);
 ModesMap.set('m3u', PlayerModes.ACCELERATED_HLS);
 ModesMap.set('mpd', PlayerModes.ACCELERATED_DASH);
 ModesMap.set('youtube', PlayerModes.ACCELERATED_YT);
+ModesMap.set('vmpatch', PlayerModes.ACCELERATED_VM);
 export class URLUtils {
   static get_yt_identifier(urlStr) {
     try {

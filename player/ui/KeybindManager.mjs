@@ -18,6 +18,9 @@ export class KeybindManager extends EventEmitter {
     DOMElements.playerContainer.addEventListener('keydown', (e) => {
       this.onKeyDown(e);
     });
+    document.addEventListener('keydown', (e) => {
+      this.onKeyDown(e);
+    });
     this.on('HidePlayer', (e) => {
       this.client.interfaceController.toggleHide();
     });
@@ -124,26 +127,15 @@ export class KeybindManager extends EventEmitter {
     this.on('ToggleSubtitles', (e)=>{
       this.client.interfaceController.subtitlesManager.toggleSubtitles();
     });
-    let flipIndex = 0;
-    let rotateIndex = 0;
-    const updateVideoTransform = () => {
-      const video = this.client.player.getVideo();
-      const str = [];
-      if (flipIndex !== 0) {
-        str.push(`scaleX(${flipIndex % 2 === 0 ? 1 : -1}) scaleY(${flipIndex > 1 ? -1 : 1})`);
-      }
-      if (rotateIndex !== 0) {
-        str.push(`rotate(${rotateIndex * 90}deg)`);
-      }
-      video.style.transform = str.join(' ');
-    };
     this.on('FlipVideo', (e) => {
-      flipIndex = (flipIndex + 1) % 4;
-      updateVideoTransform();
+      const options = this.client.options;
+      options.videoFlip = (options.videoFlip + 1) % 4;
+      this.client.updateCSSFilters();
     });
     this.on('RotateVideo', (e) => {
-      rotateIndex = (rotateIndex + 3) % 4;
-      updateVideoTransform();
+      const options = this.client.options;
+      options.videoRotate = (options.videoRotate + 3) % 4;
+      this.client.updateCSSFilters();
     });
     this.on('WindowedFullscreen', (e) => {
       this.client.interfaceController.toggleWindowedFullscreen();
@@ -220,6 +212,7 @@ export class KeybindManager extends EventEmitter {
     const keyString = WebUtils.getKeyString(e);
     if (this.handleKeyString(keyString, e)) {
       e.preventDefault();
+      e.stopPropagation();
     }
   }
 }
