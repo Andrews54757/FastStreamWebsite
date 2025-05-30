@@ -7,6 +7,8 @@ export class Vimeo2Dash {
     const new_base_url = new URL(base_url, url).href;
     const MPD = this.makeMPD(new_base_url, playlist);
     const xml = new XMLSerializer().serializeToString(MPD);
+    // console.log(JSON.stringify(playlist));
+    // console.log(xml);
     return '<?xml version="1.0" encoding="utf-8"?>' + xml;
   }
   loadDashTracks(tracks) {
@@ -25,16 +27,20 @@ export class Vimeo2Dash {
     const width = track.width;
     const height = track.height;
     const frameRate = track.framerate;
-    const startWithSap = 1;
+    // sconst startWithSap = 1;
     // const codecid = track.codecid;
     const Representation = this.document.createElement('Representation');
     Representation.setAttribute('id', id);
     Representation.setAttribute('codecs', codecs);
     Representation.setAttribute('bandwidth', bandwidth);
-    Representation.setAttribute('width', width);
-    Representation.setAttribute('height', height);
+    if (width !== undefined) {
+      Representation.setAttribute('width', width);
+    }
+    if (height !== undefined) {
+      Representation.setAttribute('height', height);
+    }
     if (frameRate) Representation.setAttribute('frameRate', frameRate);
-    Representation.setAttribute('startWithSAP', startWithSap);
+    // Representation.setAttribute('startWithSAP', startWithSap);
     Representation.setAttribute('mimeType', mimeType);
     const BaseURL = this.document.createElement('BaseURL');
     BaseURL.textContent = baseUrl;
@@ -46,9 +52,11 @@ export class Vimeo2Dash {
     const index_segment = track.index_segment;
     const init_segment_data_b64 = track.init_segment;
     const segments = track.segments;
-    const RepresentationIndex = this.document.createElement('RepresentationIndex');
-    RepresentationIndex.setAttribute('sourceURL', index_segment);
-    SegmentList.appendChild(RepresentationIndex);
+    if (index_segment !== undefined) {
+      const RepresentationIndex = this.document.createElement('RepresentationIndex');
+      RepresentationIndex.setAttribute('sourceURL', index_segment);
+      SegmentList.appendChild(RepresentationIndex);
+    }
     const Initialization = this.document.createElement('Initialization');
     Initialization.setAttribute('sourceURL', 'data:application/octet-stream;base64,' + init_segment_data_b64);
     SegmentList.appendChild(Initialization);
