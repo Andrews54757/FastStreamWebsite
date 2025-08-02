@@ -1,19 +1,7 @@
 import {MessageTypes} from '../enums/MessageTypes.mjs';
 import {EnvUtils} from '../utils/EnvUtils.mjs';
+import {RequestUtils} from '../utils/RequestUtils.mjs';
 import {URLUtils} from '../utils/URLUtils.mjs';
-const redirectHeaders = [
-  'origin',
-  'referer',
-  'user-agent',
-  'sec-fetch-site',
-  'sec-fetch-mode',
-  'sec-fetch-dest',
-  'sec-ch-ua',
-  'sec-ch-ua-mobile',
-  'sec-ch-ua-platform',
-  'x-client-data',
-  'cookie',
-];
 export class XHRLoader {
   constructor() {
     this.callbacks = [];
@@ -49,12 +37,11 @@ export class XHRLoader {
       throw new Error('Callbacks added too late');
     }
   }
-  load(entry, config) {
+  load(request, config) {
     if (this.stats.loading.start) {
       throw new Error('Loader can only be used once.');
     }
-    this.stats.loading.start = self.performance.now();
-    this.entry = entry;
+    this.request = request;
     this.config = config;
     this.retryDelay = config.retryDelay;
     this.loadInternal();
@@ -86,8 +73,9 @@ export class XHRLoader {
     }
   }
   async loadInternal() {
+    // console.warn('Loading', this.request.url, 'with', this.config);
     this.stats.loading.start = self.performance.now();
-    const {config, entry} = this;
+    const {config, request} = this;
     if (!config) {
       return;
     }
@@ -95,29 +83,21 @@ export class XHRLoader {
     const stats = this.stats;
     stats.loading.first = 0;
     stats.loaded = 0;
+    const method = request.method || 'GET';
     try {
-      xhr.open('GET', entry.url, true);
-      const headers = this.entry.headers;
+      xhr.open(method, request.url, true);
+      const headers = this.request.headers;
       if (headers) {
-        const customHeaderCommands = [];
-        for (const header in headers) {
+        const {customHeaderCommands, regularHeaders} = RequestUtils.splitSpecialHeaders(headers);
+        for (const header in regularHeaders) {
           if (!Object.hasOwn(headers, header)) continue;
-          const name = header.toLowerCase();
-          if (redirectHeaders.includes(name)) {
-            if (headers[header] === false) {
-              customHeaderCommands.push({operation: 'remove', header});
-            } else {
-              customHeaderCommands.push({operation: 'set', header, value: headers[header]});
-            }
-          } else {
-            xhr.setRequestHeader(header, headers[header]);
-          }
+          xhr.setRequestHeader(header, headers[header]);
         }
         if (customHeaderCommands.length) {
           if (EnvUtils.isExtension()) {
             await chrome.runtime.sendMessage({
               type: MessageTypes.SET_HEADERS,
-              url: entry.url,
+              url: request.url,
               commands: customHeaderCommands,
             });
           }
@@ -129,32 +109,37 @@ export class XHRLoader {
       this.callbacks?.forEach((callbacks) => {
         callbacks.onError(
             this.stats,
-            entry,
+            request,
             xhr,
         );
       });
       return;
     }
-    if (entry.rangeEnd) {
+    if (request.rangeEnd) {
       xhr.setRequestHeader(
           'Range',
-          'bytes=' + entry.rangeStart + '-' + (entry.rangeEnd - 1),
+          'bytes=' + request.rangeStart + '-' + (request.rangeEnd - 1),
       );
     }
     xhr.onreadystatechange = this.readystatechange.bind(this);
     xhr.onprogress = this.loadprogress.bind(this);
-    xhr.responseType = entry.responseType;
+    xhr.responseType = request.responseType;
     // setup timeout before we perform request
     self.clearTimeout(this.requestTimeout);
     this.requestTimeout = self.setTimeout(
         this.loadtimeout.bind(this),
         config.timeout,
     );
-    xhr.send();
+    // send body if any
+    if (request.body) {
+      xhr.send(request.body);
+    } else {
+      xhr.send();
+    }
   }
   readystatechange() {
-    const {entry, loader: xhr, stats} = this;
-    if (!entry || !xhr) {
+    const {request, loader: xhr, stats} = this;
+    if (!request || !xhr) {
       return;
     }
     const readyState = xhr.readyState;
@@ -203,7 +188,7 @@ export class XHRLoader {
           }
           this.callbacks?.forEach((callbacks) => {
             if (callbacks.onProgress) {
-              callbacks.onProgress(stats, entry, data, xhr);
+              callbacks.onProgress(stats, request, data, xhr);
             }
           });
           if (!this.callbacks) {
@@ -215,7 +200,7 @@ export class XHRLoader {
             data: data,
           };
           this.callbacks.forEach((callbacks) => {
-            callbacks.onSuccess(response, stats, entry, xhr);
+            callbacks.onSuccess(response, stats, request, xhr);
           });
           this.callbacks = null;
         } else {
@@ -224,19 +209,19 @@ export class XHRLoader {
             stats.retry >= config.maxRetry ||
                         (status >= 400 && status < 499)
           ) {
-            console.error(`${status} while loading ${entry.url}`);
+            console.error(`${status} while loading ${request.url}`);
             this.stats.error = {code: status, text: xhr.statusText};
             this.callbacks?.forEach((callbacks) => {
               callbacks?.onError(
                   this.stats,
-                  entry,
+                  request,
                   xhr,
               );
             });
           } else {
             // retry
             console.warn(
-                `${status} while loading ${entry.url}, retrying in ${this.retryDelay}...`,
+                `${status} while loading ${request.url}, retrying in ${this.retryDelay}...`,
             );
             this.retry();
           }
@@ -269,13 +254,13 @@ export class XHRLoader {
     stats.retry++;
   }
   loadtimeout() {
-    console.warn(`timeout while loading ${this.entry.url}`);
+    console.warn(`timeout while loading ${this.request.url}`);
     if (this.stats.retry < this.config.maxRetry / 2) {
       this.retry();
       return;
     }
     this.callbacks?.forEach((callbacks) => {
-      callbacks.onTimeout(this.stats, this.entry, this.loader);
+      callbacks.onTimeout(this.stats, this.request, this.loader);
     });
     this.abortInternal();
   }

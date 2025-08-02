@@ -56,7 +56,7 @@ export class HLSFragmentRequester {
         ...config.headers,
         ...this.player.source.headers,
       },
-      preProcessor: async (entry, response) => {
+      postProcessor: async (entry, response) => {
         if (!frag.fs_oldcryptdata) {
           return response;
         }

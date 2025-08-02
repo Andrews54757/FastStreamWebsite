@@ -25,7 +25,7 @@ export class EnvUtils {
   static getVersion() {
     // eslint-disable-next-line prefer-const
     let version = '1.0.0.web';
-version = '1.3.45';
+version = '1.3.47';
     return this.isExtension() ? chrome.runtime.getManifest().version : version;
   }
   static isIncognito() {
@@ -42,7 +42,7 @@ version = '1.3.45';
       // 2GB
       return 2 * 1024 * 1024 * 1024;
     }
-    const estimate = await window.navigator.storage.estimate();
+    const estimate = await window.navigator.storage.estimate().catch(() => ({quota: 2 * 1024 * 1024 * 1024, usage: 0}));
     return estimate.quota - estimate.usage;
   }
 }

@@ -19,7 +19,15 @@ export class StandardDownloader {
     if (this.loader != null) {
       throw new Error('Downloader is busy.');
     }
-    this.loader = new XHRLoader();
+    let shouldContinue = true;
+    this.loader = {
+      abort: () => {
+        shouldContinue = false;
+      },
+      destroy: () => {
+        shouldContinue = false;
+      },
+    };
     this.entry = entry;
     entry.downloader = this;
     entry.status = DownloadStatus.DOWNLOAD_INITIATED;
@@ -30,8 +38,18 @@ export class StandardDownloader {
       maxRetryDelay: 64000,
       ...entry.config,
     };
-    this.loader.addCallbacks(this);
-    this.loader.load(entry, defaultConfig);
+    entry.getRequest().then((request)=>{
+      if (!shouldContinue) {
+        return;
+      }
+      this.loader = new XHRLoader();
+      this.loader.addCallbacks(this);
+      this.loader.load(request, defaultConfig);
+    }).catch((err) => {
+      console.error('Failed to get request for entry:', err);
+      this.entry.onFail(this.loader.stats, this.entry, null);
+      this.cleanup();
+    });
   }
   abort() {
     this.loader?.abort();
@@ -59,12 +77,12 @@ export class StandardDownloader {
   }
   async onSuccess(response, stats, entry, xhr) {
     this.updateSpeed(stats);
-    this.entry.onSuccess(response, stats, entry, xhr);
+    await this.entry.onSuccess(response, stats, this.entry, xhr);
     this.cleanup();
   }
   onError(stats, entry, xhr) {
     this.updateSpeed(stats);
-    this.entry?.onFail(stats, entry, xhr);
+    this.entry?.onFail(stats, this.entry, xhr);
     this.cleanup();
   }
   onProgress(stats, context, data, xhr) {
@@ -73,7 +91,7 @@ export class StandardDownloader {
   }
   onTimeout(stats, entry, xhr) {
     this.updateSpeed(stats);
-    this.entry?.onFail(stats, entry, xhr);
+    this.entry?.onFail(stats, this.entry, xhr);
     this.cleanup();
   }
 };

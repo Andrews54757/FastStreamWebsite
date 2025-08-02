@@ -3549,6 +3549,16 @@ const TranslationMap = {
     "Laporkan Ralat",
     "Relatar erro",
     "Сообщить об ошибке"
+  ],
+  "yt_error_login_required": [
+    "Sorry! FastStream does not support videos which require you to be logged in to YouTube.",
+    "Entschuldigung! FastStream unterstützt keine Videos, die erfordern, dass du bei YouTube angemeldet bist.",
+    "¡Lo sentimos! FastStream no admite videos que requieran que inicies sesión en YouTube.",
+    "Spiacenti! FastStream non supporta i video che richiedono l'accesso a YouTube.",
+    "申し訳ありませんが、FastStream は YouTube にログインする必要がある動画をサポートしていません。",
+    "Maaf! FastStream tidak menyokong video yang memerlukan anda masuk ke YouTube.",
+    "Desculpe! O FastStream não suporta vídeos que exigem que você esteja logado no YouTube.",
+    "Извините! FastStream не поддерживает видео, для просмотра которых требуется вход в YouTube."
   ]
 };
 export class Localize {

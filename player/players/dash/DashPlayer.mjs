@@ -1,7 +1,7 @@
 import {DefaultPlayerEvents} from '../../enums/DefaultPlayerEvents.mjs';
 import {DownloadStatus} from '../../enums/DownloadStatus.mjs';
 import {ReferenceTypes} from '../../enums/ReferenceTypes.mjs';
-import {DashJS} from '../../modules/dash.mjs';
+import {MediaPlayer} from '../../modules/dash.mjs';
 import {EmitterRelay, EventEmitter} from '../../modules/eventemitter.mjs';
 import {Utils} from '../../utils/Utils.mjs';
 import {VideoUtils} from '../../utils/VideoUtils.mjs';
@@ -25,7 +25,7 @@ export default class DashPlayer extends EventEmitter {
   }
   async setup() {
     // eslint-disable-next-line new-cap
-    this.dash = DashJS.MediaPlayer().create();
+    this.dash = MediaPlayer().create();
     const preEvents = new EventEmitter();
     const emitterRelay = new EmitterRelay([preEvents, this]);
     VideoUtils.addPassthroughEventListenersToVideo(this.video, emitterRelay);
@@ -51,9 +51,9 @@ export default class DashPlayer extends EventEmitter {
       },
     };
     // if (this.isPreview) {
-    //   newSettings.debug ={
-    //     'logLevel': DashJS.Debug.LOG_LEVEL_DEBUG,
-    //   };
+    // newSettings.debug ={
+    //   'logLevel': Debug.LOG_LEVEL_DEBUG,
+    // };
     // }
     this.dash.updateSettings(newSettings);
     this.dash.setCustomInitialTrackSelectionFunction((tracks)=>{
@@ -74,20 +74,24 @@ export default class DashPlayer extends EventEmitter {
       this.extractAllFragments();
       initialize();
     });
+    this.dash.on('REPRESENTATION_UPDATED', (a) => {
+      const rep = a.representation;
+      this.extractFragments(rep);
+    });
     this.dash.on('dataUpdateCompleted', (a) => {
       this.extractAllFragments();
     });
     this.dash.on('currentTrackChanged', (a)=>{
       this.extractAllFragments();
     });
-    this.dash.on(DashJS.MediaPlayer.events.STREAM_INITIALIZED, (e) => {
+    this.dash.on(MediaPlayer.events.STREAM_INITIALIZED, (e) => {
       this.emit(DefaultPlayerEvents.LANGUAGE_TRACKS);
     });
     // eslint-disable-next-line new-cap
     this.dash.extend('XHRLoader', DASHLoaderFactory(this), false);
   }
   extractAllFragments() {
-    const processors = this.dash.getStreamController().getActiveStream().getProcessors();
+    const processors = this.dash.getStreamController().getActiveStream().getStreamProcessors();
     processors.forEach((processor) => {
       const mediaInfo = processor.getMediaInfo();
       mediaInfo.representations.forEach((rep) => {
@@ -211,7 +215,7 @@ export default class DashPlayer extends EventEmitter {
     }
   }
   getProcessor(adaptationIndex) {
-    const processors = this.dash.getStreamController().getActiveStream().getProcessors();
+    const processors = this.dash.getStreamController().getActiveStream().getStreamProcessors();
     for (let i = 0; i < processors.length; i++) {
       const processor = processors[i];
       if (processor.getMediaInfo().index === adaptationIndex) {
@@ -221,7 +225,7 @@ export default class DashPlayer extends EventEmitter {
     return null;
   }
   get currentLevel() {
-    const processor = this.dash.getStreamController()?.getActiveStream()?.getProcessors()?.find((o) => o.getType() === 'video');
+    const processor = this.dash.getStreamController()?.getActiveStream()?.getStreamProcessors()?.find((o) => o.getType() === 'video');
     if (!processor) {
       return -1;
     }
@@ -230,13 +234,13 @@ export default class DashPlayer extends EventEmitter {
   set currentLevel(value) {
     if (typeof value !== 'string') return;
     try {
-      this.dash.setRepresentationForTypeById('video', value, true);
+      this.dash.setRepresentationForTypeById('video', value);
     } catch (e) {
       console.warn(e);
     }
   }
   get currentAudioLevel() {
-    const processor = this.dash.getStreamController()?.getActiveStream()?.getProcessors()?.find((o) => o.getType() === 'audio');
+    const processor = this.dash.getStreamController()?.getActiveStream()?.getStreamProcessors()?.find((o) => o.getType() === 'audio');
     if (!processor) {
       return -1;
     }
@@ -245,7 +249,7 @@ export default class DashPlayer extends EventEmitter {
   set currentAudioLevel(value) {
     if (typeof value !== 'string') return;
     try {
-      this.dash.setRepresentationForTypeById('audio', value, true);
+      this.dash.setRepresentationForTypeById('audio', value);
     } catch (e) {
       console.warn(e);
     }
@@ -287,6 +291,10 @@ export default class DashPlayer extends EventEmitter {
   get currentFragment() {
     const frags = this.client.getFragments(this.currentLevel);
     if (!frags) return null;
+    // check if init segment isn't loaded
+    if (frags[-1] && frags[-1].status !== DownloadStatus.DOWNLOAD_COMPLETE) {
+      return frags[-1];
+    }
     const time = this.currentTime;
     return frags.find((frag) => {
       if (!frag) return false;
@@ -296,6 +304,10 @@ export default class DashPlayer extends EventEmitter {
   get currentAudioFragment() {
     const frags = this.client.getFragments(this.currentAudioLevel);
     if (!frags) return null;
+    // check if init segment isn't loaded
+    if (frags[-1] && frags[-1].status !== DownloadStatus.DOWNLOAD_COMPLETE) {
+      return frags[-1];
+    }
     const time = this.currentTime;
     return frags.find((frag) => {
       if (!frag) return false;
@@ -357,8 +369,8 @@ export default class DashPlayer extends EventEmitter {
         return this.client.downloadManager.getEntry(data.fragment.getContext());
       };
     });
-    const videoProcessor = this.dash.getStreamController()?.getActiveStream()?.getProcessors()?.find((o) => o.getType() === 'video');
-    const audioProcessor = this.dash.getStreamController()?.getActiveStream()?.getProcessors()?.find((o) => o.getType() === 'audio');
+    const videoProcessor = this.dash.getStreamController()?.getActiveStream()?.getStreamProcessors()?.find((o) => o.getType() === 'video');
+    const audioProcessor = this.dash.getStreamController()?.getActiveStream()?.getStreamProcessors()?.find((o) => o.getType() === 'audio');
     const videoDuration = videoProcessor?.getMediaInfo()?.streamInfo?.duration || 0;
     const audioDuration = audioProcessor?.getMediaInfo()?.streamInfo?.duration || 0;
     const videoInitSegment = fragments?.[-1];

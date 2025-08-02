@@ -13,6 +13,7 @@ export class DownloadEntry {
     this.storeRaw = details.storeRaw;
     this.config = details.config || {};
     this.preProcessor = details.preProcessor;
+    this.postProcessor = details.postProcessor;
     this.data = null;
     this.dataSize = 0;
     this.responseHeaders = null;
@@ -46,6 +47,7 @@ export class DownloadEntry {
     this.cleanup();
   }
   cleanup() {
+    this.postProcessor = null;
     this.preProcessor = null;
     this.downloader = null;
     this.transferFile = null;
@@ -54,14 +56,32 @@ export class DownloadEntry {
   destroy() {
     this.abort();
   }
+  async getRequest() {
+    const request = {
+      url: this.url,
+      rangeStart: this.rangeStart,
+      rangeEnd: this.rangeEnd,
+      responseType: this.responseType,
+      headers: this.headers,
+    };
+    if (this.preProcessor) {
+      try {
+        return await this.preProcessor(this, request);
+      } catch (e) {
+        console.error('Error in preProcessor:', e);
+        throw e;
+      }
+    }
+    return request;
+  }
   async onSuccess(response, stats, entry, xhr) {
     if (!this.downloader) {
       console.error('DownloadEntry.onSuccess called after abort');
     }
     this.responseHeaders = response.headers;
     try {
-      if (this.preProcessor) {
-        response = await this.preProcessor(this, response);
+      if (this.postProcessor) {
+        response = await this.postProcessor(this, response);
       }
     } catch (e) {
       console.error(e);
