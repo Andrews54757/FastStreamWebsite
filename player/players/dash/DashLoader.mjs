@@ -144,6 +144,9 @@ export function DASHLoaderFactory(player) {
     return {
       load: load,
       abort: abort,
+      reset: () => {
+        // Reset any internal state if needed
+      },
     };
   };
 }

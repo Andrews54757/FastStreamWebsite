@@ -32,6 +32,7 @@ import {VirtualAudioNode} from './ui/audio/VirtualAudioNode.mjs';
 import {SyncedAudioPlayer} from './players/SyncedAudioPlayer.mjs';
 import {AlertPolyfill} from './utils/AlertPolyfill.mjs';
 import {MessageTypes} from './enums/MessageTypes.mjs';
+import {LevelManager} from './players/LevelManager.mjs';
 const SET_VOLUME_USING_NODE = !EnvUtils.isSafari() && EnvUtils.isWebAudioSupported();
 export class FastStreamClient extends EventEmitter {
   constructor() {
@@ -98,6 +99,7 @@ export class FastStreamClient extends EventEmitter {
     this._needsUserInteraction = false;
     this.progressMemory = null;
     this.playerLoader = new PlayerLoader();
+    this.levelManager = new LevelManager(this);
     this.interfaceController = new InterfaceController(this);
     this.keybindManager = new KeybindManager(this);
     this.downloadManager = new DownloadManager(this);
@@ -128,6 +130,9 @@ export class FastStreamClient extends EventEmitter {
     this.pastUnseeks = [];
     this.fragmentsStore = {};
     this.mainloop();
+  }
+  getLevelManager() {
+    return this.levelManager;
   }
   async setup() {
     await this.downloadManager.setup();
@@ -255,6 +260,9 @@ export class FastStreamClient extends EventEmitter {
     this.options.videoZoom = options.videoZoom;
     this.options.previewEnabled = options.previewEnabled;
     this.options.videoDelay = options.videoDelay;
+    document.body.dataset.theme = options.colorTheme;
+    // save color theme to local storage
+    localStorage.setItem('faststream-color-theme', options.colorTheme);
     this.loadProgressData();
     if (this.options.previewEnabled) {
       this.setupPreviewPlayer().catch((e) => {
@@ -391,11 +399,38 @@ export class FastStreamClient extends EventEmitter {
     this.interfaceController.updateLanguageTracks();
     this.updateHasDownloadSpace();
   }
-  updateHasDownloadSpace() {
-    const levels = this.levels;
+  changeLanguage(type, language) {
+    const levels = type === 'video' ? this.getVideoLevels() : this.getAudioLevels();
     if (!levels) return;
-    const currentLevel = this.currentLevel;
-    const level = levels.get(currentLevel);
+    const currentLevelID = type === 'video' ? this.getCurrentVideoLevelID() : this.getCurrentAudioLevelID();
+    const currentLevel = levels.get(currentLevelID);
+    const matchingLevels = Array.from(levels.values()).filter((level) => level.language === language);
+    if (matchingLevels.length === 0) {
+      console.warn('No matching levels for language', language, type, levels);
+      return;
+    }
+    if (type === 'video') {
+      this.levelManager.setCurrentVideoLanguage(language);
+    } else {
+      this.levelManager.setCurrentAudioLanguage(language);
+    }
+    const chosen = type === 'video' ?
+      this.levelManager.pickVideoLevel(matchingLevels, currentLevel?.height) :
+      this.levelManager.pickAudioLevel(matchingLevels);
+    console.log('changeLanguage chosen level', chosen, type, language);
+    if (chosen) {
+      if (type === 'video') {
+        this.setCurrentVideoLevelID(chosen.id);
+      } else {
+        this.setCurrentAudioLevelID(chosen.id);
+      }
+    }
+  }
+  updateHasDownloadSpace() {
+    const levels = this.getVideoLevels();
+    if (!levels) return;
+    const currentVideoLevelID = this.getCurrentVideoLevelID();
+    const level = levels.get(currentVideoLevelID);
     if (!level) return;
     if (this.source?.loadedFromArchive) {
       return;
@@ -476,6 +511,12 @@ export class FastStreamClient extends EventEmitter {
     console.log('setAutoPlay', value);
     this.options.autoPlay = value;
   }
+  attachProcessorsToPlayer(player) {
+    if (this.source.mode === PlayerModes.ACCELERATED_YT) {
+      player.preProcessFragment = this.player.preProcessFragment.bind(this.player);
+      player.postProcessFragment = this.player.postProcessFragment.bind(this.player);
+    }
+  }
   async setupPreviewPlayer() {
     if (!this.player || this.previewPlayer || !this.options.previewEnabled) {
       return;
@@ -484,6 +525,8 @@ export class FastStreamClient extends EventEmitter {
       this.previewPlayer = await this.playerLoader.createPlayer(this.player.getSource().mode, this, {
         isPreview: true,
       });
+      // check if its yt mode
+      this.attachProcessorsToPlayer(this.previewPlayer);
       await this.previewPlayer.setup();
       this.bindPreviewPlayer(this.previewPlayer);
       await this.previewPlayer.setSource(this.player.getSource());
@@ -524,6 +567,12 @@ export class FastStreamClient extends EventEmitter {
       console.log('setSource', source);
       await this.resetPlayer();
       this.source = source;
+      if (source.defaultLevelInfo?.level !== undefined) {
+        this.getLevelManager().setCurrentVideoLevelID(source.defaultLevelInfo.level);
+      }
+      if (source.defaultLevelInfo?.audio !== undefined) {
+        this.getLevelManager().setCurrentAudioLevelID(source.defaultLevelInfo.audio);
+      }
       this.storageAvailable = await EnvUtils.getAvailableStorage();
       const options = {};
       if (source.mode === PlayerModes.ACCELERATED_YT) {
@@ -883,6 +932,7 @@ export class FastStreamClient extends EventEmitter {
     this.hasDownloadSpace = true;
     this.previousLevel = -1;
     this.previousAudioLevel = -1;
+    this.getLevelManager().reset();
     await Promise.all(promises);
   }
   setMediaInfo(info) {
@@ -891,26 +941,8 @@ export class FastStreamClient extends EventEmitter {
   }
   bindPlayer(player) {
     this.context = player.createContext();
-    this.context.on(DefaultPlayerEvents.MANIFEST_PARSED, (maxLevel, maxAudioLevel) => {
-      const source = player.getSource();
-      console.log('MANIFEST_PARSED', maxLevel, maxAudioLevel);
-      if (maxLevel !== undefined) {
-        if (source.defaultLevelInfo?.level !== undefined) {
-          this.currentLevel = source.defaultLevelInfo.level;
-        } else {
-          this.currentLevel = maxLevel;
-        }
-      } else {
-        console.warn('No recommended level found');
-      }
-      if (maxAudioLevel !== undefined) {
-        if (source.defaultLevelInfo?.audio !== undefined) {
-          this.currentAudioLevel = source.defaultLevelInfo.audio;
-        } else {
-          this.currentAudioLevel = maxAudioLevel;
-        }
-      }
-      this.player.load();
+    this.context.on(DefaultPlayerEvents.MANIFEST_PARSED, () => {
+      console.log('MANIFEST_PARSED');
       this.updateQualityLevels();
     });
     this.context.on(DefaultPlayerEvents.ABORT, (event) => {
@@ -989,15 +1021,12 @@ export class FastStreamClient extends EventEmitter {
     this.context.on(DefaultPlayerEvents.SKIP_SEGMENTS, () => {
       this.interfaceController.updateSkipSegments();
     });
-    this.context.on(DefaultPlayerEvents.LANGUAGE_TRACKS, (e) => {
-      this.interfaceController.updateLanguageTracks();
-    });
   }
   bindPreviewPlayer(player) {
     this.previewContext = player.createContext();
     this.previewContext.on(DefaultPlayerEvents.MANIFEST_PARSED, () => {
-      player.currentLevel = this.currentLevel;
-      player.load();
+      player.setCurrentVideoLevelID(this.getCurrentVideoLevelID());
+      player.setCurrentAudioLevelID(this.getCurrentAudioLevelID());
     });
     this.previewContext.on(DefaultPlayerEvents.FRAGMENT_UPDATE, (fragment) => {
       this.interfaceController.updateFragmentsLoaded();
@@ -1073,7 +1102,7 @@ export class FastStreamClient extends EventEmitter {
     this.interfaceController.updateMarkers();
   }
   isRegionBuffered(start, end) {
-    const fragments = this.getFragments(this.currentLevel);
+    const fragments = this.getFragments(this.getCurrentVideoLevelID());
     if (!fragments) {
       return true;
     }
@@ -1106,56 +1135,61 @@ export class FastStreamClient extends EventEmitter {
   get paused() {
     return this.player?.paused || true;
   }
-  get levels() {
-    return this.player?.levels || new Map();
+  getVideoLevels() {
+    return this.player?.getVideoLevels() || new Map();
   }
-  get currentLevel() {
-    return this.player?.currentLevel;
+  getAudioLevels() {
+    return this.player?.getAudioLevels() || new Map();
   }
-  get currentAudioLevel() {
-    return this.player?.currentAudioLevel;
+  getCurrentVideoLevelID() {
+    return this.player?.getCurrentVideoLevelID() ?? null;
   }
-  set currentLevel(value) {
-    this.player.currentLevel = value;
+  getCurrentAudioLevelID() {
+    return this.player?.getCurrentAudioLevelID() ?? null;
+  }
+  setCurrentVideoLevelID(levelID) {
+    this.player.setCurrentVideoLevelID(levelID);
     this.checkLevelChange();
   }
-  set currentAudioLevel(value) {
-    this.player.currentAudioLevel = value;
+  setCurrentAudioLevelID(levelID) {
+    this.player.setCurrentAudioLevelID(levelID);
     this.checkLevelChange();
   }
   checkLevelChange() {
-    const level = this.currentLevel;
-    const audioLevel = this.currentAudioLevel;
-    let hasChanged = false;
-    if (level !== this.previousLevel) {
-      if (this.options.freeUnusedChannels && this.fragmentsStore[this.previousLevel]) {
-        this.fragmentsStore[this.previousLevel].forEach((fragment, i) => {
+    const videoLevelID = this.getCurrentVideoLevelID();
+    const audioLevelID = this.getCurrentAudioLevelID();
+    const previousVideoLevelID = this.levelManager.getCurrentVideoLevelID();
+    const previousAudioLevelID = this.levelManager.getCurrentAudioLevelID();
+    const videoChanged = videoLevelID !== null && (videoLevelID !== previousVideoLevelID);
+    const audioChanged = audioLevelID !== null && (audioLevelID !== previousAudioLevelID);
+    if (videoChanged) {
+      if (this.options.freeUnusedChannels && this.fragmentsStore[previousVideoLevelID]) {
+        this.fragmentsStore[previousVideoLevelID].forEach((fragment, i) => {
           if (i === -1) return;
           this.freeFragment(fragment);
         });
+      }
+      this.levelManager.setCurrentVideoLevelID(videoLevelID);
+    }
+    if (audioChanged) {
+      if (this.options.freeUnusedChannels && this.fragmentsStore[previousAudioLevelID]) {
+        this.fragmentsStore[previousAudioLevelID].forEach((fragment, i) => {
+          if (i === -1) return;
+          this.freeFragment(fragment);
+        });
+      }
+      this.levelManager.setCurrentAudioLevelID(audioLevelID);
+    }
+    if (videoChanged || audioChanged) {
+      this.videoAnalyzer.setLevel(videoLevelID, audioLevelID);
+      this.audioAnalyzer.setLevel(videoLevelID, audioLevelID);
+      this.frameExtractor.setLevel(videoLevelID, audioLevelID);
+      if (this.syncedAudioPlayer) {
+        this.syncedAudioPlayer.setLevel(videoLevelID, audioLevelID);
       }
       if (this.previewPlayer) {
-        this.previewPlayer.currentLevel = level;
-      }
-      this.previousLevel = level;
-      hasChanged = true;
-    }
-    if (audioLevel !== this.previousAudioLevel) {
-      if (this.options.freeUnusedChannels && this.fragmentsStore[this.previousAudioLevel]) {
-        this.fragmentsStore[this.previousAudioLevel].forEach((fragment, i) => {
-          if (i === -1) return;
-          this.freeFragment(fragment);
-        });
-      }
-      this.previousAudioLevel = audioLevel;
-      hasChanged = true;
-    }
-    if (hasChanged) {
-      this.videoAnalyzer.setLevel(level, audioLevel);
-      this.audioAnalyzer.setLevel(level, audioLevel);
-      this.frameExtractor.setLevel(level, audioLevel);
-      if (this.syncedAudioPlayer) {
-        this.syncedAudioPlayer.setLevel(level, audioLevel);
+        this.previewPlayer.setCurrentVideoLevelID(videoLevelID);
+        this.previewPlayer.setCurrentAudioLevelID(audioLevelID);
       }
       this.resetFailed();
       this.updateQualityLevels();
@@ -1236,10 +1270,10 @@ export class FastStreamClient extends EventEmitter {
     return true;
   }
   get fragments() {
-    return this.fragmentsStore[this.currentLevel];
+    return this.fragmentsStore[this.getCurrentVideoLevelID()];
   }
   get audioFragments() {
-    return this.fragmentsStore[this.currentAudioLevel];
+    return this.fragmentsStore[this.getCurrentAudioLevelID()];
   }
   get currentFragment() {
     return this.player?.currentFragment || null;
@@ -1291,15 +1325,6 @@ export class FastStreamClient extends EventEmitter {
   }
   get chapters() {
     return this.player?.chapters || [];
-  }
-  get languageTracks() {
-    return this.player?.languageTracks || {
-      video: [],
-      audio: [],
-    };
-  }
-  setLanguageTrack(track) {
-    this.player.setLanguageTrack(track);
   }
   debugDemo() {
     this.interfaceController.hideControlBar = ()=>{};

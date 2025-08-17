@@ -3240,6 +3240,66 @@ const TranslationMap = {
     "Tamanho do miniplayer",
     "Размер мини-плеера"
   ],
+  "options_general_color_theme": [
+    "Player color theme",
+    "Farbthema des Players",
+    "Tema de color del reproductor",
+    "Tema colore del lettore video",
+    "プレーヤーのカラーテーマ",
+    "Player color theme",
+    "Tema de cor do tocador",
+    "Цветовая тема плеера"
+  ],
+  "options_general_color_theme_default": [
+    "Default Dark",
+    "Standard Dunkel",
+    "Predeterminado Oscuro",
+    "Predefinito Scuro",
+    "デフォルト ダーク",
+    "Default Dark",
+    "Padrão Escuro",
+    "Темная по умолчанию"
+  ],
+  "options_general_color_theme_arctic": [
+    "Arctic",
+    "Arktis",
+    "Ártico",
+    "Artico",
+    "北極",
+    "Arctic",
+    "Ártico",
+    "Арктика"
+  ],
+  "options_general_color_theme_ocean": [
+    "Ocean",
+    "Ozean",
+    "Océano",
+    "Oceano",
+    "オーシャン",
+    "Ocean",
+    "Oceano",
+    "Океан"
+  ],
+  "options_general_color_theme_neon": [
+    "Neon",
+    "Neon",
+    "Neón",
+    "Neon",
+    "ネオン",
+    "Neon",
+    "Neon",
+    "Неон"
+  ],
+  "options_general_color_theme_contrast": [
+    "High Contrast",
+    "Hoher Kontrast",
+    "Alto Contraste",
+    "Alto Contrasto",
+    "高コントラスト",
+    "High Contrast",
+    "Alto Contraste",
+    "Высокая контрастность"
+  ],
   "options_general_vischangeaction_pip": [
     "Toggle picture-in-picture",
     "Bild-in-Bild umschalten",
@@ -3479,6 +3539,16 @@ const TranslationMap = {
     "Language",
     "Idioma",
     "Язык"
+  ],
+  "subtitles_settings_bottomMargin": [
+    "Bottom Margin",
+    "Unterer Rand",
+    "Margen Inferior",
+    "Margine Inferiore",
+    "下の余白",
+    "Bottom Margin",
+    "Margem inferior",
+    "Нижнее поле"
   ],
   "yes": [
     "Yes",

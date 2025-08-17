@@ -22,7 +22,7 @@ export function createDropdown(defaultChoice, title, items, call, editableCallba
       div.textContent = items[name];
       div.role = 'option';
       if (defaultChoice === name) {
-        div.style.backgroundColor = 'rgb(20,20,20)';
+        div.style.backgroundColor = 'var(--popwindow-dropdown-item-selected-background-color)';
       }
       itemListElement.appendChild(div);
     }
@@ -72,7 +72,7 @@ function setupDropdown(itemListElement, text, container, call) {
         element.style.backgroundColor = '';
         const newIndex = (j + indexAmount + itemListElement.children.length) % itemListElement.children.length;
         const nextElement = itemListElement.children[newIndex];
-        nextElement.style.backgroundColor = 'rgb(20,20,20)';
+        nextElement.style.backgroundColor = 'var(--popwindow-dropdown-item-selected-background-color)';
         main.textContent = nextElement.textContent;
         container.dataset.val = nextElement.dataset.val;
         if (call) call(container.dataset.val, element.dataset.val);
@@ -108,7 +108,7 @@ function setupDropdown(itemListElement, text, container, call) {
         container.dataset.val = el.dataset.val;
         for (let j = 0; j < itemListElement.children.length; j++) {
           if (j === i) {
-            itemListElement.children[j].style.backgroundColor = 'rgb(20,20,20)';
+            itemListElement.children[j].style.backgroundColor = 'var(--popwindow-dropdown-item-selected-background-color)';
           } else {
             itemListElement.children[j].style.backgroundColor = '';
           }

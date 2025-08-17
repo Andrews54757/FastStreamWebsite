@@ -1,6 +1,7 @@
 import {YoutubeClients} from '../../enums/YoutubeClients.mjs';
 import {EnvUtils} from '../../utils/EnvUtils.mjs';
 import {ClickActions} from './ClickActions.mjs';
+import {ColorThemes} from './ColorThemes.mjs';
 import {DaltonizerTypes} from './DaltonizerTypes.mjs';
 import {DefaultKeybinds} from './DefaultKeybinds.mjs';
 import {MiniplayerPositions} from './MiniplayerPositions.mjs';
@@ -19,6 +20,7 @@ export const DefaultOptions = {
   autoplayNext: false,
   defaultYoutubeClient: YoutubeClients.WEB,
   defaultQuality: `Auto`,
+  colorTheme: ColorThemes.DEFAULT,
   autoEnableURLs: [],
   customSourcePatterns: ``,
   keybinds: DefaultKeybinds,

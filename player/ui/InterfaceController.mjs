@@ -13,6 +13,7 @@ import {Utils} from '../utils/Utils.mjs';
 import {WebUtils} from '../utils/WebUtils.mjs';
 import {DOMElements} from './DOMElements.mjs';
 import {FineTimeControls} from './FineTimeControls.mjs';
+import {AudioQualityChanger} from './menus/AudioQualityChanger.mjs';
 import {LanguageChanger} from './menus/LanguageChanger.mjs';
 import {LoopMenu} from './menus/LoopMenu.mjs';
 import {PlaybackRateChanger} from './menus/PlaybackRateChanger.mjs';
@@ -47,13 +48,36 @@ export class InterfaceController {
     this.playbackRateChanger.setupUI();
     this.videoQualityChanger = new VideoQualityChanger();
     this.videoQualityChanger.setupUI();
-    this.videoQualityChanger.on('qualityChanged', (level) => {
-      this.client.currentLevel = level;
+    this.videoQualityChanger.on('qualityChanged', (level, savePriority) => {
+      if (savePriority) {
+        const mimeType = (level.mimeType || '').split('/');
+        if (mimeType.length > 1) {
+          this.client.getLevelManager().setPrioritizedVideoContainer(mimeType[1]);
+        }
+        if (level.videoCodec) {
+          this.client.getLevelManager().setPrioritizedVideoCodec(level.videoCodec);
+        }
+      }
+      this.client.setCurrentVideoLevelID(level.id);
+    });
+    this.audioQualityChanger = new AudioQualityChanger();
+    this.audioQualityChanger.setupUI();
+    this.audioQualityChanger.on('qualityChanged', (level) => {
+      const mimeType = (level.mimeType || '').split('/');
+      if (mimeType.length > 1) {
+        this.client.getLevelManager().setPrioritizedAudioContainer(mimeType[1]);
+      }
+      if (level.audioCodec) {
+        this.client.getLevelManager().setPrioritizedAudioCodec(level.audioCodec);
+      }
+      const usesDRC = level.id.includes('-drc');
+      this.client.getLevelManager().setShouldPreferDRCAudio(usesDRC);
+      this.client.setCurrentAudioLevelID(level.id);
     });
     this.languageChanger = new LanguageChanger();
     this.languageChanger.setupUI();
-    this.languageChanger.on('languageChanged', (track) => {
-      this.client.setLanguageTrack(track);
+    this.languageChanger.on('languageChanged', (type, language, tracks) => {
+      this.client.changeLanguage(type, language);
     });
     this.loopControls = new LoopMenu(this.client);
     this.loopControls.setupUI();
@@ -61,6 +85,7 @@ export class InterfaceController {
     this.saveManager.setupUI();
     this.playbackRateChanger.on('open', this.closeAllMenus.bind(this));
     this.videoQualityChanger.on('open', this.closeAllMenus.bind(this));
+    this.audioQualityChanger.on('open', this.closeAllMenus.bind(this));
     this.languageChanger.on('open', this.closeAllMenus.bind(this));
     this.subtitlesManager.on('open', this.closeAllMenus.bind(this));
     this.loopControls.on('open', this.closeAllMenus.bind(this));
@@ -108,6 +133,7 @@ export class InterfaceController {
     }
     closedSomething = this.playbackRateChanger.closeUI() || closedSomething;
     closedSomething = this.videoQualityChanger.closeUI() || closedSomething;
+    closedSomething = this.audioQualityChanger.closeUI() || closedSomething;
     closedSomething = this.languageChanger.closeUI() || closedSomething;
     closedSomething = this.subtitlesManager.closeUI() || closedSomething;
     closedSomething = this.loopControls.closeUI() || closedSomething;
@@ -530,6 +556,7 @@ export class InterfaceController {
     const mouseUpHandler = (e) => {
       DOMElements.playerContainer.removeEventListener('mousemove', mouseMoveHandler);
       DOMElements.playerContainer.removeEventListener('mouseup', mouseUpHandler);
+      DOMElements.playerContainer.removeEventListener('mouseleave', mouseUpHandler);
     };
     const mouseMoveHandler = (e) => {
       const currentY = Math.min(Math.max(e.clientY - WebUtils.getOffsetTop(DOMElements.progressContainer), -100), 100);
@@ -550,7 +577,8 @@ export class InterfaceController {
         return;
       }
       DOMElements.playerContainer.addEventListener('mousemove', mouseMoveHandler);
-      DOMElements.playerContainer.addEventListener('mouseup', mouseUpHandler);
+      DOMElements.playerContainer.addEventListener('mouseup', mouseUpHandler, true);
+      DOMElements.playerContainer.addEventListener('mouseleave', mouseUpHandler);
     });
   }
   toggleAutoplayNext() {
@@ -840,6 +868,7 @@ export class InterfaceController {
   }
   updateQualityLevels() {
     this.videoQualityChanger.updateQualityLevels(this.client);
+    this.audioQualityChanger.updateQualityLevels(this.client);
   }
   setVolume(volume) {
     this.volumeControls.setVolume(volume);

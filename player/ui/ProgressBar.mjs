@@ -209,10 +209,10 @@ export class ProgressBar extends EventEmitter {
     }
     const player = this.client.player;
     const duration = player.duration;
-    const currentLevel = player.currentLevel;
-    const currentAudioLevel = player.currentAudioLevel;
-    const fragments = this.client.getFragments(currentLevel);
-    const audioFragments = this.client.getFragments(currentAudioLevel);
+    const currentVideoLevelID = player.getCurrentVideoLevelID();
+    const currentAudioLevelID = player.getCurrentAudioLevelID();
+    const fragments = this.client.getFragments(currentVideoLevelID);
+    const audioFragments = this.client.getFragments(currentAudioLevelID);
     let total = 0;
     let loaded = 0;
     let failed = 0;
@@ -465,6 +465,7 @@ export class ProgressBar extends EventEmitter {
       DOMElements.playerContainer.removeEventListener('mousemove', onProgressbarMouseMove);
       DOMElements.playerContainer.removeEventListener('touchmove', onProgressbarMouseMove);
       DOMElements.playerContainer.removeEventListener('mouseup', onProgressbarMouseUp);
+      DOMElements.playerContainer.removeEventListener('mouseleave', onProgressbarMouseUp);
       DOMElements.playerContainer.removeEventListener('touchend', onProgressbarMouseUp);
       if (!this.keepPreciseModeOpen) {
         this.endPreciseMode();
@@ -489,6 +490,7 @@ export class ProgressBar extends EventEmitter {
     shiftTime(initialPosition);
     DOMElements.playerContainer.addEventListener('mouseup', onProgressbarMouseUp);
     DOMElements.playerContainer.addEventListener('touchend', onProgressbarMouseUp);
+    DOMElements.playerContainer.addEventListener('mouseleave', onProgressbarMouseUp);
     DOMElements.playerContainer.addEventListener('mousemove', onProgressbarMouseMove);
     DOMElements.playerContainer.addEventListener('touchmove', onProgressbarMouseMove);
   }

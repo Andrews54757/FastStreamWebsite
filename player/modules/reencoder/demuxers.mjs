@@ -85,6 +85,19 @@ export class WebMDemuxer extends AbstractDemuxer {
   }
   getVideoChunks(duration) {
     const packets = this.demuxer.videoPackets;
+    // delete any packets out of order
+    let dropped = 0;
+    for (let i = 1; i < packets.length; ) {
+      if (packets[i].timestamp < packets[i - 1].timestamp) {
+        packets.splice(i, 1);
+        dropped++;
+      } else {
+        i++;
+      }
+    }
+    if (dropped > 0) {
+      console.warn(`WebMDemuxer: dropped ${dropped} out of order video packets`);
+    }
     const chunks = [];
     for (let i = 0; i < packets.length - 1; i++) {
       const packet = packets[i];
@@ -115,6 +128,19 @@ export class WebMDemuxer extends AbstractDemuxer {
   }
   getAudioChunks(duration) {
     const packets = this.demuxer.audioPackets;
+    // delete any packets out of order
+    let dropped = 0;
+    for (let i = 1; i < packets.length; ) {
+      if (packets[i].timestamp <= packets[i - 1].timestamp) {
+        packets.splice(i, 1);
+        dropped++;
+      } else {
+        i++;
+      }
+    }
+    if (dropped > 0) {
+      console.warn(`WebMDemuxer: dropped ${dropped} out of order audio packets`);
+    }
     const chunks = [];
     for (let i = 0; i < packets.length - 1; i++) {
       const packet = packets[i];

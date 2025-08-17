@@ -159,7 +159,7 @@ export class VideoAnalyzer extends EventEmitter {
     if (this.isModeSupported()) {
       const fragments = this.client.fragments;
       if (!fragments || fragments.length === 0) return false;
-      if (this.client.currentLevel === -1) return false;
+      if (this.client.getCurrentVideoLevelID() === null) return false;
       const start = fragments.find((fragment) => {
         return fragment && fragment.start <= timeStart && fragment.end >= timeStart;
       });
@@ -203,14 +203,15 @@ export class VideoAnalyzer extends EventEmitter {
     });
     await player.setup();
     player.on(DefaultPlayerEvents.MANIFEST_PARSED, () => {
-      player.currentLevel = this.client.currentLevel;
-      player.load();
+      player.setCurrentVideoLevelID(this.client.getCurrentVideoLevelID());
+      player.setCurrentAudioLevelID(this.client.getCurrentAudioLevelID());
     });
     const onLoadMeta = () => {
       player.off(DefaultPlayerEvents.LOADEDMETADATA, onLoadMeta);
       this.runAnalyzerInBackground(player, aligner, timeStart, timeEnd, onDone);
     };
     player.on(DefaultPlayerEvents.LOADEDMETADATA, onLoadMeta);
+    this.client.attachProcessorsToPlayer(player);
     await player.setSource(this.source);
     return player;
   }

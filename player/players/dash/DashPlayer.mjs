@@ -8,7 +8,7 @@ import {VideoUtils} from '../../utils/VideoUtils.mjs';
 import {DashFragment} from './DashFragment.mjs';
 import {DashFragmentRequester} from './DashFragmentRequester.mjs';
 import {DASHLoaderFactory} from './DashLoader.mjs';
-import {TrackFilter} from './TrackFilter.mjs';
+import {DashTrackUtils} from './DashTrackUtils.mjs';
 export default class DashPlayer extends EventEmitter {
   constructor(client, config) {
     super();
@@ -19,8 +19,6 @@ export default class DashPlayer extends EventEmitter {
     this.defaultQuality = client.options.defaultQuality || 'Auto';
     this.video = document.createElement(this.isAudioOnly ? 'audio' : 'video');
     this.fragmentRequester = new DashFragmentRequester(this);
-    this.desiredVideoLevel = null;
-    this.desiredAudioLevel = null;
     this.activeRequests = [];
   }
   async setup() {
@@ -30,7 +28,7 @@ export default class DashPlayer extends EventEmitter {
     const emitterRelay = new EmitterRelay([preEvents, this]);
     VideoUtils.addPassthroughEventListenersToVideo(this.video, emitterRelay);
     const newSettings = {
-      'streaming': {
+      streaming: {
         abr: {
           autoSwitchBitrate: {audio: false, video: false},
         },
@@ -43,8 +41,11 @@ export default class DashPlayer extends EventEmitter {
         text: {
           defaultEnabled: false,
         },
+        capabilities: {
+          useMediaCapabilitiesApi: false,
+        },
       },
-      'errors': {
+      errors: {
         recoverAttempts: {
           mediaErrorDecode: 1000000,
         },
@@ -56,19 +57,65 @@ export default class DashPlayer extends EventEmitter {
     // };
     // }
     this.dash.updateSettings(newSettings);
-    this.dash.setCustomInitialTrackSelectionFunction((tracks)=>{
-      const lang = navigator.language || 'en';
-      return TrackFilter.filterTracks(tracks, lang, this.defaultQuality);
+    this.dash.setCustomInitialTrackSelectionFunction((tracks) => {
+      const type = tracks[0]?.type;
+      if (type === 'video') {
+        const levels = DashTrackUtils.getVideoLevelList(tracks);
+        const chosen = this.client.getLevelManager().pickVideoLevel(Array.from(levels.values()));
+        if (chosen) {
+          return [chosen.track];
+        } else {
+          console.warn('No matching video track found for chosen level, falling back to all tracks', tracks, chosen);
+          return tracks;
+        }
+      } else if (type === 'audio') {
+        const levels = DashTrackUtils.getAudioLevelList(tracks);
+        const chosen = this.client.getLevelManager().pickAudioLevel(Array.from(levels.values()));
+        if (chosen) {
+          return [chosen.track];
+        } else {
+          console.warn('No matching audio track found for chosen level, falling back to all tracks', tracks, chosen);
+          return tracks;
+        }
+      }
+      return tracks;
+    });
+    this.dash.setCustomBitrateSelectionFunction((representations, bitrate, mediaInfo) => {
+      const type = mediaInfo.type;
+      if (type === 'video') {
+        const levels = DashTrackUtils.getVideoLevelList([mediaInfo]);
+        const chosen = this.client.getLevelManager().pickVideoLevel(Array.from(levels.values()));
+        const result = representations.filter((rep) => {
+          return chosen && rep.id === chosen.id;
+        });
+        if (result.length === 0) {
+          return representations;
+        } else {
+          return result;
+        }
+      } else if (type === 'audio') {
+        const levels = DashTrackUtils.getAudioLevelList([mediaInfo]);
+        const chosen = this.client.getLevelManager().pickAudioLevel(Array.from(levels.values()));
+        const result = representations.filter((rep) => {
+          return chosen && rep.id === chosen.id;
+        });
+        if (result.length === 0) {
+          console.warn('No matching audio representation found for chosen level, falling back to all representations', representations, chosen);
+          return representations;
+        } else {
+          return result;
+        }
+      }
+      return representations;
     });
     this.dash.on('needkey', (e) => {
       this.emit(DefaultPlayerEvents.NEED_KEY);
     });
     let initAlready = false;
-    const initialize = ()=> {
+    const initialize = () => {
       if (initAlready) return;
       initAlready = true;
-      const level = Utils.selectQuality(this.levels, this.defaultQuality);
-      this.emit(DefaultPlayerEvents.MANIFEST_PARSED, level);
+      this.emit(DefaultPlayerEvents.MANIFEST_PARSED);
     };
     this.dash.on('initialInit', (a) => {
       this.extractAllFragments();
@@ -81,11 +128,8 @@ export default class DashPlayer extends EventEmitter {
     this.dash.on('dataUpdateCompleted', (a) => {
       this.extractAllFragments();
     });
-    this.dash.on('currentTrackChanged', (a)=>{
+    this.dash.on('currentTrackChanged', (a) => {
       this.extractAllFragments();
-    });
-    this.dash.on(MediaPlayer.events.STREAM_INITIALIZED, (e) => {
-      this.emit(DefaultPlayerEvents.LANGUAGE_TRACKS);
     });
     // eslint-disable-next-line new-cap
     this.dash.extend('XHRLoader', DASHLoaderFactory(this), false);
@@ -166,14 +210,14 @@ export default class DashPlayer extends EventEmitter {
       }, null, priority);
     });
   }
-  get buffered() {
-    return this.video.buffered;
-  }
   async play() {
     return this.video.play();
   }
   async pause() {
     return this.video.pause();
+  }
+  set currentTime(value) {
+    this.video.currentTime = value;
   }
   destroy() {
     try {
@@ -185,35 +229,6 @@ export default class DashPlayer extends EventEmitter {
     this.video = null;
     this.emit(DefaultPlayerEvents.DESTROYED);
   }
-  set currentTime(value) {
-    this.video.currentTime = value;
-  }
-  get currentTime() {
-    return this.video.currentTime;
-  }
-  get readyState() {
-    return this.video.readyState;
-  }
-  get paused() {
-    return this.video.paused;
-  }
-  get levels() {
-    try {
-      const tracks = this.dash.getTracksFor('video');
-      const currentLang = this.getCurrentLang();
-      return TrackFilter.getLevelList(tracks, currentLang);
-    } catch (e) {
-      console.warn(e);
-      return new Map();
-    }
-  }
-  getCurrentLang() {
-    try {
-      return this.dash.getCurrentTrackFor('video')?.lang || navigator.language || 'en';
-    } catch (e) {
-      return navigator.language || 'en';
-    }
-  }
   getProcessor(adaptationIndex) {
     const processors = this.dash.getStreamController().getActiveStream().getStreamProcessors();
     for (let i = 0; i < processors.length; i++) {
@@ -224,32 +239,50 @@ export default class DashPlayer extends EventEmitter {
     }
     return null;
   }
-  get currentLevel() {
+  getVideoLevels() {
+    try {
+      const tracks = this.dash.getTracksFor('video');
+      return DashTrackUtils.getVideoLevelList(tracks);
+    } catch (e) {
+      console.warn(e);
+      return new Map();
+    }
+  }
+  getAudioLevels() {
+    try {
+      const tracks = this.dash.getTracksFor('audio');
+      return DashTrackUtils.getAudioLevelList(tracks);
+    } catch (e) {
+      console.warn(e);
+      return new Map();
+    }
+  }
+  getCurrentVideoLevelID() {
     const processor = this.dash.getStreamController()?.getActiveStream()?.getStreamProcessors()?.find((o) => o.getType() === 'video');
     if (!processor) {
       return -1;
     }
     return processor.getRepresentationController().getCurrentRepresentation().id;
   }
-  set currentLevel(value) {
-    if (typeof value !== 'string') return;
+  setCurrentVideoLevelID(id) {
+    if (typeof id !== 'string') return;
     try {
-      this.dash.setRepresentationForTypeById('video', value);
+      this.dash.setRepresentationForTypeById('video', id);
     } catch (e) {
       console.warn(e);
     }
   }
-  get currentAudioLevel() {
+  getCurrentAudioLevelID() {
     const processor = this.dash.getStreamController()?.getActiveStream()?.getStreamProcessors()?.find((o) => o.getType() === 'audio');
     if (!processor) {
       return -1;
     }
     return processor.getRepresentationController().getCurrentRepresentation().id;
   }
-  set currentAudioLevel(value) {
-    if (typeof value !== 'string') return;
+  setCurrentAudioLevelID(id) {
+    if (typeof id !== 'string') return;
     try {
-      this.dash.setRepresentationForTypeById('audio', value);
+      this.dash.setRepresentationForTypeById('audio', id, true);
     } catch (e) {
       console.warn(e);
     }
@@ -257,44 +290,9 @@ export default class DashPlayer extends EventEmitter {
   get duration() {
     return this.video.duration;
   }
-  get audioTracks() {
-    return TrackFilter.uniqueLanguages(this.dash.getTracksFor('audio'));
-  }
-  get videoTracks() {
-    return TrackFilter.uniqueLanguages(this.dash.getTracksFor('video'), this.defaultQuality);
-  }
-  get languageTracks() {
-    return {
-      audio: this.audioTracks.map((track) => {
-        return {
-          type: 'audio',
-          lang: track.lang,
-          index: track.index,
-          isActive: track === this.dash.getCurrentTrackFor('audio'),
-          track,
-        };
-      }),
-      video: this.videoTracks.map((track) => {
-        return {
-          type: 'video',
-          lang: track.lang,
-          index: track.index,
-          isActive: track === this.dash.getCurrentTrackFor('video'),
-          track,
-        };
-      }),
-    };
-  }
-  setLanguageTrack(track) {
-    this.dash.setCurrentTrack(track.track);
-  }
   get currentFragment() {
-    const frags = this.client.getFragments(this.currentLevel);
+    const frags = this.client.getFragments(this.getCurrentVideoLevelID());
     if (!frags) return null;
-    // check if init segment isn't loaded
-    if (frags[-1] && frags[-1].status !== DownloadStatus.DOWNLOAD_COMPLETE) {
-      return frags[-1];
-    }
     const time = this.currentTime;
     return frags.find((frag) => {
       if (!frag) return false;
@@ -302,12 +300,8 @@ export default class DashPlayer extends EventEmitter {
     });
   }
   get currentAudioFragment() {
-    const frags = this.client.getFragments(this.currentAudioLevel);
+    const frags = this.client.getFragments(this.getCurrentAudioLevelID());
     if (!frags) return null;
-    // check if init segment isn't loaded
-    if (frags[-1] && frags[-1].status !== DownloadStatus.DOWNLOAD_COMPLETE) {
-      return frags[-1];
-    }
     const time = this.currentTime;
     return frags.find((frag) => {
       if (!frag) return false;
@@ -342,9 +336,9 @@ export default class DashPlayer extends EventEmitter {
     };
   }
   async saveVideo(options) {
-    const fragments = this.client.getFragments(this.currentLevel) || [];
-    const audioFragments = this.client.getFragments(this.currentAudioLevel) || [];
-    let zippedFragments = Utils.zipTimedFragments([fragments, audioFragments]);
+    const videoFragments = this.client.getFragments(this.getCurrentVideoLevelID()) || [];
+    const audioFragments = this.client.getFragments(this.getCurrentAudioLevelID()) || [];
+    let zippedFragments = Utils.zipTimedFragments([videoFragments, audioFragments]);
     if (options.partialSave) {
       zippedFragments = zippedFragments.filter((data) => {
         return data.fragment.status === DownloadStatus.DOWNLOAD_COMPLETE;
@@ -373,8 +367,15 @@ export default class DashPlayer extends EventEmitter {
     const audioProcessor = this.dash.getStreamController()?.getActiveStream()?.getStreamProcessors()?.find((o) => o.getType() === 'audio');
     const videoDuration = videoProcessor?.getMediaInfo()?.streamInfo?.duration || 0;
     const audioDuration = audioProcessor?.getMediaInfo()?.streamInfo?.duration || 0;
-    const videoInitSegment = fragments?.[-1];
+    const videoInitSegment = videoFragments?.[-1];
     const audioInitSegment = audioFragments?.[-1];
+    // if init segments are not downloaded, we will try to download them
+    if (videoInitSegment && videoInitSegment.status !== DownloadStatus.DOWNLOAD_COMPLETE) {
+      await this.downloadFragment(videoInitSegment, -1);
+    }
+    if (audioInitSegment && audioInitSegment.status !== DownloadStatus.DOWNLOAD_COMPLETE) {
+      await this.downloadFragment(audioInitSegment, -1);
+    }
     const videoInitSegmentData = videoInitSegment ? await this.client.downloadManager.getEntry(videoInitSegment.getContext()).getDataFromBlob() : null;
     const audioInitSegmentData = audioInitSegment ? await this.client.downloadManager.getEntry(audioInitSegment.getContext()).getDataFromBlob() : null;
     const {DASH2MP4} = await import('../../modules/dash2mp4/dash2mp4.mjs');
@@ -412,5 +413,17 @@ export default class DashPlayer extends EventEmitter {
   }
   set playbackRate(value) {
     this.video.playbackRate = value;
+  }
+  get buffered() {
+    return this.video.buffered;
+  }
+  get currentTime() {
+    return this.video.currentTime;
+  }
+  get readyState() {
+    return this.video.readyState;
+  }
+  get paused() {
+    return this.video.paused;
   }
 }

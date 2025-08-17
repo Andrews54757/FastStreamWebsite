@@ -28,7 +28,16 @@ export class AudioChannelMixer extends AbstractAudioModule {
     return this.ui.mixer;
   }
   setConfig(config) {
+    // first, cache which channel is dyn active
+    const dynChannel = this.channelConfigs ? this.channelConfigs.find((channel) => channel.dyn) : null;
     this.channelConfigs = config.channels;
+    // restore dyn active channel
+    if (dynChannel) {
+      const newDynChannel = this.channelConfigs.find((channel) => channel.id === dynChannel.id);
+      if (newDynChannel) {
+        newDynChannel.dyn = true;
+      }
+    }
     this.masterConfig = config.master;
     this.channelConfigs.forEach((channel, i) => {
       this.channelNodes[channel.id].equalizer.setConfig(channel.equalizerNodes);
@@ -37,7 +46,6 @@ export class AudioChannelMixer extends AbstractAudioModule {
     this.masterNodes.equalizer.setConfig(this.masterConfig.equalizerNodes);
     this.masterNodes.compressor.setConfig(this.masterConfig.compressor);
     this.refreshMixer();
-    this.updateDynLabels();
   }
   setupUI(equalizerContainer, compressorContainer) {
     this.ui = {};
@@ -188,7 +196,6 @@ export class AudioChannelMixer extends AbstractAudioModule {
       els.muteButton.textContent = Localize.getMessage('audiomixer_mono');
       els.muteButton.title = els.muteButton.textContent;
       els.muteButton.classList.toggle('active', channel.mono);
-      els.dynButton.classList.toggle('active', true);
     } else {
       els.soloButton.classList.toggle('active', channel.solo);
       els.muteButton.classList.toggle('active', channel.muted);
@@ -267,14 +274,10 @@ export class AudioChannelMixer extends AbstractAudioModule {
     const toggleDyn = () => {
       this.channelConfigs.forEach((otherChannel) => {
         if (otherChannel.id === channel.id) return;
-        const els = this.mixerChannelElements[otherChannel.id];
         otherChannel.dyn = false;
-        els.dynButton.classList.remove('active');
       });
       this.masterConfig.dyn = false;
-      this.masterElements.dynButton.classList.remove('active');
       channel.dyn = true;
-      els.dynButton.classList.toggle('active', channel.dyn);
       this.swapDynActive();
     };
     els.volumeHandle.addEventListener('keydown', (e) => {
@@ -328,8 +331,15 @@ export class AudioChannelMixer extends AbstractAudioModule {
     this.ui.master.appendChild(this.masterElements.container);
     this.updateNodes();
     this.swapDynActive();
+    this.updateDynLabels();
   }
   swapDynActive() {
+    // remove active labels
+    for (let i = 0; i < this.channelConfigs.length; i++) {
+      if (this.mixerChannelElements[i]) {
+        this.mixerChannelElements[i].dynButton.classList.remove('active');
+      }
+    }
     this.ui.equalizerContainer.replaceChildren();
     this.ui.compressorContainer.replaceChildren();
     for (let i = 0; i < this.channelConfigs.length; i++) {
@@ -338,12 +348,14 @@ export class AudioChannelMixer extends AbstractAudioModule {
       if (channel.dyn) {
         this.ui.equalizerContainer.appendChild(nodes.equalizer.getElement());
         this.ui.compressorContainer.appendChild(nodes.compressor.getElement());
+        this.mixerChannelElements[i].dynButton.classList.add('active');
         return;
       }
     }
     this.masterConfig.dyn = true;
     this.ui.equalizerContainer.appendChild(this.masterNodes.equalizer.getElement());
     this.ui.compressorContainer.appendChild(this.masterNodes.compressor.getElement());
+    this.masterElements.dynButton.classList.add('active');
   }
   createAnalyzers() {
     if (this.channelNodes.length === 0) {
@@ -426,8 +438,26 @@ export class AudioChannelMixer extends AbstractAudioModule {
       nodes.postSplit.connect(nodes.equalizer.getInputNode());
       nodes.equalizer.getOutputNode().connect(nodes.compressor.getInputNode());
       nodes.compressor.getOutputNode().connect(nodes.preGain);
-      nodes.equalizer.on('change', this.updateDynLabels.bind(this));
-      nodes.compressor.on('change', this.updateDynLabels.bind(this));
+      let oldEqualizerState = nodes.equalizer.hasNodes();
+      let oldCompressorState = nodes.compressor.isEnabled();
+      nodes.equalizer.on('change', ()=>{
+        const newState = nodes.equalizer.hasNodes();
+        if (newState === oldEqualizerState) {
+          return;
+        }
+        oldEqualizerState = newState;
+        this.updateDynLabels();
+        this.updateNodes();
+      });
+      nodes.compressor.on('change', ()=>{
+        const newState = nodes.compressor.isEnabled();
+        if (newState === oldCompressorState) {
+          return;
+        }
+        oldCompressorState = newState;
+        this.updateDynLabels();
+        this.updateNodes();
+      });
       return nodes;
     });
     this.masterNodes = {
@@ -497,8 +527,11 @@ export class AudioChannelMixer extends AbstractAudioModule {
       }
     }
     const hasNonUnityChannelGains = gains.some((gain) => gain !== 1);
+    const hasActiveNodes = this.channelNodes.some((nodes) => {
+      return nodes.equalizer.hasNodes() || nodes.compressor.isEnabled();
+    });
     const needsAnalyzer = this.needsAnalyzer();
-    if (hasNonUnityChannelGains || needsAnalyzer) {
+    if (hasActiveNodes || hasNonUnityChannelGains || needsAnalyzer) {
       if (!this.channelSplitter) {
         this.channelSplitter = this.audioContext.createChannelSplitter();
         this.channelMerger = this.audioContext.createChannelMerger();
