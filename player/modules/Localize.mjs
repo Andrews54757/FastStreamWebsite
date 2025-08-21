@@ -1780,6 +1780,16 @@ const TranslationMap = {
     "(atual)",
     "(текущее)"
   ],
+  "player_quality_unknown": [
+    "(unknown)",
+    "(unbekannt)",
+    "(desconocido)",
+    "(sconosciuto)",
+    "(不明)",
+    "(tidak diketahui)",
+    "(desconhecido)",
+    "(неизвестно)"
+  ],
   "player_buffer_incognito_warning": [
     "Not enough space to predownload in incognito mode, will buffer $1",
     "Nicht genügend Speicherplatz um im Privaten Modus vor zu laden, es wird gepuffert bis $1",

@@ -980,6 +980,7 @@ export class FastStreamClient extends EventEmitter {
     this.context.on(DefaultPlayerEvents.LOADEDDATA, (event) => {
     });
     this.context.on(DefaultPlayerEvents.LOADEDMETADATA, (event) => {
+      this.interfaceController.updateQualityLevels();
     });
     this.context.on(DefaultPlayerEvents.PAUSE, (event) => {
       this.interfaceController.pause();
@@ -1325,6 +1326,12 @@ export class FastStreamClient extends EventEmitter {
   }
   get chapters() {
     return this.player?.chapters || [];
+  }
+  get videoWidth() {
+    return this.player?.getVideo().videoWidth || 0;
+  }
+  get videoHeight() {
+    return this.player?.getVideo().videoHeight || 0;
   }
   debugDemo() {
     this.interfaceController.hideControlBar = ()=>{};
