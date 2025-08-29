@@ -4,14 +4,14 @@ import {WebUtils} from '../../utils/WebUtils.mjs';
 import {createKnob} from '../components/Knob.mjs';
 import {AbstractAudioModule} from './AbstractAudioModule.mjs';
 export class AudioCompressor extends AbstractAudioModule {
-  constructor(skipSplitter = false, customTitlePrepend) {
+  constructor(customTitlePrepend, numberOfChannelsGetter) {
     super('AudioCompressor');
     this.compressorNode = null;
     this.compressorGain = null;
     this.compressorConfig = null;
-    this.dontPass = skipSplitter;
     this.customTitlePrepend = customTitlePrepend || '';
     this.renderCache = {};
+    this.numberOfChannelsGetter = numberOfChannelsGetter;
     this.setupUI();
   }
   isEnabled() {
@@ -55,35 +55,51 @@ export class AudioCompressor extends AbstractAudioModule {
     this.ui.compressor.replaceChildren();
     this.updateCompressor();
   }
-  updateCompressor() {
+  async updateChannelCount() {
+    const count = this.numberOfChannelsGetter ? await this.numberOfChannelsGetter() : 2;
+    if (count && this.compressorNode) {
+      if (count > 2 && (!this.splitterNode || this.splitterNode.numberOfOutputs !== count)) {
+        this.destroyCompressorNodes();
+        this.createCompressorNodes();
+      } else if (count <= 2 && this.splitterNode) {
+        this.destroyCompressorNodes();
+        this.createCompressorNodes();
+      }
+    }
+  }
+  async updateCompressor() {
     if (!this.compressorConfig) return;
     const compressor = this.compressorConfig;
     this.ui.compressorToggle.textContent = compressor.enabled ? Localize.getMessage('audiocompressor_enabled') : Localize.getMessage('audiocompressor_disabled');
     this.ui.compressorToggle.classList.toggle('enabled', compressor.enabled);
     if (compressor.enabled) {
-      this.createCompressorNodes();
-      this.compressorNode.threshold.value = compressor.threshold;
-      this.compressorNode.knee.value = compressor.knee;
-      this.compressorNode.ratio.value = compressor.ratio;
-      this.compressorNode.attack.value = compressor.attack;
-      this.compressorNode.release.value = compressor.release;
-      this.compressorGain.gain.value = compressor.gain;
+      await this.createCompressorNodes();
+      if (this.compressorNode) {
+        this.compressorNode.threshold.value = compressor.threshold;
+        this.compressorNode.knee.value = compressor.knee;
+        this.compressorNode.ratio.value = compressor.ratio;
+        this.compressorNode.attack.value = compressor.attack;
+        this.compressorNode.release.value = compressor.release;
+        this.compressorGain.gain.value = compressor.gain;
+      }
     } else {
       this.destroyCompressorNodes();
     }
   }
-  createCompressorNodes() {
-    if (this.compressorNode) return;
+  async createCompressorNodes() {
+    const numChannels = this.numberOfChannelsGetter ? await this.numberOfChannelsGetter() : 2;
+    if (numChannels === 0 || this.compressorNode) return;
     const audioContext = this.audioContext;
     this.compressorNode = audioContext.createDynamicsCompressor();
     this.compressorGain = audioContext.createGain();
     this.compressorNode.connect(this.compressorGain);
-    if (!this.dontPass) {
-      this.splitterNode = audioContext.createChannelSplitter(6);
-      this.mergerNode = audioContext.createChannelMerger(6);
+    const shouldUseSplitterMerger = numChannels > 2;
+    if (shouldUseSplitterMerger) {
+      this.splitterNode = audioContext.createChannelSplitter(numChannels);
+      this.mergerNode = audioContext.createChannelMerger(numChannels);
       this.compressorMerger = audioContext.createChannelMerger(2);
       this.compressorSplitter = audioContext.createChannelSplitter(2);
-      for (let i = 2; i < 6; i++) {
+      for (let i = 2; i < numChannels; i++) {
         this.splitterNode.connect(this.mergerNode, i, i);
       }
       this.splitterNode.connect(this.compressorMerger, 0, 0);
@@ -104,7 +120,7 @@ export class AudioCompressor extends AbstractAudioModule {
   destroyCompressorNodes(skipDisconnect = false) {
     if (!this.compressorNode) return;
     if (!skipDisconnect) {
-      if (!this.dontPass) {
+      if (this.splitterNode) {
         this.getInputNode().disconnect(this.splitterNode);
         this.splitterNode.disconnect(this.compressorMerger);
         this.compressorMerger.disconnect(this.compressorNode);

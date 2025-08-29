@@ -9,7 +9,15 @@ ModesMap.set('m3u', PlayerModes.ACCELERATED_HLS);
 ModesMap.set('mpd', PlayerModes.ACCELERATED_DASH);
 ModesMap.set('youtube', PlayerModes.ACCELERATED_YT);
 ModesMap.set('vmpatch', PlayerModes.ACCELERATED_VM);
+/**
+ * Utility functions for working with URLs and extracting identifiers.
+ */
 export class URLUtils {
+  /**
+   * Extracts the YouTube video identifier from a URL.
+   * @param {string} urlStr - The YouTube URL.
+   * @return {string} The video identifier or empty string if not found.
+   */
   static get_yt_identifier(urlStr) {
     try {
       const url = new URL(urlStr);
@@ -22,6 +30,11 @@ export class URLUtils {
       return '';
     }
   }
+  /**
+   * Extracts the YouTube playlist identifier from a URL.
+   * @param {string} urlStr - The YouTube URL.
+   * @return {string} The playlist identifier or empty string if not found.
+   */
   static get_yt_playlist_identifier(urlStr) {
     try {
       const url = new URL(urlStr);
@@ -30,6 +43,11 @@ export class URLUtils {
       return '';
     }
   }
+  /**
+   * Checks if a URL is a YouTube URL.
+   * @param {string} urlStr - The URL to check.
+   * @return {boolean} True if YouTube URL, false otherwise.
+   */
   static is_url_yt(urlStr) {
     if (!urlStr) return false;
     try {
@@ -94,7 +112,7 @@ export class URLUtils {
     return url.split(/[#?]/)[0];
   }
   static get_url_extension(url) {
-    return this.strip_queryhash(url).split('.').pop().trim();
+    return this.strip_queryhash(url).split('.').pop().trim().toLowerCase();
   }
   static get_file_name(url) {
     return this.strip_queryhash(url).split('/').pop().trim();

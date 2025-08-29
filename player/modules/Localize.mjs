@@ -3151,12 +3151,12 @@ const TranslationMap = {
     "Скрыть плеер"
   ],
   "options_general_vischangeaction": [
-    "When player visiblity changes",
+    "When player visibility changes",
     "Wenn die Visibilität des Players sich ändert",
     "Cuando cambia la visibilidad del reproductor",
     "Quando cambia la visibilità del lettore video",
     "プレーヤーの可視性が変更されたとき",
-    "When player visiblity changes",
+    "When player visibility changes",
     "Quando a visibilidade do tocador mudar",
     "При изменении видимости плеера"
   ],
