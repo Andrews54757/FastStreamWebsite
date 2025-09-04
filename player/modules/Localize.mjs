@@ -3310,6 +3310,36 @@ const TranslationMap = {
     "Alto Contraste",
     "Высокая контрастность"
   ],
+  "options_general_color_theme_sunset": [
+    "Sunset",
+    "Sonnenuntergang",
+    "Puesta del sol",
+    "Tramonto",
+    "夕日",
+    "Sunset",
+    "Pôr do sol",
+    "Закат"
+  ],
+  "options_general_color_theme_forest": [
+    "Forest",
+    "Wald",
+    "Bosque",
+    "Foresta",
+    "森",
+    "Forest",
+    "Floresta",
+    "Лес"
+  ],
+  "options_general_color_theme_slate": [
+    "Slate",
+    "Schiefer",
+    "Pizarra",
+    "Ardesia",
+    "スレート",
+    "Slate",
+    "Lousa",
+    "Сланец"
+  ],
   "options_general_vischangeaction_pip": [
     "Toggle picture-in-picture",
     "Bild-in-Bild umschalten",

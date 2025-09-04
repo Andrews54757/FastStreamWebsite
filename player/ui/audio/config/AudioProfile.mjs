@@ -2,11 +2,11 @@ import {AudioChannelControl} from './AudioChannelControl.mjs';
 import {AudioCompressionControl} from './AudioCompressionControl.mjs';
 import {AudioCrosstalkControl} from './AudioCrosstalkControl.mjs';
 import {AudioEQNode} from './AudioEQNode.mjs';
-const MAX_CHANNELS = 6; // 8; Change to 8 when 7.1 audio is fixed.
+export const MAX_AUDIO_CHANNELS = 6; // 8; Change to 8 when 7.1 audio is fixed.
 export class AudioProfile {
   constructor(id) {
     this.id = parseInt(id);
-    this.channels = Array.from({length: MAX_CHANNELS}, (_, i) => {
+    this.channels = Array.from({length: MAX_AUDIO_CHANNELS}, (_, i) => {
       return AudioChannelControl.default(i);
     });
     this.master = AudioChannelControl.default('master');
@@ -16,7 +16,7 @@ export class AudioProfile {
   static fromObj(obj) {
     const profile = new AudioProfile(obj.id);
     profile.label = obj.label;
-    if (obj.channels && obj.channels.length <= MAX_CHANNELS) {
+    if (obj.channels && obj.channels.length <= MAX_AUDIO_CHANNELS) {
       profile.channels = obj.channels.map((channel) => {
         return AudioChannelControl.fromObj(channel);
       });
@@ -26,9 +26,20 @@ export class AudioProfile {
       });
       profile.master = profile.channels.pop();
     }
+    // Sort channels by ID, increasing
+    profile.channels.sort((a, b) => a.id - b.id);
     // fill remaining with defaults if less than MAX_CHANNELS
-    for (let i = profile.channels.length; i < MAX_CHANNELS; i++) {
-      profile.channels.push(AudioChannelControl.default(i));
+    if (profile.channels.length < MAX_AUDIO_CHANNELS) {
+      const newChannels = [];
+      for (let i = 0; i < MAX_AUDIO_CHANNELS; i++) {
+        const existingChannel = profile.channels.find((ch) => ch.id === i);
+        if (existingChannel) {
+          newChannels.push(existingChannel);
+        } else {
+          newChannels.push(AudioChannelControl.default(i));
+        }
+      }
+      profile.channels = newChannels;
     }
     if (obj.master) {
       const masterChannel = AudioChannelControl.fromObj(obj.master);
