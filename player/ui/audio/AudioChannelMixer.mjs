@@ -505,22 +505,6 @@ export class AudioChannelMixer extends AbstractAudioModule {
   async updateChannelCount() {
     this.updateNodes();
     if ( this.masterNodes.compressor) this.masterNodes.compressor.updateChannelCount();
-    const numberOfChannels = await this.getChannelCount();
-    if (numberOfChannels === 0) {
-      return;
-    }
-    const activeChannels = AudioUtils.getActiveChannelsForChannelCount(numberOfChannels);
-    if (numberOfChannels === 1) {
-      activeChannels.push(1); // mono sources are always stereo internally
-    }
-    // disable unused channels
-    this.mixerChannelElements.forEach((els, i) => {
-      if (activeChannels.includes(i)) {
-        els.channelTitle.classList.remove('disabled');
-      } else {
-        els.channelTitle.classList.add('disabled');
-      }
-    });
   }
   async updateNodes() {
     if (!this.audioContext) return;
@@ -540,6 +524,14 @@ export class AudioChannelMixer extends AbstractAudioModule {
     if (numberOfChannels === 1) {
       activeChannels.push(1); // mono sources are always stereo internally
     }
+    this.mixerChannelElements.forEach((els, i) => {
+      if (!els) return;
+      if (activeChannels.includes(i)) {
+        els.channelTitle.classList.remove('disabled');
+      } else {
+        els.channelTitle.classList.add('disabled');
+      }
+    });
     const hasNonUnityChannelGains = activeChannels.some((i) => gains[i] !== 1);
     const hasActiveNodes = activeChannels.some((i) => {
       const nodes = this.channelNodes[i];

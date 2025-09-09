@@ -1,5 +1,6 @@
-import {CrossoverNode} from './crossover.mjs';
-/* eslint-disable camelcase */
+import {LinkwitzRileyCrossoverNetwork} from './crossover.mjs';
+const CROSSOVER_BYPASS = 0;
+const CROSSOVER_XTC = 1;
 export class CrosstalkNode {
   constructor(audioContext, options) {
     this.cachedOptions = {};
@@ -25,7 +26,10 @@ export class CrosstalkNode {
     };
     this.cachedOptions = options;
     if (changedProperties.highbypass || changedProperties.lowbypass) {
-      this.configureCrossover();
+      clearTimeout(this.crossoverConfigureTimeout);
+      this.crossoverConfigureTimeout = setTimeout(() => {
+        this.configureCrossover();
+      }, 50);
     }
     this.configureXTC();
   }
@@ -38,7 +42,7 @@ export class CrosstalkNode {
     this.cutoffs = [];
     this.mappings = [];
     this.cutoffs = [this.cachedOptions.lowbypass, this.cachedOptions.highbypass];
-    this.mappings = [0, 1, 0];
+    this.mappings = [CROSSOVER_BYPASS, CROSSOVER_XTC, CROSSOVER_BYPASS];
     if (this.cachedOptions.highbypass < this.cachedOptions.lowbypass) {
       this.cutoffs.pop();
       this.mappings.pop();
@@ -76,16 +80,14 @@ export class CrosstalkNode {
     this.input.channelCountMode = 'explicit';
     const merger = ctx.createChannelMerger(2);
     this.output = merger;
-    this.crossover = new CrossoverNode(ctx, {
-      cutoffs: this.cutoffs,
-      mappings: this.mappings,
-      numOutputs: 2,
-    });
+    this.crossover = new LinkwitzRileyCrossoverNetwork(ctx);
+    this.configureCrossover();
+    this.crossover.getInputNode().connectFrom(this.input);
     const {ConvolutionXTC} = await import('./convolution.mjs');
     this.xtc = new ConvolutionXTC(ctx, this.cachedOptions);
-    await this.crossover.init();
-    this.input.connect(this.crossover.getNode());
-    await this.xtc.init(this.crossover.getNode());
+    await this.xtc.init();
+    this.crossover.getOutputNode(CROSSOVER_BYPASS).connect(this.xtc.getBypassInputNode());
+    this.crossover.getOutputNode(CROSSOVER_XTC).connect(this.xtc.getInputNode());
     this.output = this.xtc.getOutputNode();
   }
   getOutputNode() {
