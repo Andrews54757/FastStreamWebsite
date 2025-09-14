@@ -650,6 +650,18 @@ export class FastStreamClient extends EventEmitter {
       this.updateCSSFilters();
     }
   }
+  initiateWebAudio() {
+    this.audioContext = new AudioContext();
+    this.audioSource = this.audioContext.createMediaElementSource(this.player.getVideo());
+    this.audioOutputNode = new VirtualAudioNode('mainSource');
+    this.audioOutputNode.connectFrom(this.audioSource);
+    this.audioAnalyzer.setupAnalyzerNodeForMainPlayer(this.player.getVideo(), this.audioOutputNode, this.audioContext, ()=>{
+      return this.currentVideo.currentTime + this.options.videoDelay / 1000;
+    });
+    this.audioConfigManager.setupNodes(this.audioContext);
+    this.audioConfigManager.getInputNode().connectFrom(this.audioOutputNode);
+    this.audioConfigManager.getOutputNode().connect(this.audioContext.destination);
+  }
   /**
    * Sets the current source and initializes the player.
    * @param {Object} source - Source object.
@@ -710,17 +722,8 @@ export class FastStreamClient extends EventEmitter {
       }
       await this.player.setSource(source);
       this.interfaceController.addVideo(this.player.getVideo());
-      if (EnvUtils.isWebAudioSupported()) {
-        this.audioContext = new AudioContext();
-        this.audioSource = this.audioContext.createMediaElementSource(this.player.getVideo());
-        this.audioOutputNode = new VirtualAudioNode('mainSource');
-        this.audioOutputNode.connectFrom(this.audioSource);
-        this.audioAnalyzer.setupAnalyzerNodeForMainPlayer(this.player.getVideo(), this.audioOutputNode, this.audioContext, ()=>{
-          return this.currentVideo.currentTime + this.options.videoDelay / 1000;
-        });
-        this.audioConfigManager.setupNodes(this.audioContext);
-        this.audioConfigManager.getInputNode().connectFrom(this.audioOutputNode);
-        this.audioConfigManager.getOutputNode().connect(this.audioContext.destination);
+      if (EnvUtils.isWebAudioSupported() && !EnvUtils.isSafari()) {
+        this.initiateWebAudio();
       }
       this.syncedAudioPlayer = new SyncedAudioPlayer(this);
       this.syncedAudioPlayer.setPlaybackRate(this.state.playbackRate);
@@ -1282,6 +1285,9 @@ export class FastStreamClient extends EventEmitter {
       await this.syncedAudioPlayer.play();
     }
     this.interfaceController.play();
+    if (!this.audioContext && EnvUtils.isWebAudioSupported() && EnvUtils.isSafari()) {
+      this.initiateWebAudio();
+    }
     if (this.audioContext && this.audioContext.state === 'suspended') {
       await this.audioContext.resume();
     }
