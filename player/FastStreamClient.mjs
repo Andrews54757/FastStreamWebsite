@@ -116,7 +116,7 @@ export class FastStreamClient extends EventEmitter {
     this.frameExtractor = new PreviewFrameExtractor(this);
     if (EnvUtils.isWebAudioSupported()) {
       this.audioConfigManager = new AudioConfigManager(this);
-      this.audioContext = new AudioContext();
+      this.audioContext = EnvUtils.isSafari() ? null : new AudioContext();
       this.audioConfigManager.setupNodes(this.audioContext);
     }
     this.videoAnalyzer.on(AnalyzerEvents.MATCH, () => {

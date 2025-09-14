@@ -17,6 +17,9 @@ export class AudioEqualizer extends AbstractAudioModule {
     this.renderCache = {};
     this.setupUI();
   }
+  getSampleRate() {
+    return this.audioContext ? this.audioContext.sampleRate : 48000;
+  }
   hasNodes() {
     return this.equalizerNodes.length > 0;
   }
@@ -144,12 +147,21 @@ export class AudioEqualizer extends AbstractAudioModule {
     });
     this.equalizerNodes = [];
     this.equalizerConfig.forEach((node) => {
-      const eqNode = this.audioContext.createBiquadFilter();
-      eqNode.type = node.type;
-      eqNode.frequency.value = node.frequency;
-      eqNode.gain.value = node.gain;
-      eqNode.Q.value = node.q;
-      this.equalizerNodes.push(eqNode);
+      if (this.audioContext) {
+        const eqNode = this.audioContext.createBiquadFilter();
+        eqNode.type = node.type;
+        eqNode.frequency.value = node.frequency;
+        eqNode.gain.value = node.gain;
+        eqNode.Q.value = node.q;
+        this.equalizerNodes.push(eqNode);
+      } else {
+        this.equalizerNodes.push({
+          type: node.type,
+          frequency: {value: node.frequency},
+          gain: {value: node.gain},
+          Q: {value: node.q},
+        });
+      }
     });
     this.equalizerNodes.forEach((node, index) => {
       if (index === 0) {
@@ -188,7 +200,7 @@ export class AudioEqualizer extends AbstractAudioModule {
       this.renderCache.height = height;
     }
     this.spectrumCtx.clearRect(0, 0, width, height);
-    const sampleRate = this.audioContext.sampleRate;
+    const sampleRate = this.getSampleRate();
     const maxFreq = sampleRate / 2;
     const frequencyWidth = maxFreq;
     const logFrequencyWidth = Math.log10(frequencyWidth) - Math.log10(20);
@@ -268,7 +280,7 @@ export class AudioEqualizer extends AbstractAudioModule {
       lines.push(instructions.join('\r\n'));
       return lines.join('\r\n');
     }
-    const sampleRate = this.audioContext.sampleRate;
+    const sampleRate = this.getSampleRate();
     const maxFreq = sampleRate / 2;
     this.equalizerNodes.forEach((node, i) => {
       const el = WebUtils.create('div', null, 'equalizer_node tooltip');
@@ -412,11 +424,12 @@ export class AudioEqualizer extends AbstractAudioModule {
     });
   }
   renderEqualizerResponse() {
+    if (!this.audioContext) return;
     this.ui.equalizerCanvas.width = this.ui.equalizer.clientWidth * window.devicePixelRatio;
     this.ui.equalizerCanvas.height = this.ui.equalizer.clientHeight * window.devicePixelRatio;
     const width = this.ui.equalizerCanvas.width;
     const height = this.ui.equalizerCanvas.height;
-    const sampleRate = this.audioContext.sampleRate;
+    const sampleRate = this.getSampleRate();
     const maxFreq = sampleRate / 2;
     const bufferLength = width;
     const frequencyArray = new Float32Array(bufferLength);
@@ -508,7 +521,7 @@ export class AudioEqualizer extends AbstractAudioModule {
   }
   setupEqualizerFrequencyAxis() {
     this.ui.equalizerFrequencyAxis.replaceChildren();
-    const sampleRate = this.audioContext.sampleRate;
+    const sampleRate = this.getSampleRate();
     const maxFreq = sampleRate / 2;
     const frequencyWidth = maxFreq;
     const logFrequencyWidth = Math.log10(frequencyWidth);
@@ -561,7 +574,7 @@ export class AudioEqualizer extends AbstractAudioModule {
     }
   }
   ratioToFrequency(ratio) {
-    const sampleRate = this.audioContext.sampleRate;
+    const sampleRate = this.getSampleRate();
     const maxFreq = sampleRate / 2;
     const frequencyWidth = maxFreq;
     const logFrequencyWidth = Math.log10(frequencyWidth / 20);

@@ -111,7 +111,7 @@ export class ToolManager {
     } else {
       DOMElements.nextVideo.classList.add('hidden');
     }
-    if ((EnvUtils.isSafari() && this.client.player && this.client.player.getSource().mode !== PlayerModes.DIRECT) || !EnvUtils.isWebAudioSupported()) {
+    if (!EnvUtils.isWebAudioSupported()) {
       DOMElements.audioConfigBtn.classList.add('hidden');
     } else {
       DOMElements.audioConfigBtn.classList.remove('hidden');
