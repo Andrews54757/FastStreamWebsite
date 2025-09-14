@@ -1,11 +1,13 @@
 export const DefaultKeybinds = {
   'HidePlayer': 'AltRight',
+  'ToggleControls': 'None',
   'PlayPause': 'Space',
   'Fullscreen': 'KeyF',
   'WindowedFullscreen': 'KeyW',
   'PictureInPicture': 'KeyP',
   'VolumeUp': 'ArrowUp',
   'VolumeDown': 'ArrowDown',
+  'VolumeReset': 'None',
   'Mute': 'KeyM',
   'SeekForward': 'ArrowRight',
   'SeekBackward': 'ArrowLeft',
@@ -15,6 +17,7 @@ export const DefaultKeybinds = {
   'SeekBackwardFrame': 'Shift+ArrowLeft',
   'IncreasePlaybackRate': 'Shift+ArrowUp',
   'DecreasePlaybackRate': 'Shift+ArrowDown',
+  'ResetPlaybackRate': 'None',
   'UndoSeek': 'KeyZ',
   'RedoSeek': 'Shift+KeyZ',
   'ResetFailed': 'Backquote',
@@ -33,6 +36,7 @@ export const DefaultKeybinds = {
   'RotateVideo': 'KeyR',
   'ZoomInVideo': 'None',
   'ZoomOutVideo': 'None',
+  'ZoomReset': 'None',
   'ToggleVisualFilters': 'KeyQ',
 };
 export const KeybindsWithModifiers = [

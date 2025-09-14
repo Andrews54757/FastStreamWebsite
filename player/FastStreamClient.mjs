@@ -773,6 +773,7 @@ export class FastStreamClient extends EventEmitter {
       AlertPolyfill.errorSendToDeveloper(e);
       console.error(e);
     }
+    DOMElements.playerContainer.style.backgroundColor = 'black';
     this.emit('setsource', this);
   }
   /**

@@ -25,7 +25,10 @@ export class KeybindManager extends EventEmitter {
     this.on('HidePlayer', (e) => {
       this.client.interfaceController.toggleHide();
     });
-    this.on('NextChapter', (e) =>{
+    this.on('ToggleControls', (e) => {
+      this.client.interfaceController.toggleControlBar();
+    });
+    this.on('NextChapter', (e) => {
       const chapters = this.client.chapters;
       const time = this.client.currentTime;
       const chapter = chapters.findIndex((chapter) => chapter.startTime <= time && chapter.endTime >= time);
@@ -41,11 +44,17 @@ export class KeybindManager extends EventEmitter {
     });
     this.on('VolumeUp', (e) => {
       this.client.volume = Math.round(Math.min(this.client.volume + 0.10, 3) * 100) / 100;
+      this.client.interfaceController.showControlBarTemporarily();
     });
     this.on('VolumeDown', (e) => {
       this.client.volume = Math.round(Math.max(this.client.volume - 0.10, 0) * 100) / 100;
+      this.client.interfaceController.showControlBarTemporarily();
     });
-    this.on('Mute', (e)=>{
+    this.on('VolumeReset', (e) => {
+      this.client.volume = 1;
+      this.client.interfaceController.showControlBarTemporarily();
+    });
+    this.on('Mute', (e) => {
       this.client.interfaceController.volumeControls.muteToggle();
     });
     this.on('SeekForward', (e) => {
@@ -91,15 +100,23 @@ export class KeybindManager extends EventEmitter {
     });
     this.on('IncreasePlaybackRate', (e) => {
       this.client.playbackRate = Math.min(this.client.playbackRate + 0.1, 8);
+      this.client.interfaceController.showControlBarTemporarily();
     });
     this.on('DecreasePlaybackRate', (e) => {
       this.client.playbackRate = Math.max(this.client.playbackRate - 0.1, 0.1);
+      this.client.interfaceController.showControlBarTemporarily();
+    });
+    this.on('ResetPlaybackRate', (e) => {
+      this.client.playbackRate = 1;
+      this.client.interfaceController.showControlBarTemporarily();
     });
     this.on('UndoSeek', (e) => {
       this.client.undoSeek();
+      this.client.interfaceController.showControlBarTemporarily();
     });
     this.on('RedoSeek', (e) => {
       this.client.redoSeek();
+      this.client.interfaceController.showControlBarTemporarily();
     });
     this.on('ResetFailed', (e) => {
       this.client.resetFailed();
@@ -125,7 +142,7 @@ export class KeybindManager extends EventEmitter {
     this.on('SubtrackShiftLeft', (e) => {
       this.client.interfaceController.subtitlesManager.subtitleSyncer.shiftSubtitles(-0.2);
     });
-    this.on('ToggleSubtitles', (e)=>{
+    this.on('ToggleSubtitles', (e) => {
       this.client.interfaceController.subtitlesManager.toggleSubtitles();
     });
     this.on('FlipVideo', (e) => {
@@ -138,23 +155,28 @@ export class KeybindManager extends EventEmitter {
       options.videoRotate = (options.videoRotate + 3) % 4;
       this.client.updateCSSFilters();
     });
-    this.on('ZoomInVideo', (e) =>{
+    this.on('ZoomInVideo', (e) => {
       const options = this.client.options;
       options.videoZoom = Utils.clamp(options.videoZoom + 0.05, 0, 2);
       this.client.updateCSSFilters();
     });
-    this.on('ZoomOutVideo', (e) =>{
+    this.on('ZoomOutVideo', (e) => {
       const options = this.client.options;
       options.videoZoom = Utils.clamp(options.videoZoom - 0.05, 0, 2);
+      this.client.updateCSSFilters();
+    });
+    this.on('ZoomReset', (e) => {
+      const options = this.client.options;
+      options.videoZoom = 1;
       this.client.updateCSSFilters();
     });
     this.on('WindowedFullscreen', (e) => {
       this.client.interfaceController.toggleWindowedFullscreen();
     });
-    this.on('NextVideo', (e) =>{
+    this.on('NextVideo', (e) => {
       this.client.nextVideo();
     });
-    this.on('PreviousVideo', (e) =>{
+    this.on('PreviousVideo', (e) => {
       this.client.previousVideo();
     });
     this.on('SaveVideo', (e) => {

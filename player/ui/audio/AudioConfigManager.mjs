@@ -10,7 +10,8 @@ import {AbstractAudioModule} from './AbstractAudioModule.mjs';
 import {AudioChannelMixer} from './AudioChannelMixer.mjs';
 import {AudioCrosstalk} from './AudioCrosstalk.mjs';
 import {AudioGain} from './AudioGain.mjs';
-import {MonoUpscaler} from './MonoUpscaler.mjs';
+import {ChannelUpmixer} from './ChannelUpmixer.mjs';
+import {OutputMeter} from './OutputMeter.mjs';
 import {AudioProfile} from './config/AudioProfile.mjs';
 export class AudioConfigManager extends AbstractAudioModule {
   constructor(client) {
@@ -20,10 +21,11 @@ export class AudioConfigManager extends AbstractAudioModule {
     this.ui = {};
     this.renderLoopRunning = false;
     this.shouldRunRenderLoop = false;
-    this.audioUpscaler = new MonoUpscaler();
+    this.audioUpmixer = new ChannelUpmixer();
     this.audioChannelMixer = new AudioChannelMixer(this);
     this.audioCrosstalk = new AudioCrosstalk();
     this.finalGain = new AudioGain();
+    this.outputMeter = new OutputMeter();
     this.setupUI();
     this.loadProfilesFromStorage().then(async () => {
       await this.loadDefaultProfiles();
@@ -198,12 +200,13 @@ export class AudioConfigManager extends AbstractAudioModule {
   openUI() {
     InterfaceUtils.closeWindows();
     DOMElements.audioConfigContainer.style.display = '';
-    this.startRenderLoop();
     WebUtils.setLabels(DOMElements.audioConfigBtn, Localize.getMessage('player_audioconfig_close_label'));
+    setTimeout(() => {
+      this.startRenderLoop();
+    }, 1);
   }
   closeUI() {
     DOMElements.audioConfigContainer.style.display = 'none';
-    this.stopRenderLoop();
     WebUtils.setLabels(DOMElements.audioConfigBtn, Localize.getMessage('player_audioconfig_open_label'));
   }
   isOpen() {
@@ -363,12 +366,10 @@ export class AudioConfigManager extends AbstractAudioModule {
     this.ui.dynamicsContainer.appendChild(this.audioCrosstalk.getElement());
   }
   renderLoop() {
-    if (!this.shouldRunRenderLoop) {
+    if (!this.shouldRunRenderLoop || !this.isOpen()) {
       this.renderLoopRunning = false;
     } else {
-      requestAnimationFrame(() => {
-        this.renderLoop();
-      });
+      requestAnimationFrame(this.renderLoop.bind(this));
     }
     this.audioChannelMixer.render();
     this.audioCrosstalk.render();
@@ -386,32 +387,42 @@ export class AudioConfigManager extends AbstractAudioModule {
     super.setupNodes(audioContext);
     try {
       this.updateChannelCount();
-      this.audioUpscaler.setupNodes(this.audioContext);
+      this.audioUpmixer.setupNodes(this.audioContext);
       this.audioChannelMixer.setupNodes(this.audioContext);
       this.audioCrosstalk.setupNodes(this.audioContext);
       this.finalGain.setupNodes(this.audioContext);
-      this.getInputNode().connect(this.audioUpscaler.getInputNode());
-      this.audioUpscaler.getOutputNode().connect(this.audioChannelMixer.getInputNode());
+      this.outputMeter.setupNodes(this.audioContext);
+      this.getInputNode().connect(this.audioUpmixer.getInputNode());
+      this.audioUpmixer.getOutputNode().connect(this.audioChannelMixer.getInputNode());
       this.audioChannelMixer.getOutputNode().connect(this.audioCrosstalk.getInputNode());
       this.audioCrosstalk.getOutputNode().connect(this.finalGain.getInputNode());
       this.finalGain.getOutputNode().connect(this.getOutputNode());
+      this.getOutputNode().connect(this.outputMeter.getInputNode());
     } catch (e) {
       AlertPolyfill.errorSendToDeveloper(e);
     }
   }
   updateChannelCount() {
     this.discardChannelCount();
-    this.getChannelCount().then((count) => {
-      if (count === 1) {
-        this.audioUpscaler.enable();
-      } else {
-        this.audioUpscaler.disable();
+    this.getInputChannelCount().then((count) => {
+      try {
+        this.audioContext.destination.channelCount = Utils.clamp(count, 2, this.audioContext.destination.maxChannelCount);
+      } catch (e) {
       }
+      this.audioUpmixer.updateChannelCount(count, this.audioContext.destination.channelCount);
       this.audioChannelMixer.updateChannelCount();
     }).catch((e) => {
     });
   }
   async getChannelCount() {
+    if (!this.audioContext) {
+      return 0;
+    }
+    const inputCount = await this.getInputChannelCount();
+    const outputCount = this.audioContext.destination.channelCount;
+    return Math.max(inputCount, outputCount);
+  }
+  async getInputChannelCount() {
     if (!this.audioContext) {
       return 0;
     }
@@ -441,7 +452,6 @@ export class AudioConfigManager extends AbstractAudioModule {
         this.channelCounterNode = null;
         this.getInputNode().disconnect(node.getNode());
         node.destroy();
-        console.log('Detected ' + count + ' audio channels');
         resolve(count);
       });
       this.getInputNode().connect(node.getNode());
@@ -464,5 +474,8 @@ export class AudioConfigManager extends AbstractAudioModule {
   }
   updateVolume(value) {
     this.finalGain.setGain(value);
+  }
+  getOutputMeter() {
+    return this.outputMeter;
   }
 }

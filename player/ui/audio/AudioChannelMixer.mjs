@@ -20,6 +20,7 @@ export class AudioChannelMixer extends AbstractAudioModule {
     this.channelMerger = null;
     this.channelNodes = [];
     this.masterNodes = {};
+    this.outputMeterCache = [];
     this.mixerChannelElements = [];
     this.masterElements = null;
   }
@@ -77,7 +78,7 @@ export class AudioChannelMixer extends AbstractAudioModule {
     this.channelConfigs.forEach((channel, i) => {
       this.renderChannel(this.channelNodes[channel.id], this.mixerChannelElements[channel.id]);
     });
-    this.renderChannel(this.masterNodes, this.masterElements);
+    this.renderMaster(this.masterElements);
     this.channelNodes.forEach((nodes, i) => {
       nodes.equalizer.render();
       nodes.compressor.render();
@@ -85,7 +86,7 @@ export class AudioChannelMixer extends AbstractAudioModule {
     this.masterNodes.equalizer.render();
     this.masterNodes.compressor.render();
   }
-  renderChannel(nodes, els) {
+  renderChannel(nodes, els, checkClip = false) {
     const analyzer = nodes ? nodes.analyzer : null;
     if (!analyzer || !els) {
       return;
@@ -102,6 +103,10 @@ export class AudioChannelMixer extends AbstractAudioModule {
     const newvolume = AudioUtils.getVolume(analyzer);
     const volume = Math.max(newvolume, lastVolume - 0.5);
     analyzer._lastVolume = volume;
+    if (checkClip && AudioUtils.isClipping(analyzer)) {
+      analyzer._isClippingTime = Date.now();
+    }
+    const isClipping = checkClip && analyzer._isClippingTime && (Date.now() - analyzer._isClippingTime < 500);
     const rectHeight = height / 50;
     const minDb = analyzer.minDecibels;
     const maxDb = analyzer.maxDecibels;
@@ -117,7 +122,7 @@ export class AudioChannelMixer extends AbstractAudioModule {
       ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
       ctx.fillRect(0, y, width, rectHeight);
       const color = `rgb(${Utils.clamp(i * 5, 0, 255)}, ${Utils.clamp(255 - i * 5, 0, 255)}, 0)`;
-      ctx.fillStyle = color;
+      ctx.fillStyle = isClipping ? 'rgb(255, 0, 0)' : color;
       ctx.fillRect(0, y + 1, width, rectHeight - 2);
     }
     const timeDiff = now - els.peakTime;
@@ -137,6 +142,71 @@ export class AudioChannelMixer extends AbstractAudioModule {
       els.peak = 0;
       els.peakTime = now;
     }
+  }
+  renderMaster(els) {
+    const outputMeter = this.configManager.getOutputMeter();
+    const data = outputMeter.getMeterData();
+    if (data.length === 0 || !els) {
+      return;
+    }
+    const canvas = els.volumeMeter;
+    const ctx = els.volumeMeterCtx;
+    const width = canvas.clientWidth * window.devicePixelRatio;
+    const height = canvas.clientHeight * window.devicePixelRatio;
+    if (width === 0 || height === 0) return;
+    canvas.width = width;
+    canvas.height = height;
+    ctx.clearRect(0, 0, width, height);
+    if (this.outputMeterCache.length !== data.length) {
+      this.outputMeterCache = data.map(() => ({peak: 0, peakTime: 0, lastVolume: -Infinity, isClippingTime: 0}));
+    }
+    const rectHeight = height / 50;
+    const minDb = outputMeter.minDecibels;
+    const maxDb = outputMeter.maxDecibels;
+    const now = Date.now();
+    const channelWidth = width / data.length;
+    data.forEach((channelData, i) => {
+      const cache = this.outputMeterCache[i];
+      const newVolume = channelData.volume;
+      const volume = Math.max(newVolume, cache.lastVolume - 0.5);
+      cache.lastVolume = volume;
+      if (channelData.isClipping) {
+        cache.isClippingTime = now;
+      }
+      const isClipping = cache.isClippingTime && (now - cache.isClippingTime < 500);
+      const ratio = (volume - minDb) / (maxDb - minDb);
+      const rectCount = Math.round(ratio * 50);
+      if (!cache.peak || rectCount > cache.peak) {
+        cache.peak = rectCount;
+        cache.peakTime = now;
+      }
+      const xStart = i * channelWidth;
+      for (let i = 0; i < rectCount; i++) {
+        const y = height - (i + 1) * rectHeight;
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+        ctx.fillRect(xStart, y, channelWidth, rectHeight);
+        const color = `rgb(${Utils.clamp(i * 5, 0, 255)}, ${Utils.clamp(255 - i * 5, 0, 255)}, 0)`;
+        ctx.fillStyle = isClipping ? 'rgb(255, 0, 0)' : color;
+        ctx.fillRect(xStart, y + 1, channelWidth, rectHeight - 2);
+      }
+      const timeDiff = now - cache.peakTime;
+      // Code snippet from https://github.com/kevincennis/Mix.js/blob/master/src/js/views/app.views.track.js
+      // MIT License
+      /**
+     * The MIT License (MIT)
+     * Copyright (c) 2014 Kevin Ennis
+     * https://github.com/kevincennis/Mix.js/blob/master/LICENSE
+     */
+      if ( timeDiff < 1000 && cache.peak >= 1 ) {
+      // for first 650 ms, use full alpha, then fade out
+        const freshness = timeDiff < 650 ? 1 : 1 - ( ( timeDiff - 650 ) / 350 );
+        ctx.fillStyle = 'rgba(238,119,85,' + freshness + ')';
+        ctx.fillRect(xStart, height - cache.peak * rectHeight - 1, channelWidth, 1);
+      } else {
+        cache.peak = 0;
+        cache.peakTime = now;
+      }
+    });
   }
   createMixerElements() {
     const els = {};
@@ -378,10 +448,6 @@ export class AudioChannelMixer extends AbstractAudioModule {
       nodes.preMerge.connect(analyser);
       nodes.analyzer = analyser;
     });
-    const masterAnalyzer = this.audioContext.createAnalyser();
-    masterAnalyzer.fftSize = 256;
-    this.getOutputNode().connect(masterAnalyzer);
-    this.masterNodes.analyzer = masterAnalyzer;
     this.updateNodes();
   }
   destroyAnalyzers(skipDisconnect = false) {
@@ -398,11 +464,6 @@ export class AudioChannelMixer extends AbstractAudioModule {
       }
       nodes.analyzer = null;
     });
-    if (!skipDisconnect) {
-      this.getOutputNode().disconnect(this.masterNodes.analyzer);
-      this.masterNodes.analyzer.disconnect();
-    }
-    this.masterNodes.analyzer = null;
     this.updateNodes();
   }
   getChannelGainsFromConfig() {
@@ -521,9 +582,6 @@ export class AudioChannelMixer extends AbstractAudioModule {
     const needsMasterGain = hasNonUnityMasterGain || isMono;
     const needsAnalyzer = this.needsAnalyzer();
     const activeChannels = AudioUtils.getActiveChannelsForChannelCount(numberOfChannels);
-    if (numberOfChannels === 1) {
-      activeChannels.push(1); // mono sources are always stereo internally
-    }
     this.mixerChannelElements.forEach((els, i) => {
       if (!els) return;
       if (activeChannels.includes(i)) {
@@ -635,5 +693,13 @@ export class AudioChannelMixer extends AbstractAudioModule {
         nodes.gain.gain.value = gain;
       }
     });
+    const meterNode = this.configManager.getOutputMeter();
+    if (needsAnalyzer) {
+      const cappedChannelCount = Math.min(numberOfChannels, this.audioContext.destination.maxChannelCount);
+      meterNode.updateChannelCount(cappedChannelCount);
+      meterNode.createAnalysers(cappedChannelCount);
+    } else {
+      meterNode.destroyAnalysers();
+    }
   }
 }

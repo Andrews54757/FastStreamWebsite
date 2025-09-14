@@ -91,8 +91,7 @@ export class InterfaceController {
     this.loopControls.on('open', this.closeAllMenus.bind(this));
     this.progressBar = new ProgressBar(this.client);
     this.progressBar.on('show-skip', (segment)=>{
-      this.showControlBar();
-      this.queueControlsHide(5000);
+      this.showControlBarTemporarily(5000);
     });
     this.progressBar.setupUI();
     this.volumeControls = new VolumeControls(this.client);
@@ -853,11 +852,22 @@ export class InterfaceController {
     DOMElements.controlsContainer.classList.add('fade_out');
     DOMElements.progressContainer.classList.remove('freeze');
   }
+  toggleControlBar() {
+    if (this.controlsVisible) {
+      this.hideControlBar();
+    } else {
+      this.showControlBar();
+    }
+  }
   showControlBar() {
     this.controlsVisible = true;
     DOMElements.playerContainer.classList.add('controls_visible');
     DOMElements.controlsContainer.classList.remove('fade_out');
     DOMElements.controlsContainer.classList.add('fade_in');
+  }
+  showControlBarTemporarily(timeout = 1000) {
+    this.showControlBar();
+    this.queueControlsHide(timeout);
   }
   updatePlaybackRate() {
     this.playbackRateChanger.setPlaybackRate(this.state.playbackRate, true);

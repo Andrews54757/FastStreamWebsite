@@ -3271,34 +3271,34 @@ const TranslationMap = {
     "Темная по умолчанию"
   ],
   "options_general_color_theme_arctic": [
-    "Arctic",
-    "Arktis",
-    "Ártico",
-    "Artico",
-    "北極",
-    "Arctic",
-    "Ártico",
-    "Арктика"
+    "Arctic Light",
+    "Arktisches Licht",
+    "Luz Ártica",
+    "Luce Artica",
+    "北極ライト",
+    "Cahaya Artik",
+    "Luz Ártica",
+    "Арктический свет"
   ],
   "options_general_color_theme_ocean": [
-    "Ocean",
-    "Ozean",
-    "Océano",
-    "Oceano",
-    "オーシャン",
-    "Ocean",
-    "Oceano",
-    "Океан"
+    "Ocean Blue",
+    "Ozeanblau",
+    "Azul Océano",
+    "Blu Oceano",
+    "オーシャンブルー",
+    "Biru Lautan",
+    "Azul Oceano",
+    "Океанический синий"
   ],
   "options_general_color_theme_neon": [
-    "Neon",
-    "Neon",
-    "Neón",
-    "Neon",
-    "ネオン",
-    "Neon",
-    "Neon",
-    "Неон"
+    "Neon Night",
+    "Neon-Nacht",
+    "Noche Neón",
+    "Notte Neon",
+    "ネオンナイト",
+    "Malam Neon",
+    "Noite Néon",
+    "Неоновая ночь"
   ],
   "options_general_color_theme_contrast": [
     "High Contrast",
@@ -3311,34 +3311,64 @@ const TranslationMap = {
     "Высокая контрастность"
   ],
   "options_general_color_theme_sunset": [
-    "Sunset",
-    "Sonnenuntergang",
-    "Puesta del sol",
-    "Tramonto",
-    "夕日",
-    "Sunset",
-    "Pôr do sol",
-    "Закат"
+    "Sunset Glow",
+    "Sonnenuntergangsglühen",
+    "Resplandor del Atardecer",
+    "Bagliore del Tramonto",
+    "夕焼けの輝き",
+    "Cahaya Senja",
+    "Brilho do Pôr do Sol",
+    "Закатное сияние"
   ],
   "options_general_color_theme_forest": [
-    "Forest",
-    "Wald",
-    "Bosque",
-    "Foresta",
-    "森",
-    "Forest",
-    "Floresta",
-    "Лес"
+    "Forest Night",
+    "Waldnacht",
+    "Noche en el Bosque",
+    "Notte nella Foresta",
+    "森の夜",
+    "Malam Hutan",
+    "Noite na Floresta",
+    "Лесная ночь"
   ],
   "options_general_color_theme_slate": [
-    "Slate",
-    "Schiefer",
-    "Pizarra",
-    "Ardesia",
-    "スレート",
-    "Slate",
-    "Lousa",
-    "Сланец"
+    "Slate Mono",
+    "Schiefer Monochrom",
+    "Pizarra Monocromo",
+    "Ardesia Monocromatica",
+    "スレート単色",
+    "Slate Monokrom",
+    "Lousa Monocromática",
+    "Сланец монохром"
+  ],
+  "options_general_color_theme_amethyst": [
+    "Amethyst Haze",
+    "Amethystnebel",
+    "Niebla de Amatista",
+    "Foschia di Ametista",
+    "アメジストの霞",
+    "Kabus Ametis",
+    "Névoa de Ametista",
+    "Аметистовая дымка"
+  ],
+  "options_general_color_theme_desert": [
+    "Desert Sand",
+    "Wüstensand",
+    "Arena del Desierto",
+    "Sabbia del Deserto",
+    "砂漠の砂",
+    "Pasir Gurun",
+    "Areia do Deserto",
+    "Пустынный песок"
+  ],
+  "options_general_color_theme_mint": [
+    "Mint Fresh",
+    "Frische Minze",
+    "Menta Fresca",
+    "Menta Fresca",
+    "フレッシュミント",
+    "Pudina Segar",
+    "Menta Fresca",
+    "Свежая мята"
   ],
   "options_general_vischangeaction_pip": [
     "Toggle picture-in-picture",

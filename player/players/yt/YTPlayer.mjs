@@ -774,7 +774,7 @@ async function getPoTokens(session, videoId) {
     if (!result) {
       return {contentToken, sessionToken};
     }
-    const expires = Date.now() + (result.ttl * 1000);
+    const expires = Date.now() + (result.ttl * 1000 * 0.8); // 20% margin
     result.result.forEach((item) => {
       if (item.error) {
         console.warn('PoToken error for', item.identifier, item.error);
