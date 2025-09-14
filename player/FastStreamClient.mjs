@@ -116,7 +116,7 @@ export class FastStreamClient extends EventEmitter {
     this.frameExtractor = new PreviewFrameExtractor(this);
     if (EnvUtils.isWebAudioSupported()) {
       this.audioConfigManager = new AudioConfigManager(this);
-      this.audioContext = EnvUtils.isSafari() ? null : new AudioContext();
+      this.audioContext = new AudioContext();
       this.audioConfigManager.setupNodes(this.audioContext);
     }
     this.videoAnalyzer.on(AnalyzerEvents.MATCH, () => {
@@ -722,7 +722,7 @@ export class FastStreamClient extends EventEmitter {
       }
       await this.player.setSource(source);
       this.interfaceController.addVideo(this.player.getVideo());
-      if (EnvUtils.isWebAudioSupported() && !EnvUtils.isSafari()) {
+      if (EnvUtils.isWebAudioSupported()) {
         this.initiateWebAudio();
       }
       this.syncedAudioPlayer = new SyncedAudioPlayer(this);
@@ -1285,9 +1285,6 @@ export class FastStreamClient extends EventEmitter {
       await this.syncedAudioPlayer.play();
     }
     this.interfaceController.play();
-    if (!this.audioContext && EnvUtils.isWebAudioSupported() && EnvUtils.isSafari()) {
-      this.initiateWebAudio();
-    }
     if (this.audioContext && this.audioContext.state === 'suspended') {
       await this.audioContext.resume();
     }

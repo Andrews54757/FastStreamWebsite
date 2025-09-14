@@ -111,7 +111,8 @@ export class ToolManager {
     } else {
       DOMElements.nextVideo.classList.add('hidden');
     }
-    if (!EnvUtils.isWebAudioSupported()) {
+    // Safari doesn't allow webaudio unless the video itself is playing from the same origin
+    if ((EnvUtils.isSafari() && this.client.player && this.client.player.getSource().mode !== PlayerModes.DIRECT) || !EnvUtils.isWebAudioSupported()) {
       DOMElements.audioConfigBtn.classList.add('hidden');
     } else {
       DOMElements.audioConfigBtn.classList.remove('hidden');
