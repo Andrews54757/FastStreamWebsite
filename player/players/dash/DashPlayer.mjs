@@ -86,7 +86,7 @@ export default class DashPlayer extends EventEmitter {
         const levels = DashTrackUtils.getVideoLevelList([mediaInfo]);
         const chosen = this.client.getLevelManager().pickVideoLevel(Array.from(levels.values()));
         const result = representations.filter((rep) => {
-          return chosen && rep.id === chosen.id;
+          return chosen && DashTrackUtils.getLevelFromRepresentation(rep) === chosen.id;
         });
         if (result.length === 0) {
           return representations;
@@ -97,7 +97,7 @@ export default class DashPlayer extends EventEmitter {
         const levels = DashTrackUtils.getAudioLevelList([mediaInfo]);
         const chosen = this.client.getLevelManager().pickAudioLevel(Array.from(levels.values()));
         const result = representations.filter((rep) => {
-          return chosen && rep.id === chosen.id;
+          return chosen && DashTrackUtils.getLevelFromRepresentation(rep) === chosen.id;
         });
         if (result.length === 0) {
           console.warn('No matching audio representation found for chosen level, falling back to all representations', representations, chosen);
@@ -155,7 +155,7 @@ export default class DashPlayer extends EventEmitter {
     if (rep.hasInitialization()) {
       const init = dashHandler.getInitRequest(mediaInfo, rep);
       if (init) {
-        init.level = rep.id;
+        init.level = DashTrackUtils.getLevelFromRepresentation(rep);
         init.index = -1;
         init.startTime = init.duration = 0;
         if (!this.client.getFragment(init.level, -1)) {
@@ -169,7 +169,7 @@ export default class DashPlayer extends EventEmitter {
       });
       segments.forEach((request) => {
         if (!request) return;
-        request.level = rep.id;
+        request.level = DashTrackUtils.getLevelFromRepresentation(rep);
         const fragment = new DashFragment(request);
         if (!this.client.getFragment(fragment.level, fragment.sn)) {
           this.client.makeFragment(fragment.level, fragment.sn, fragment);
@@ -262,12 +262,12 @@ export default class DashPlayer extends EventEmitter {
     if (!processor) {
       return -1;
     }
-    return processor.getRepresentationController().getCurrentRepresentation().id;
+    return DashTrackUtils.getLevelFromRepresentation(processor.getRepresentationController().getCurrentRepresentation());
   }
   setCurrentVideoLevelID(id) {
     if (typeof id !== 'string') return;
     try {
-      this.dash.setRepresentationForTypeById('video', id);
+      this.dash.setRepresentationForTypeById('video', DashTrackUtils.deconstructLevel(id).id);
     } catch (e) {
       console.warn(e);
     }
@@ -277,12 +277,12 @@ export default class DashPlayer extends EventEmitter {
     if (!processor) {
       return -1;
     }
-    return processor.getRepresentationController().getCurrentRepresentation().id;
+    return DashTrackUtils.getLevelFromRepresentation(processor.getRepresentationController().getCurrentRepresentation());
   }
   setCurrentAudioLevelID(id) {
     if (typeof id !== 'string') return;
     try {
-      this.dash.setRepresentationForTypeById('audio', id, true);
+      this.dash.setRepresentationForTypeById('audio', DashTrackUtils.deconstructLevel(id).id, true);
     } catch (e) {
       console.warn(e);
     }
