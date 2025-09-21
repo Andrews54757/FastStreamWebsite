@@ -1,8 +1,10 @@
 import {AudioChannelControl} from './AudioChannelControl.mjs';
 import {AudioCompressionControl} from './AudioCompressionControl.mjs';
+import {AudioConvolverProfile} from './AudioConvolverControl.mjs';
 import {AudioCrosstalkControl} from './AudioCrosstalkControl.mjs';
 import {AudioEQNode} from './AudioEQNode.mjs';
 export const MAX_AUDIO_CHANNELS = 6; // 8; Change to 8 when 7.1 audio is fixed.
+export const CHANNEL_NAMES = ['Left', 'Right', 'Center', 'Bass (LFE)', 'Left Surround', 'Right Surround', 'Side Left', 'Side Right'];
 export class AudioProfile {
   constructor(id) {
     this.id = parseInt(id);
@@ -11,6 +13,7 @@ export class AudioProfile {
     });
     this.master = AudioChannelControl.default('master');
     this.crosstalk = AudioCrosstalkControl.default();
+    this.convolver = AudioConvolverProfile.default();
     this.label = `Profile ${id}`;
   }
   static fromObj(obj) {
@@ -59,6 +62,9 @@ export class AudioProfile {
     if (obj.crosstalk) {
       profile.crosstalk = AudioCrosstalkControl.fromObj(obj.crosstalk);
     }
+    if (obj.convolver) {
+      profile.convolver = AudioConvolverProfile.fromObj(obj.convolver);
+    }
     // console.log('Loaded audio profile:', profile, obj);
     return profile;
   }
@@ -82,6 +88,9 @@ export class AudioProfile {
     if (!this.crosstalk.isDefault()) {
       obj.crosstalk = this.crosstalk.toObj();
     }
+    // if (!this.convolver.isDefault()) {
+    //   obj.convolver = this.convolver.toObj();
+    // }
     return obj;
   }
 }

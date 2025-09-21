@@ -7,9 +7,8 @@ import {DOMElements} from '../DOMElements.mjs';
 import {AbstractAudioModule} from './AbstractAudioModule.mjs';
 import {AudioCompressor} from './AudioCompressor.mjs';
 import {AudioEqualizer} from './AudioEqualizer.mjs';
-import {MAX_AUDIO_CHANNELS} from './config/AudioProfile.mjs';
+import {MAX_AUDIO_CHANNELS, CHANNEL_NAMES} from './config/AudioProfile.mjs';
 import {VirtualAudioNode} from './VirtualAudioNode.mjs';
-const CHANNEL_NAMES = ['Left', 'Right', 'Center', 'Bass (LFE)', 'Left Surround', 'Right Surround', 'Side Left', 'Side Right'];
 export class AudioChannelMixer extends AbstractAudioModule {
   constructor(configManager) {
     super('AudioChannelMixer');
@@ -151,7 +150,7 @@ export class AudioChannelMixer extends AbstractAudioModule {
     }
     const canvas = els.volumeMeter;
     const ctx = els.volumeMeterCtx;
-    const width = canvas.clientWidth * window.devicePixelRatio;
+    const width = canvas.clientWidth * window.devicePixelRatio * 2;
     const height = canvas.clientHeight * window.devicePixelRatio;
     if (width === 0 || height === 0) return;
     canvas.width = width;
@@ -164,7 +163,7 @@ export class AudioChannelMixer extends AbstractAudioModule {
     const minDb = outputMeter.minDecibels;
     const maxDb = outputMeter.maxDecibels;
     const now = Date.now();
-    const channelWidth = width / data.length;
+    const channelWidthDivided = (width + 1) / data.length;
     data.forEach((channelData, i) => {
       const cache = this.outputMeterCache[i];
       const newVolume = channelData.volume;
@@ -180,7 +179,9 @@ export class AudioChannelMixer extends AbstractAudioModule {
         cache.peak = rectCount;
         cache.peakTime = now;
       }
-      const xStart = i * channelWidth;
+      const xStart = Math.round(i * channelWidthDivided);
+      const xEnd = Math.round((i + 1) * channelWidthDivided);
+      const channelWidth = xEnd - xStart - (i === data.length - 1 ? 0 : 1); // 1px gap except last channel
       for (let i = 0; i < rectCount; i++) {
         const y = height - (i + 1) * rectHeight;
         ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
@@ -415,6 +416,7 @@ export class AudioChannelMixer extends AbstractAudioModule {
         this.mixerChannelElements[i].dynButton.classList.remove('active');
       }
     }
+    this.masterElements.dynButton.classList.remove('active');
     this.ui.equalizerContainer.replaceChildren();
     this.ui.compressorContainer.replaceChildren();
     for (let i = 0; i < this.channelConfigs.length; i++) {

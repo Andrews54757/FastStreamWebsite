@@ -11,6 +11,7 @@ import {AudioChannelMixer} from './AudioChannelMixer.mjs';
 import {AudioCrosstalk} from './AudioCrosstalk.mjs';
 import {AudioGain} from './AudioGain.mjs';
 import {ChannelUpmixer} from './ChannelUpmixer.mjs';
+import {OutputConvolver} from './OutputConvolver.mjs';
 import {OutputMeter} from './OutputMeter.mjs';
 import {AudioProfile} from './config/AudioProfile.mjs';
 export class AudioConfigManager extends AbstractAudioModule {
@@ -26,6 +27,9 @@ export class AudioConfigManager extends AbstractAudioModule {
     this.audioCrosstalk = new AudioCrosstalk();
     this.finalGain = new AudioGain();
     this.outputMeter = new OutputMeter();
+    if (OutputConvolver.isSupported()) {
+      this.outputConvolver = new OutputConvolver(this);
+    }
     this.setupUI();
     this.loadProfilesFromStorage().then(async () => {
       await this.loadDefaultProfiles();
@@ -118,6 +122,9 @@ export class AudioConfigManager extends AbstractAudioModule {
     this.currentProfile = profile.copy();
     this.audioChannelMixer.setConfig(this.currentProfile);
     this.audioCrosstalk.setCrosstalkConfig(this.currentProfile.crosstalk);
+    if (this.outputConvolver) {
+      this.outputConvolver.setConfig(this.currentProfile.convolver);
+    }
     this.saveProfilesToStorage();
   }
   deleteProfile(profile) {
@@ -364,6 +371,9 @@ export class AudioConfigManager extends AbstractAudioModule {
     this.audioChannelMixer.setupUI(this.ui.equalizerContainer, this.ui.compressorContainer);
     this.ui.dynamicsContainer.appendChild(this.audioChannelMixer.getElement());
     this.ui.dynamicsContainer.appendChild(this.audioCrosstalk.getElement());
+    if (this.outputConvolver) {
+      this.ui.dynamicsContainer.appendChild(this.outputConvolver.getElement());
+    }
   }
   renderLoop() {
     if (!this.shouldRunRenderLoop || !this.isOpen()) {
@@ -391,11 +401,19 @@ export class AudioConfigManager extends AbstractAudioModule {
       this.audioChannelMixer.setupNodes(this.audioContext);
       this.audioCrosstalk.setupNodes(this.audioContext);
       this.finalGain.setupNodes(this.audioContext);
+      if (this.outputConvolver) {
+        this.outputConvolver.setupNodes(this.audioContext);
+      }
       this.outputMeter.setupNodes(this.audioContext);
       this.getInputNode().connect(this.audioUpmixer.getInputNode());
       this.audioUpmixer.getOutputNode().connect(this.audioChannelMixer.getInputNode());
       this.audioChannelMixer.getOutputNode().connect(this.audioCrosstalk.getInputNode());
-      this.audioCrosstalk.getOutputNode().connect(this.finalGain.getInputNode());
+      if (this.outputConvolver) {
+        this.audioCrosstalk.getOutputNode().connect(this.outputConvolver.getInputNode());
+        this.outputConvolver.getOutputNode().connect(this.finalGain.getInputNode());
+      } else {
+        this.audioCrosstalk.getOutputNode().connect(this.finalGain.getInputNode());
+      }
       this.finalGain.getOutputNode().connect(this.getOutputNode());
       this.getOutputNode().connect(this.outputMeter.getInputNode());
     } catch (e) {
@@ -411,6 +429,7 @@ export class AudioConfigManager extends AbstractAudioModule {
       }
       this.audioUpmixer.updateChannelCount(count, this.audioContext.destination.channelCount);
       this.audioChannelMixer.updateChannelCount();
+      this.outputConvolver.updateChannelCount();
     }).catch((e) => {
     });
   }
