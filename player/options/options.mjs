@@ -44,6 +44,7 @@ const daltonizerStrength = document.getElementById('daltonizerStrength');
 const previewEnabled = document.getElementById('previewenabled');
 const replaceDelay = document.getElementById('replacedelay');
 const colorTheme = document.getElementById('colortheme');
+const ytPlayerID = document.getElementById('ytplayerid');
 // const ytclient = document.getElementById('ytclient');
 const maxdownloaders = document.getElementById('maxdownloaders');
 autoEnableURLSInput.setAttribute('autocapitalize', 'off');
@@ -93,6 +94,7 @@ async function loadOptions(newOptions) {
   storeProgress.checked = !!Options.storeProgress;
   replaceDelay.value = Options.replaceDelay;
   maxdownloaders.value = Options.maximumDownloaders;
+  ytPlayerID.value = Options.youtubePlayerID;
   setSelectMenuValue(daltonizerType, Options.videoDaltonizerType);
   setSelectMenuValue(clickAction, Options.singleClickAction);
   setSelectMenuValue(dblclickAction, Options.doubleClickAction);
@@ -328,6 +330,10 @@ autoplayNext.addEventListener('change', () => {
   sessionStorage.removeItem('autoplayNext');
   optionChanged();
 });
+ytPlayerID.addEventListener('change', () => {
+  Options.youtubePlayerID = ytPlayerID.value.trim();
+  optionChanged();
+});
 maxSpeed.addEventListener('change', () => {
   // parse value, number unit/s
   Options.maxSpeed = StringUtils.getSpeedValue(maxSpeed.value);
@@ -419,9 +425,9 @@ versionDiv.textContent = `FastStream v${EnvUtils.getVersion()}`;
 if (parent !== window) {
   document.body.classList.add('frame');
 }
+// React to external changes via OptionsStore
+OptionsStore.subscribe(() => loadOptions(OptionsStore.get()));
 if (EnvUtils.isExtension()) {
-  // React to external changes via OptionsStore
-  OptionsStore.subscribe(() => loadOptions(OptionsStore.get()));
   // Also refresh when becoming visible to catch recent changes
   const o = new IntersectionObserver(([entry]) => {
     if (entry.isIntersecting) loadOptions(OptionsStore.get());

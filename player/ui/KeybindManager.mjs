@@ -99,7 +99,7 @@ export class KeybindManager extends EventEmitter {
       this.client.setSeekSave(true);
     });
     this.on('IncreasePlaybackRate', (e) => {
-      this.client.playbackRate = Math.min(this.client.playbackRate + 0.1, 8);
+      this.client.playbackRate = Math.min(this.client.playbackRate + 0.1, this.client.options.maxPlaybackRate);
       this.client.interfaceController.showControlBarTemporarily();
     });
     this.on('DecreasePlaybackRate', (e) => {

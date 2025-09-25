@@ -9,7 +9,6 @@ export class PlaybackRateChanger extends EventEmitter {
     this.client = client;
     this.stayOpen = false;
     this.playbackRate = 1;
-    this.maxPlaybackRate = EnvUtils.isChrome() ? 16 : 8;
     this.playbackElements = [];
     this.onSilenceSkipperUIOpenHandle = this.onSilenceSkipperUIOpen.bind(this);
     this.onSilenceSkipperUICloseHandle = this.onSilenceSkipperUIClose.bind(this);
@@ -25,6 +24,9 @@ export class PlaybackRateChanger extends EventEmitter {
     this.audioPaddingEnd = 0.25;
     this.resyncCounter = 0;
     this.silenceSkipperLoopHandle = this.silenceSkipperLoop.bind(this);
+  }
+  get maxPlaybackRate() {
+    return this.client.options.maxPlaybackRate;
   }
   async saveState() {
     const state = {
