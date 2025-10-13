@@ -53,7 +53,7 @@ export class Vimeo2Dash {
     Representation.appendChild(SegmentList);
     // segment timeline
     const SegmentTimeline = this.document.createElement('SegmentTimeline');
-    const timeScale = 1000;
+    const timeScale = mimeType.startsWith('video') ? 12800 : 48000;
     SegmentList.setAttribute('timescale', timeScale);
     // adjust segment times to timescale
     segments.forEach((segment)=>{

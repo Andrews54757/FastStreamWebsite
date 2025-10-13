@@ -32,6 +32,9 @@ export class SubtitleSyncer extends EventEmitter {
     DOMElements.playerContainer.addEventListener('mouseup', () => {
       isGrabbingTrack = false;
     });
+    DOMElements.playerContainer.addEventListener('mouseleave', () => {
+      isGrabbingTrack = false;
+    });
     DOMElements.playerContainer.addEventListener('mousemove', (e) => {
       if (!this.client.player) return;
       const video = this.client.player.getVideo();

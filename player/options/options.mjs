@@ -249,6 +249,12 @@ document.querySelectorAll('.video-option').forEach((option) => {
   numberInput.addEventListener('input', numberInputChanged);
   rangeInput.addEventListener('change', rangeInputChanged);
   rangeInput.addEventListener('input', rangeInputChanged);
+  rangeInput.addEventListener('dblclick', (e) => {
+    Options[optionKey] = DefaultOptions[optionKey];
+    rangeInput.value = Math.round(Options[optionKey] * unitMultiplier);
+    numberInput.value = rangeInput.value + unit;
+    optionChanged();
+  });
 });
 function createKeybindElement(keybind) {
   const containerElement = document.createElement('div');
@@ -373,11 +379,11 @@ document.getElementById('resetdefault').addEventListener('click', () => {
   optionChanged();
 });
 WebUtils.setupTabIndex(document.getElementById('resetdefault'));
-autoEnableURLSInput.addEventListener('input', (e) => {
+autoEnableURLSInput.addEventListener('change', (e) => {
   Options.autoEnableURLs = autoEnableURLSInput.value.split('\n').map((o)=>o.trim()).filter((o)=>o.length);
   optionChanged();
 });
-customSourcePatterns.addEventListener('input', (e) => {
+customSourcePatterns.addEventListener('change', (e) => {
   Options.customSourcePatterns = customSourcePatterns.value;
   optionChanged();
 });
