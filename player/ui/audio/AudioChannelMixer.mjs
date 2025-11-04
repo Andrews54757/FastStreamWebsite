@@ -456,8 +456,7 @@ export class AudioChannelMixer extends AbstractAudioModule {
       return;
     }
     this.channelNodes.forEach((nodes) => {
-      const analyser = this.audioContext.createAnalyser();
-      analyser.fftSize = 256;
+      const analyser = AudioUtils.createVolumeAnalyserNode(this.audioContext);
       nodes.preMerge.connect(analyser);
       nodes.analyzer = analyser;
     });
@@ -593,6 +592,7 @@ export class AudioChannelMixer extends AbstractAudioModule {
     const isMono = this.masterConfig.mono;
     const needsMasterGain = hasNonUnityMasterGain || isMono;
     const needsAnalyzer = this.needsAnalyzer();
+    const cappedChannelCount = Math.min(numberOfChannels, this.audioContext.destination.maxChannelCount);
     const activeChannels = AudioUtils.getActiveChannelsForChannelCount(numberOfChannels);
     this.mixerChannelElements.forEach((els, i) => {
       if (!els) return;
@@ -618,9 +618,23 @@ export class AudioChannelMixer extends AbstractAudioModule {
       }
       this.masterNodes.gain.gain.value = this.masterConfig.gain;
       if (isMono) {
-        this.masterNodes.gain.channelCount = 1;
+        if (!this.masterNodes.monoNode) {
+          this.masterNodes.monoNode = this.audioContext.createGain();
+          this.masterNodes.preGain.disconnect(this.masterNodes.gain);
+          this.masterNodes.preGain.connect(this.masterNodes.monoNode);
+          this.masterNodes.monoNode.connect(this.masterNodes.gain);
+          this.masterNodes.monoNode.channelCount = 1;
+          this.masterNodes.monoNode.channelCountMode = 'explicit';
+        }
+        this.masterNodes.gain.channelCount = cappedChannelCount;
         this.masterNodes.gain.channelCountMode = 'explicit';
       } else {
+        if (this.masterNodes.monoNode) {
+          this.masterNodes.preGain.disconnect(this.masterNodes.monoNode);
+          this.masterNodes.monoNode.disconnect(this.masterNodes.gain);
+          this.masterNodes.monoNode = null;
+          this.masterNodes.preGain.connect(this.masterNodes.gain);
+        }
         this.masterNodes.gain.channelCountMode = 'max';
       }
     } else {
@@ -707,7 +721,6 @@ export class AudioChannelMixer extends AbstractAudioModule {
     });
     const meterNode = this.configManager.getOutputMeter();
     if (needsAnalyzer) {
-      const cappedChannelCount = Math.min(numberOfChannels, this.audioContext.destination.maxChannelCount);
       meterNode.updateChannelCount(cappedChannelCount);
       meterNode.createAnalysers(cappedChannelCount);
     } else {

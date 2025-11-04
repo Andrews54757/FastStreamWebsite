@@ -485,15 +485,15 @@ if (EnvUtils.isExtension()) {
         firstuse: Date.now(),
       });
     } else {
-      const now = Date.now();
-      const diff = now - result.firstuse;
-      if (diff > 1000 * 60 * 60 * 24 * 3) { // 3 days, ask for feedback
-        chrome.storage.local.get('feedback', (result) => {
-          if (!result || !result.feedback) {
-            feedbackbox.style.display = 'block';
-          }
-        });
-      }
+      // const now = Date.now();
+      // const diff = now - result.firstuse;
+      // if (diff > 1000 * 60 * 60 * 24 * 3) { // 3 days, ask for feedback
+      //   chrome.storage.local.get('feedback', (result) => {
+      //     if (!result || !result.feedback) {
+      //       feedbackbox.style.display = 'block';
+      //     }
+      //   });
+      // }
     }
   });
   // Don't ask for rating for manual installs

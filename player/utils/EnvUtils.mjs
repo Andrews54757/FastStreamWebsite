@@ -46,13 +46,20 @@ export class EnvUtils {
     return typeof chrome !== 'undefined' && !!chrome?.extension;
   }
   /**
+   * Checks if the device is mobile.
+   * @return {boolean} True if mobile, false otherwise.
+   */
+  static isMobile() {
+    return /Mobi|Android/i.test(navigator.userAgent);
+  }
+  /**
    * Gets the version of the extension or web app.
    * @return {string} The version string.
    */
   static getVersion() {
     // eslint-disable-next-line prefer-const
     let version = '1.0.0.web';
-version = '1.3.64.web';
+version = '1.3.66.web';
     return this.isExtension() ? chrome.runtime.getManifest().version : version;
   }
   /**

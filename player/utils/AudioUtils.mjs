@@ -50,6 +50,12 @@ function get468WeightsForAnalyser(analyser) {
  * Utility functions for audio processing and conversions.
  */
 export class AudioUtils {
+  static createVolumeAnalyserNode(audioContext) {
+    const analyser = audioContext.createAnalyser();
+    analyser.fftSize = 256;
+    analyser.smoothingTimeConstant = 0.5;
+    return analyser;
+  }
   static isClipping(analyser) {
     const bufferLength = analyser.frequencyBinCount;
     const dataArray = new Float32Array(bufferLength);
