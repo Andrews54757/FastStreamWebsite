@@ -1,5 +1,7 @@
 import {IndexedDBManager} from '../network/IndexedDBManager.mjs';
+import {AlertPolyfill} from '../utils/AlertPolyfill.mjs';
 import {EnvUtils} from '../utils/EnvUtils.mjs';
+import {Localize} from './Localize.mjs';
 const BrowserCanAutoOffloadBlobs = EnvUtils.isChrome();
 const UseCache = !BrowserCanAutoOffloadBlobs && window.caches;
 const UseIndexedDB = !BrowserCanAutoOffloadBlobs && !UseCache && IndexedDBManager.isSupported();
@@ -7,12 +9,21 @@ export class FSBlob {
   constructor() {
     this.blobStore = new Map();
     this.blobStorePromises = new Map();
-    if (UseCache) {
-      this.cache = true;
-      this.setupPromise = this.setupOrphanedCache();
-    } else if (UseIndexedDB) {
-      this.indexedDBManager = new IndexedDBManager();
-      this.setupPromise = this.indexedDBManager.setup();
+    try {
+      if (UseCache) {
+        this.cache = true;
+        this.setupPromise = this.setupOrphanedCache();
+      } else if (UseIndexedDB) {
+        this.indexedDBManager = new IndexedDBManager();
+        this.setupPromise = this.indexedDBManager.setup();
+      }
+    } catch (e) {
+      console.warn('FSBlob setup failed, falling back to memory storage', e);
+      this.cache = null;
+      this.indexedDBManager = null;
+      this.setupPromise = null;
+      this.blobStorePromises.clear();
+      AlertPolyfill.alert(Localize.getMessage('player_outofstorage'));
     }
     this.blobIndex = 0;
   }

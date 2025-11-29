@@ -59,7 +59,7 @@ export class EnvUtils {
   static getVersion() {
     // eslint-disable-next-line prefer-const
     let version = '1.0.0.web';
-version = '1.3.69.web';
+version = '1.3.70.web';
     return this.isExtension() ? chrome.runtime.getManifest().version : version;
   }
   /**
