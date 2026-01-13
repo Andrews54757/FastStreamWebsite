@@ -56,13 +56,13 @@ export default class MP4Player extends EventEmitter {
   makeSourceBuffers() {
     const videoTrack = this.metaData.videoTracks[this.currentVideoTrack];
     if (videoTrack) {
-      const videoCodec = 'video/mp4; codecs=\"' + videoTrack.codec + '\"';
+      const videoCodec = 'video/mp4; codecs=\"' + videoTrack.codec.toLowerCase() + '\"';
       this.videoSourceBuffer = new SourceBufferWrapper(this.mediaSource, videoCodec);
     }
     if (this.currentAudioTrack !== null) {
       const audioTrack = this.metaData.audioTracks[this.currentAudioTrack];
       if (audioTrack) {
-        const audioCodec = 'audio/mp4; codecs=\"' + audioTrack.codec + '\"';
+        const audioCodec = 'audio/mp4; codecs=\"' + audioTrack.codec.toLowerCase() + '\"';
         this.audioSourceBuffer = new SourceBufferWrapper(this.mediaSource, audioCodec);
       }
     }
@@ -342,18 +342,22 @@ export default class MP4Player extends EventEmitter {
             if (this.loader === loader) {
               this.loader = null;
             } else return;
+            this.mp4box.appendBuffer(data);
+            this.currentFragments.push(frag);
+            frag.addReference(ReferenceTypes.MP4PLAYER, true);
             if (!this.fileLength) {
               const rangeHeader = entry.responseHeaders['content-range'];
               if (!rangeHeader) {
                 console.warn('No content length');
                 this.fileLength = 0;
-                // make next fragment
                 if (!this.metaData) {
                   const nextParsePosition = this.mp4box.nextParsePosition || (frag.rangeEnd + 1);
-                  const fragIndex = Math.floor(nextParsePosition / FRAGMENT_SIZE);
+                  const maxIndex = Math.floor(nextParsePosition / FRAGMENT_SIZE);
                   const levelID = this.getCurrentVideoLevelID();
-                  if (!this.client.getFragment(levelID, fragIndex)) {
-                    this.client.makeFragment(levelID, fragIndex, new MP4Fragment(levelID, fragIndex, this.source, fragIndex * FRAGMENT_SIZE, (fragIndex + 1) * FRAGMENT_SIZE));
+                  for (let fragIndex = 1; fragIndex <= maxIndex; fragIndex++) {
+                    if (!this.client.getFragment(levelID, fragIndex)) {
+                      this.client.makeFragment(levelID, fragIndex, new MP4Fragment(levelID, fragIndex, this.source, fragIndex * FRAGMENT_SIZE, (fragIndex + 1) * FRAGMENT_SIZE));
+                    }
                   }
                 } else {
                   console.log(entry.responseHeaders);
@@ -366,10 +370,6 @@ export default class MP4Player extends EventEmitter {
                 this.initializeFragments();
               }
             }
-            // console.log("append", frag)
-            this.mp4box.appendBuffer(data);
-            this.currentFragments.push(frag);
-            frag.addReference(ReferenceTypes.MP4PLAYER, true);
             this.runLoad();
           },
           onProgress: (stats, context, data, xhr) => {
