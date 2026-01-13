@@ -56,13 +56,17 @@ export default class MP4Player extends EventEmitter {
   makeSourceBuffers() {
     const videoTrack = this.metaData.videoTracks[this.currentVideoTrack];
     if (videoTrack) {
-      const videoCodec = 'video/mp4; codecs=\"' + videoTrack.codec.toLowerCase() + '\"';
+      const videoCodec = 'video/mp4; codecs=\"' + videoTrack.codec + '\"';
       this.videoSourceBuffer = new SourceBufferWrapper(this.mediaSource, videoCodec);
     }
     if (this.currentAudioTrack !== null) {
       const audioTrack = this.metaData.audioTracks[this.currentAudioTrack];
       if (audioTrack) {
-        const audioCodec = 'audio/mp4; codecs=\"' + audioTrack.codec.toLowerCase() + '\"';
+        let fixedCodec = audioTrack.codec;
+        if (fixedCodec === 'Opus') {
+          fixedCodec = 'opus';
+        }
+        const audioCodec = 'audio/mp4; codecs=\"' + fixedCodec + '\"';
         this.audioSourceBuffer = new SourceBufferWrapper(this.mediaSource, audioCodec);
       }
     }
@@ -77,7 +81,12 @@ export default class MP4Player extends EventEmitter {
   }
   setupHLS() {
     this.removeSourceBuffers();
-    this.makeSourceBuffers();
+    try {
+      this.makeSourceBuffers();
+    } catch (e) {
+      this.emit(DefaultPlayerEvents.ERROR, 'Failed to create SourceBuffers: ' + e.message);
+      return;
+    }
     this.mp4box.fragmentedTracks.length = 0;
     const videoTrack = this.metaData.videoTracks[this.currentVideoTrack];
     const audioTrack = this.metaData.audioTracks[this.currentAudioTrack];
