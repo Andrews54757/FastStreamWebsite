@@ -97,7 +97,7 @@ export class CrosstalkNode {
     return this.input;
   }
   destroy() {
-    this.crossover.destroy();
-    this.xtc.destroy();
+    this.crossover?.destroy();
+    this.xtc?.destroy();
   }
 }
