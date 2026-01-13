@@ -195,6 +195,7 @@ export default class MP4Player extends EventEmitter {
       throw new Error('Source already set');
     }
     this.source = source;
+    source.headers["accept-encoding"] = "None";
     this.needsInit = true;
     const levelID = this.getCurrentVideoLevelID();
     if (!this.client.getFragment(levelID, 0)) {
