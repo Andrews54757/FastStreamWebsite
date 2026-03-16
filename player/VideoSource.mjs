@@ -17,7 +17,6 @@ const headerBlacklist = [
   'host',
   'connection',
   'dnt',
-  'cookie',
   'sec-fetch-storage-access',
   'sec-fetch-user',
   'upgrade-insecure-requests',

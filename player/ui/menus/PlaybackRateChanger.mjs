@@ -147,14 +147,16 @@ export class PlaybackRateChanger extends EventEmitter {
     const outputRate = this.client.audioAnalyzer.getOutputRate();
     const minIndex = Math.floor((time - this.audioPaddingEnd) * outputRate);
     const maxIndex = Math.floor((time + this.audioPaddingStart) * outputRate);
+    let hasData = false;
     for (let i = minIndex; i < maxIndex; i++) {
       if (volumeBuffer[i] === undefined) continue;
+      hasData = true;
       const volume = Utils.clamp((volumeBuffer[i] - minDB) / dbRange, 0, 1);
       if (volume >= this.silenceThreshold) {
         return false;
       }
     }
-    return true;
+    return hasData; // Don't skip silence if we have no audio data yet
   }
   enableSilenceSkipper() {
     if (this.silenceSkipperActive || !this.client.player) {
@@ -224,6 +226,13 @@ export class PlaybackRateChanger extends EventEmitter {
     DOMElements.playbackRateMenuContainer.style.display = 'none';
     this.stayOpen = false;
     return true;
+  }
+  reset() {
+    // Reset silence skipper state when a new video loads
+    if (this.silenceSkipperActive) {
+      this.disableSilenceSkipper();
+    }
+    this.silenceSkipperLoopRunning = false;
   }
   isOpen() {
     return DOMElements.playbackRateMenuContainer.style.display !== 'none';
