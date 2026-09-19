@@ -1,6 +1,7 @@
 import {MessageTypes} from './enums/MessageTypes.mjs';
 import {PlayerModes} from './enums/PlayerModes.mjs';
 import {FastStreamClient} from './FastStreamClient.mjs';
+import {EmbedAPI} from './modules/EmbedAPI.mjs'; // SPLICER:EXTENSION:REMOVE_LINE
 import {Localize} from './modules/Localize.mjs';
 import {SubtitleTrack} from './SubtitleTrack.mjs';
 import {EnvUtils} from './utils/EnvUtils.mjs';
@@ -77,6 +78,15 @@ async function recieveSources(request, sendResponse) {
   // Sources are ordered by time, so we can just choose the first one and it will be the oldest.
   // But we also want to minimize depth
   let autoSetSource = sources.reduce((result, curr) => {
+    // A Panopto source describes the whole session — every camera plus the audio, in
+    // sync — so it beats the individual streams it is stitched from, whichever frame
+    // those turned up in and however early the page asked for them.
+    if (result.mode === PlayerModes.ACCELERATED_PANOPTO) {
+      return result;
+    }
+    if (curr.mode === PlayerModes.ACCELERATED_PANOPTO) {
+      return curr;
+    }
     // Choose lower depth
     if (result.depth > curr.depth) {
       return curr;
@@ -86,7 +96,7 @@ async function recieveSources(request, sendResponse) {
       return curr;
     }
     // If result isn't using streaming technologies, try to find one that does
-    const streamingModes = [PlayerModes.ACCELERATED_HLS, PlayerModes.ACCELERATED_DASH, PlayerModes.ACCELERATED_YT];
+    const streamingModes = [PlayerModes.ACCELERATED_HLS, PlayerModes.ACCELERATED_DASH, PlayerModes.ACCELERATED_YT, PlayerModes.ACCELERATED_PANOPTO];
     if (!streamingModes.includes(result.mode) && streamingModes.includes(curr.mode)) {
       return curr;
     }
@@ -265,9 +275,13 @@ async function setup() {
       window.fastStream.destroy();
       delete window.fastStream;
     }
-    chrome.runtime.sendMessage({
-      type: MessageTypes.FRAME_REMOVED,
-    });
+    // Only the extension has a background page that tracks its frames; the web build has
+    // no chrome object to reach for, and reaching for one here threw on every unload.
+    if (EnvUtils.isExtension()) {
+      chrome.runtime.sendMessage({
+        type: MessageTypes.FRAME_REMOVED,
+      });
+    }
   });
   if (window.location.hash) {
     const url = window.location.hash.substring(1);
@@ -298,6 +312,15 @@ async function setup() {
       }
     });
   }
+  // SPLICER:EXTENSION:REMOVE_START
+  if (!EnvUtils.isExtension()) {
+    // A page that embeds this player in an iframe cannot reach into the frame to drive
+    // it, the way the extension reaches into its own pages, so it is given a channel to
+    // ask through instead.
+    window.fastStreamEmbedAPI = new EmbedAPI(window.fastStream);
+    window.fastStreamEmbedAPI.start();
+  }
+  // SPLICER:EXTENSION:REMOVE_END
 }
 setup().catch((e)=>{
   console.error(e);

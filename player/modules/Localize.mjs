@@ -3492,6 +3492,24 @@ const TranslationMap = {
     "加速 Vimeo",
     "加速 Vimeo"
   ],
+  "player_source_accelpanopto": [
+    "Accelerated Panopto",
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null
+  ],
   "player_source_mode": [
     "Mode",
     "Modus",

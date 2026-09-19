@@ -141,7 +141,15 @@ export function HLSLoaderFactory(player) {
       }, {
         onSuccess: async (entry, xhr) => {
           this.copyStats(entry.stats);
-          const data = await entry.getDataFromBlob();
+          let data = await entry.getDataFromBlob();
+          // Lets a player rewrite manifests before hls.js parses them.
+          if (player.processPlaylist) {
+            try {
+              data = player.processPlaylist(this.context, data);
+            } catch (e) {
+              console.error('Error in processPlaylist:', e);
+            }
+          }
           if (this.callbacks) {
             this.callbacks.onSuccess({
               url: entry.url,

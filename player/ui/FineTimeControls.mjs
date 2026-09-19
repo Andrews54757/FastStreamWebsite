@@ -447,12 +447,18 @@ export class FineTimeControls extends EventEmitter {
       }
     });
   }
+  mousePositionToTime(clientX) {
+    const video = this.client.player.getVideo();
+    const rect = this.ui.timelineTicks.getBoundingClientRect();
+    const time = ((clientX - rect.left) / rect.width) * video.duration;
+    return time;
+  }
   renderTimeline() {
     if (!this.started || !this.client.interfaceController.controlsVisible || !this.client.player) return;
     const time = this.client.state.currentTime;
     const video = this.client.player.getVideo();
     const duration = video.duration;
-    const timePerWidth = 60;
+    const timePerWidth = window.subEditMode ? 30 : 60;
     const minTime = Math.floor(Math.max(0, time - timePerWidth / 2 - 5));
     const maxTime = Math.ceil(Math.min(video.duration, time + timePerWidth / 2 + 5));
     this.ui.timelineContainer.style.width = (video.duration / timePerWidth) * 100 + '%';

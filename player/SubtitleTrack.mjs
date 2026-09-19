@@ -20,15 +20,28 @@ export class SubtitleTrack {
       cue.endTime += time;
     });
   }
+  shiftAfter(cue, time) {
+    // only shift cues that are the given cue or come after it. This allows users to shift a single cue without affecting cues that come before it.
+    let shift = false;
+    this.cues.forEach((c) => {
+      if (c === cue) {
+        shift = true;
+      }
+      if (shift) {
+        c.startTime += time;
+        c.endTime += time;
+      }
+    });
+  }
   loadText(text) {
     if (text.substring(0, 5) === '<?xml') {
       text = SubtitleUtils.xml2vtt(text);
     } else if (text.trim().split('\n')[0].trim().substr(0, 6) !== 'WEBVTT') {
       text = SubtitleUtils.srt2webvtt(text);
     }
-    // sometimes formatting in subtitles are not properly 
+    // sometimes formatting in subtitles are not properly
     // converted into webvtt, so we need to convert them manually
-    text = SubtitleUtils.convertSubtitleFormatting(text)
+    text = SubtitleUtils.convertSubtitleFormatting(text);
     // eslint-disable-next-line new-cap
     const parser = new WebVTT.Parser(window, WebVTT.StringDecoder());
     parser.onRegion = (region) => {
